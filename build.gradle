@@ -40,6 +40,10 @@ ext {
     set('kotlin.version', '1.9.20')
 }
 
+springBoot {
+    mainClass = 'io.pinkspider.LevelUpTogetherMvpAApplication'
+}
+
 bootJar {
     archiveBaseName = getRootProject().name
     archiveFileName = getRootProject().name + '-' + version + '-exec.jar'

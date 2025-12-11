@@ -8,17 +8,17 @@ import lombok.RequiredArgsConstructor;
 public enum ChatMessageType {
     TEXT("텍스트"),
     IMAGE("이미지"),
-    SYSTEM("시스템"),
-    ACHIEVEMENT("업적"),
-    LEVEL_UP("레벨업"),
-    MISSION_COMPLETE("미션완료"),
-    MEMBER_JOIN("멤버가입"),
-    MEMBER_LEAVE("멤버탈퇴");
+    SYSTEM_JOIN("시스템-가입"),
+    SYSTEM_LEAVE("시스템-탈퇴"),
+    SYSTEM_KICK("시스템-추방"),
+    SYSTEM_ACHIEVEMENT("시스템-업적"),
+    SYSTEM_MISSION("시스템-미션"),
+    SYSTEM_LEVEL_UP("시스템-레벨업"),
+    SYSTEM_ANNOUNCEMENT("시스템-공지");
 
     private final String displayName;
 
     public boolean isSystemMessage() {
-        return this == SYSTEM || this == ACHIEVEMENT || this == LEVEL_UP ||
-               this == MISSION_COMPLETE || this == MEMBER_JOIN || this == MEMBER_LEAVE;
+        return this != TEXT && this != IMAGE;
     }
 }
