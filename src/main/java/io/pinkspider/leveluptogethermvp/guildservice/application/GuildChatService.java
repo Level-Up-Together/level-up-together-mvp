@@ -136,14 +136,14 @@ public class GuildChatService {
     // 멤버 가입 시스템 메시지
     @Transactional
     public void notifyMemberJoin(Long guildId, String memberNickname) {
-        sendSystemMessage(guildId, ChatMessageType.MEMBER_JOIN,
+        sendSystemMessage(guildId, ChatMessageType.SYSTEM_JOIN,
             memberNickname + "님이 길드에 가입했습니다.");
     }
 
     // 멤버 탈퇴 시스템 메시지
     @Transactional
     public void notifyMemberLeave(Long guildId, String memberNickname) {
-        sendSystemMessage(guildId, ChatMessageType.MEMBER_LEAVE,
+        sendSystemMessage(guildId, ChatMessageType.SYSTEM_LEAVE,
             memberNickname + "님이 길드를 떠났습니다.");
     }
 
@@ -151,7 +151,7 @@ public class GuildChatService {
     @Transactional
     public void notifyAchievement(Long guildId, String memberNickname, String achievementName,
                                    Long achievementId) {
-        sendSystemMessage(guildId, ChatMessageType.ACHIEVEMENT,
+        sendSystemMessage(guildId, ChatMessageType.SYSTEM_ACHIEVEMENT,
             memberNickname + "님이 '" + achievementName + "' 업적을 달성했습니다!",
             "ACHIEVEMENT", achievementId);
     }
@@ -159,7 +159,7 @@ public class GuildChatService {
     // 레벨업 시스템 메시지
     @Transactional
     public void notifyLevelUp(Long guildId, String memberNickname, int newLevel) {
-        sendSystemMessage(guildId, ChatMessageType.LEVEL_UP,
+        sendSystemMessage(guildId, ChatMessageType.SYSTEM_LEVEL_UP,
             memberNickname + "님이 레벨 " + newLevel + "에 도달했습니다!");
     }
 
@@ -167,7 +167,7 @@ public class GuildChatService {
     @Transactional
     public void notifyMissionComplete(Long guildId, String memberNickname, String missionTitle,
                                        Long missionId) {
-        sendSystemMessage(guildId, ChatMessageType.MISSION_COMPLETE,
+        sendSystemMessage(guildId, ChatMessageType.SYSTEM_MISSION,
             memberNickname + "님이 '" + missionTitle + "' 미션을 완료했습니다!",
             "MISSION", missionId);
     }
