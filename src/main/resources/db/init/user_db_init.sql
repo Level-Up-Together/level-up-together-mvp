@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS users CASCADE;
 CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     name VARCHAR(255),
+    nickname VARCHAR(50),
     email VARCHAR(255) NOT NULL,
     picture VARCHAR(500),
     provider VARCHAR(50) NOT NULL,
@@ -43,10 +44,12 @@ CREATE TABLE users (
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_provider ON users(provider);
+CREATE INDEX idx_users_nickname ON users(nickname);
 
 COMMENT ON TABLE users IS '사용자';
 COMMENT ON COLUMN users.id IS '사용자 ID (UUID)';
 COMMENT ON COLUMN users.name IS '이름';
+COMMENT ON COLUMN users.nickname IS '닉네임 (표시용)';
 COMMENT ON COLUMN users.email IS '이메일';
 COMMENT ON COLUMN users.picture IS '프로필 이미지 URL';
 COMMENT ON COLUMN users.provider IS 'OAuth 제공자 (GOOGLE, KAKAO, APPLE)';
@@ -237,14 +240,18 @@ CREATE TABLE user_title (
     title_id BIGINT REFERENCES title(id),
     acquired_at TIMESTAMP,
     is_equipped BOOLEAN NOT NULL DEFAULT FALSE,
+    equipped_position VARCHAR(10),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uk_user_title UNIQUE (user_id, title_id)
+    CONSTRAINT uk_user_title UNIQUE (user_id, title_id),
+    CONSTRAINT chk_equipped_position CHECK (equipped_position IS NULL OR equipped_position IN ('LEFT', 'RIGHT'))
 );
 
 CREATE INDEX idx_user_title_user ON user_title(user_id);
+CREATE INDEX idx_user_title_equipped ON user_title(user_id, is_equipped) WHERE is_equipped = TRUE;
 
 COMMENT ON TABLE user_title IS '사용자 보유 칭호';
+COMMENT ON COLUMN user_title.equipped_position IS '장착 위치 (LEFT: 좌측, RIGHT: 우측)';
 
 CREATE TABLE user_stats (
     id BIGSERIAL PRIMARY KEY,

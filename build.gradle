@@ -155,7 +155,7 @@ dependencyManagement {
 
 openapi3 {
     def serverIp = System.getenv('LUT_IP') ?: 'localhost'
-    def serverPort = System.getenv('USER_SERVICE_PORT') ?: '18080'
+    def serverPort = System.getenv('USER_SERVICE_PORT') ?: '8443'
     server = "http://${serverIp}:${serverPort}"
     title = getRootProject().name + " API 문서"
     description = getRootProject().name + "API 문서 입니다. 작성된 테스트 코드 기반으로 생성됩니다. 삭제와 생성이 자동화 되었습니다."

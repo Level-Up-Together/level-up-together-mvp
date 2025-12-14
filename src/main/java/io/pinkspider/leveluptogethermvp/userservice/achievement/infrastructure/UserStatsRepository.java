@@ -29,4 +29,19 @@ public interface UserStatsRepository extends JpaRepository<UserStats, Long> {
     // 유저의 랭킹 순위 조회
     @Query("SELECT COUNT(us) + 1 FROM UserStats us WHERE us.rankingPoints > (SELECT us2.rankingPoints FROM UserStats us2 WHERE us2.userId = :userId)")
     Long findUserRank(@Param("userId") String userId);
+
+    /**
+     * 랭킹 포인트 기준으로 사용자의 순위 계산
+     *
+     * @param rankingPoints 기준 랭킹 포인트
+     * @return 해당 포인트보다 높은 사용자 수 + 1
+     */
+    @Query("SELECT COUNT(us) + 1 FROM UserStats us WHERE us.rankingPoints > :rankingPoints")
+    long calculateRank(@Param("rankingPoints") long rankingPoints);
+
+    /**
+     * 전체 사용자 수 조회 (랭킹 퍼센타일 계산용)
+     */
+    @Query("SELECT COUNT(us) FROM UserStats us")
+    long countTotalUsers();
 }

@@ -1,0 +1,459 @@
+package io.pinkspider.leveluptogethermvp.userservice.mypage.api;
+
+import static com.epages.restdocs.apispec.ResourceDocumentation.headerWithName;
+import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessRequest;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.preprocessResponse;
+import static org.springframework.restdocs.operation.preprocess.Preprocessors.prettyPrint;
+import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
+
+import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
+import com.epages.restdocs.apispec.ResourceSnippetParameters;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.application.MyPageService;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.MyPageResponse;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.MyPageResponse.EquippedTitleInfo;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.MyPageResponse.ExperienceInfo;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.MyPageResponse.ProfileInfo;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.MyPageResponse.UserInfo;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.ProfileUpdateRequest;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.TitleChangeRequest;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.TitleChangeResponse;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.UserTitleListResponse;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.UserTitleListResponse.UserTitleItem;
+import io.pinkspider.leveluptogethermvp.userservice.mypage.presentation.MyPageController;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders;
+import org.springframework.restdocs.payload.JsonFieldType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+
+@WebMvcTest(controllers = MyPageController.class,
+    excludeAutoConfiguration = {
+        DataSourceAutoConfiguration.class,
+        HibernateJpaAutoConfiguration.class,
+        DataSourceTransactionManagerAutoConfiguration.class
+    }
+)
+@Import(ControllerTestConfig.class)
+@AutoConfigureRestDocs
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
+class MyPageControllerTest {
+
+    @Autowired
+    protected MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockitoBean
+    private MyPageService myPageService;
+
+    private static final String X_USER_ID = "X-User-Id";
+    private static final String MOCK_USER_ID = "test-user-123";
+
+    @Test
+    @DisplayName("GET /api/v1/mypage : MyPage 전체 데이터 조회")
+    void getMyPageTest() throws Exception {
+        // given
+        EquippedTitleInfo leftTitle = EquippedTitleInfo.builder()
+            .userTitleId(1L)
+            .titleId(1L)
+            .name("초보 모험가")
+            .displayName("[초보] 초보 모험가")
+            .rarity("COMMON")
+            .colorCode("#808080")
+            .iconUrl("https://example.com/title/common.png")
+            .build();
+
+        EquippedTitleInfo rightTitle = EquippedTitleInfo.builder()
+            .userTitleId(2L)
+            .titleId(2L)
+            .name("미션 마스터")
+            .displayName("[미션] 미션 마스터")
+            .rarity("RARE")
+            .colorCode("#0000FF")
+            .iconUrl("https://example.com/title/rare.png")
+            .build();
+
+        ProfileInfo profileInfo = ProfileInfo.builder()
+            .userId(MOCK_USER_ID)
+            .nickname("테스트유저")
+            .profileImageUrl("https://example.com/profile.jpg")
+            .leftTitle(leftTitle)
+            .rightTitle(rightTitle)
+            .followerCount(10)
+            .followingCount(10)
+            .build();
+
+        ExperienceInfo experienceInfo = ExperienceInfo.builder()
+            .currentLevel(5)
+            .currentExp(250)
+            .totalExp(1250)
+            .nextLevelRequiredExp(300)
+            .expPercentage(83.33)
+            .expForPercentage(250)
+            .build();
+
+        UserInfo userInfo = UserInfo.builder()
+            .startDate(LocalDate.of(2024, 1, 1))
+            .daysSinceJoined(365L)
+            .clearedMissionsCount(50)
+            .clearedMissionBooksCount(5)
+            .rankingPercentile(15.5)
+            .acquiredTitlesCount(10)
+            .rankingPoints(1500L)
+            .build();
+
+        MyPageResponse response = MyPageResponse.builder()
+            .profile(profileInfo)
+            .experience(experienceInfo)
+            .userInfo(userInfo)
+            .build();
+
+        when(myPageService.getMyPage(anyString())).thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/mypage")
+                .header(X_USER_ID, MOCK_USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("마이페이지-01. MyPage 전체 데이터 조회",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("MyPage")
+                        .description("MyPage 화면에 필요한 전체 데이터 조회 (프로필, 경험치, 유저 정보)")
+                        .requestHeaders(
+                            headerWithName(X_USER_ID).description("사용자 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("MyPage 데이터"),
+
+                            // Profile Info
+                            fieldWithPath("value.profile").type(JsonFieldType.OBJECT).description("프로필 정보"),
+                            fieldWithPath("value.profile.user_id").type(JsonFieldType.STRING).description("사용자 ID"),
+                            fieldWithPath("value.profile.nickname").type(JsonFieldType.STRING).description("닉네임"),
+                            fieldWithPath("value.profile.profile_image_url").type(JsonFieldType.STRING).description("프로필 이미지 URL").optional(),
+                            fieldWithPath("value.profile.left_title").type(JsonFieldType.OBJECT).description("좌측 장착 칭호").optional(),
+                            fieldWithPath("value.profile.left_title.user_title_id").type(JsonFieldType.NUMBER).description("사용자 칭호 ID").optional(),
+                            fieldWithPath("value.profile.left_title.title_id").type(JsonFieldType.NUMBER).description("칭호 ID").optional(),
+                            fieldWithPath("value.profile.left_title.name").type(JsonFieldType.STRING).description("칭호 이름").optional(),
+                            fieldWithPath("value.profile.left_title.display_name").type(JsonFieldType.STRING).description("표시 이름").optional(),
+                            fieldWithPath("value.profile.left_title.rarity").type(JsonFieldType.STRING).description("희귀도").optional(),
+                            fieldWithPath("value.profile.left_title.color_code").type(JsonFieldType.STRING).description("색상 코드").optional(),
+                            fieldWithPath("value.profile.left_title.icon_url").type(JsonFieldType.STRING).description("아이콘 URL").optional(),
+                            fieldWithPath("value.profile.right_title").type(JsonFieldType.OBJECT).description("우측 장착 칭호").optional(),
+                            fieldWithPath("value.profile.right_title.user_title_id").type(JsonFieldType.NUMBER).description("사용자 칭호 ID").optional(),
+                            fieldWithPath("value.profile.right_title.title_id").type(JsonFieldType.NUMBER).description("칭호 ID").optional(),
+                            fieldWithPath("value.profile.right_title.name").type(JsonFieldType.STRING).description("칭호 이름").optional(),
+                            fieldWithPath("value.profile.right_title.display_name").type(JsonFieldType.STRING).description("표시 이름").optional(),
+                            fieldWithPath("value.profile.right_title.rarity").type(JsonFieldType.STRING).description("희귀도").optional(),
+                            fieldWithPath("value.profile.right_title.color_code").type(JsonFieldType.STRING).description("색상 코드").optional(),
+                            fieldWithPath("value.profile.right_title.icon_url").type(JsonFieldType.STRING).description("아이콘 URL").optional(),
+                            fieldWithPath("value.profile.follower_count").type(JsonFieldType.NUMBER).description("팔로워 수"),
+                            fieldWithPath("value.profile.following_count").type(JsonFieldType.NUMBER).description("팔로잉 수"),
+
+                            // Experience Info
+                            fieldWithPath("value.experience").type(JsonFieldType.OBJECT).description("경험치 정보"),
+                            fieldWithPath("value.experience.current_level").type(JsonFieldType.NUMBER).description("현재 레벨"),
+                            fieldWithPath("value.experience.current_exp").type(JsonFieldType.NUMBER).description("현재 경험치"),
+                            fieldWithPath("value.experience.total_exp").type(JsonFieldType.NUMBER).description("누적 경험치"),
+                            fieldWithPath("value.experience.next_level_required_exp").type(JsonFieldType.NUMBER).description("다음 레벨 필요 경험치"),
+                            fieldWithPath("value.experience.exp_percentage").type(JsonFieldType.NUMBER).description("경험치 퍼센트"),
+                            fieldWithPath("value.experience.exp_for_percentage").type(JsonFieldType.NUMBER).description("퍼센트 계산에 사용된 경험치"),
+
+                            // User Info
+                            fieldWithPath("value.user_info").type(JsonFieldType.OBJECT).description("유저 정보/통계"),
+                            fieldWithPath("value.user_info.start_date").type(JsonFieldType.STRING).description("가입일"),
+                            fieldWithPath("value.user_info.days_since_joined").type(JsonFieldType.NUMBER).description("가입 후 일수"),
+                            fieldWithPath("value.user_info.cleared_missions_count").type(JsonFieldType.NUMBER).description("완료한 미션 수"),
+                            fieldWithPath("value.user_info.cleared_mission_books_count").type(JsonFieldType.NUMBER).description("완료한 미션북 수"),
+                            fieldWithPath("value.user_info.ranking_percentile").type(JsonFieldType.NUMBER).description("랭킹 퍼센타일 (상위 X%)"),
+                            fieldWithPath("value.user_info.acquired_titles_count").type(JsonFieldType.NUMBER).description("획득한 칭호 수"),
+                            fieldWithPath("value.user_info.ranking_points").type(JsonFieldType.NUMBER).description("랭킹 포인트")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/mypage/profile : 프로필 이미지 변경")
+    void updateProfileTest() throws Exception {
+        // given
+        ProfileUpdateRequest request = ProfileUpdateRequest.builder()
+            .profileImageUrl("https://example.com/new-profile.jpg")
+            .build();
+
+        ProfileInfo response = ProfileInfo.builder()
+            .userId(MOCK_USER_ID)
+            .nickname("테스트유저")
+            .profileImageUrl("https://example.com/new-profile.jpg")
+            .followerCount(10)
+            .followingCount(10)
+            .build();
+
+        when(myPageService.updateProfileImage(anyString(), any(ProfileUpdateRequest.class)))
+            .thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/v1/mypage/profile")
+                .header(X_USER_ID, MOCK_USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("마이페이지-02. 프로필 이미지 변경",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("MyPage")
+                        .description("프로필 이미지 변경")
+                        .requestHeaders(
+                            headerWithName(X_USER_ID).description("사용자 ID")
+                        )
+                        .requestFields(
+                            fieldWithPath("profile_image_url").type(JsonFieldType.STRING).description("새 프로필 이미지 URL")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("업데이트된 프로필 정보"),
+                            fieldWithPath("value.user_id").type(JsonFieldType.STRING).description("사용자 ID"),
+                            fieldWithPath("value.nickname").type(JsonFieldType.STRING).description("닉네임"),
+                            fieldWithPath("value.profile_image_url").type(JsonFieldType.STRING).description("프로필 이미지 URL"),
+                            fieldWithPath("value.left_title").type(JsonFieldType.OBJECT).description("좌측 장착 칭호").optional(),
+                            fieldWithPath("value.right_title").type(JsonFieldType.OBJECT).description("우측 장착 칭호").optional(),
+                            fieldWithPath("value.follower_count").type(JsonFieldType.NUMBER).description("팔로워 수"),
+                            fieldWithPath("value.following_count").type(JsonFieldType.NUMBER).description("팔로잉 수")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/mypage/titles : 보유 칭호 목록 조회")
+    void getUserTitlesTest() throws Exception {
+        // given
+        UserTitleItem title1 = UserTitleItem.builder()
+            .userTitleId(1L)
+            .titleId(1L)
+            .name("초보 모험가")
+            .displayName("[초보] 초보 모험가")
+            .description("레벨 1-9 사용자")
+            .rarity("COMMON")
+            .colorCode("#808080")
+            .iconUrl("https://example.com/title/common.png")
+            .isEquipped(true)
+            .equippedPosition("LEFT")
+            .acquiredAt(LocalDateTime.now().minusDays(30))
+            .build();
+
+        UserTitleItem title2 = UserTitleItem.builder()
+            .userTitleId(2L)
+            .titleId(2L)
+            .name("미션 마스터")
+            .displayName("[미션] 미션 마스터")
+            .description("미션 10개 완료")
+            .rarity("RARE")
+            .colorCode("#0000FF")
+            .iconUrl("https://example.com/title/rare.png")
+            .isEquipped(true)
+            .equippedPosition("RIGHT")
+            .acquiredAt(LocalDateTime.now().minusDays(10))
+            .build();
+
+        UserTitleItem title3 = UserTitleItem.builder()
+            .userTitleId(3L)
+            .titleId(3L)
+            .name("출석왕")
+            .displayName("[출석] 출석왕")
+            .description("7일 연속 출석")
+            .rarity("UNCOMMON")
+            .colorCode("#00FF00")
+            .iconUrl("https://example.com/title/uncommon.png")
+            .isEquipped(false)
+            .equippedPosition(null)
+            .acquiredAt(LocalDateTime.now().minusDays(5))
+            .build();
+
+        UserTitleListResponse response = UserTitleListResponse.builder()
+            .totalCount(3)
+            .titles(List.of(title1, title2, title3))
+            .equippedLeftId(1L)
+            .equippedRightId(2L)
+            .build();
+
+        when(myPageService.getUserTitles(anyString())).thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/mypage/titles")
+                .header(X_USER_ID, MOCK_USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("마이페이지-03. 보유 칭호 목록 조회",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("MyPage")
+                        .description("사용자가 보유한 칭호 목록 조회")
+                        .requestHeaders(
+                            headerWithName(X_USER_ID).description("사용자 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("칭호 목록 정보"),
+                            fieldWithPath("value.total_count").type(JsonFieldType.NUMBER).description("총 보유 칭호 수"),
+                            fieldWithPath("value.equipped_left_id").type(JsonFieldType.NUMBER).description("좌측 장착 칭호 ID").optional(),
+                            fieldWithPath("value.equipped_right_id").type(JsonFieldType.NUMBER).description("우측 장착 칭호 ID").optional(),
+                            fieldWithPath("value.titles[]").type(JsonFieldType.ARRAY).description("칭호 목록"),
+                            fieldWithPath("value.titles[].user_title_id").type(JsonFieldType.NUMBER).description("사용자 칭호 ID"),
+                            fieldWithPath("value.titles[].title_id").type(JsonFieldType.NUMBER).description("칭호 ID"),
+                            fieldWithPath("value.titles[].name").type(JsonFieldType.STRING).description("칭호 이름"),
+                            fieldWithPath("value.titles[].display_name").type(JsonFieldType.STRING).description("표시 이름"),
+                            fieldWithPath("value.titles[].description").type(JsonFieldType.STRING).description("칭호 설명").optional(),
+                            fieldWithPath("value.titles[].rarity").type(JsonFieldType.STRING).description("희귀도 (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY)"),
+                            fieldWithPath("value.titles[].color_code").type(JsonFieldType.STRING).description("색상 코드").optional(),
+                            fieldWithPath("value.titles[].icon_url").type(JsonFieldType.STRING).description("아이콘 URL").optional(),
+                            fieldWithPath("value.titles[].is_equipped").type(JsonFieldType.BOOLEAN).description("장착 여부"),
+                            fieldWithPath("value.titles[].equipped_position").type(JsonFieldType.STRING).description("장착 위치 (LEFT, RIGHT)").optional(),
+                            fieldWithPath("value.titles[].acquired_at").type(JsonFieldType.STRING).description("획득 일시")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("PUT /api/v1/mypage/titles : 칭호 변경")
+    void changeTitlesTest() throws Exception {
+        // given
+        TitleChangeRequest request = TitleChangeRequest.builder()
+            .leftUserTitleId(1L)
+            .rightUserTitleId(3L)
+            .build();
+
+        EquippedTitleInfo leftTitle = EquippedTitleInfo.builder()
+            .userTitleId(1L)
+            .titleId(1L)
+            .name("초보 모험가")
+            .displayName("[초보] 초보 모험가")
+            .rarity("COMMON")
+            .colorCode("#808080")
+            .iconUrl("https://example.com/title/common.png")
+            .build();
+
+        EquippedTitleInfo rightTitle = EquippedTitleInfo.builder()
+            .userTitleId(3L)
+            .titleId(3L)
+            .name("출석왕")
+            .displayName("[출석] 출석왕")
+            .rarity("UNCOMMON")
+            .colorCode("#00FF00")
+            .iconUrl("https://example.com/title/uncommon.png")
+            .build();
+
+        TitleChangeResponse response = TitleChangeResponse.builder()
+            .message("칭호가 변경되었습니다.")
+            .leftTitle(leftTitle)
+            .rightTitle(rightTitle)
+            .build();
+
+        when(myPageService.changeTitles(anyString(), any(TitleChangeRequest.class)))
+            .thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.put("/api/v1/mypage/titles")
+                .header(X_USER_ID, MOCK_USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("마이페이지-04. 칭호 변경",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("MyPage")
+                        .description("좌측/우측 칭호 동시 변경 (둘 다 필수 선택)")
+                        .requestHeaders(
+                            headerWithName(X_USER_ID).description("사용자 ID")
+                        )
+                        .requestFields(
+                            fieldWithPath("left_user_title_id").type(JsonFieldType.NUMBER).description("좌측 장착할 사용자 칭호 ID (필수)"),
+                            fieldWithPath("right_user_title_id").type(JsonFieldType.NUMBER).description("우측 장착할 사용자 칭호 ID (필수)")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("변경 결과"),
+                            fieldWithPath("value.message").type(JsonFieldType.STRING).description("결과 메시지"),
+                            fieldWithPath("value.left_title").type(JsonFieldType.OBJECT).description("좌측 장착 칭호"),
+                            fieldWithPath("value.left_title.user_title_id").type(JsonFieldType.NUMBER).description("사용자 칭호 ID"),
+                            fieldWithPath("value.left_title.title_id").type(JsonFieldType.NUMBER).description("칭호 ID"),
+                            fieldWithPath("value.left_title.name").type(JsonFieldType.STRING).description("칭호 이름"),
+                            fieldWithPath("value.left_title.display_name").type(JsonFieldType.STRING).description("표시 이름"),
+                            fieldWithPath("value.left_title.rarity").type(JsonFieldType.STRING).description("희귀도"),
+                            fieldWithPath("value.left_title.color_code").type(JsonFieldType.STRING).description("색상 코드").optional(),
+                            fieldWithPath("value.left_title.icon_url").type(JsonFieldType.STRING).description("아이콘 URL").optional(),
+                            fieldWithPath("value.right_title").type(JsonFieldType.OBJECT).description("우측 장착 칭호"),
+                            fieldWithPath("value.right_title.user_title_id").type(JsonFieldType.NUMBER).description("사용자 칭호 ID"),
+                            fieldWithPath("value.right_title.title_id").type(JsonFieldType.NUMBER).description("칭호 ID"),
+                            fieldWithPath("value.right_title.name").type(JsonFieldType.STRING).description("칭호 이름"),
+                            fieldWithPath("value.right_title.display_name").type(JsonFieldType.STRING).description("표시 이름"),
+                            fieldWithPath("value.right_title.rarity").type(JsonFieldType.STRING).description("희귀도"),
+                            fieldWithPath("value.right_title.color_code").type(JsonFieldType.STRING).description("색상 코드").optional(),
+                            fieldWithPath("value.right_title.icon_url").type(JsonFieldType.STRING).description("아이콘 URL").optional()
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+}
