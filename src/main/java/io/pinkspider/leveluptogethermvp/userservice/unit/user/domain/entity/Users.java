@@ -35,6 +35,9 @@ public class Users extends LocalDateTimeBaseEntity {
 
     private String name;
 
+    @Column(name = "nickname", length = 50)
+    private String nickname;
+
     @Convert(converter = CryptoConverter.class)
     @NotNull
     private String email;
@@ -54,5 +57,30 @@ public class Users extends LocalDateTimeBaseEntity {
         this.picture = picture;
 
         return this;
+    }
+
+    public void updatePicture(String picture) {
+        this.picture = picture;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    /**
+     * 표시용 이름 반환 (닉네임 > 이름 > 이메일 앞부분)
+     */
+    public String getDisplayName() {
+        if (nickname != null && !nickname.isBlank()) {
+            return nickname;
+        }
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        // 이메일의 @ 앞부분 반환
+        if (email != null && email.contains("@")) {
+            return email.substring(0, email.indexOf("@"));
+        }
+        return "사용자";
     }
 }

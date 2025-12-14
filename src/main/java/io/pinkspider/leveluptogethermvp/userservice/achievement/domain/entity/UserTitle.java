@@ -1,8 +1,11 @@
 package io.pinkspider.leveluptogethermvp.userservice.achievement.domain.entity;
 
 import io.pinkspider.global.domain.auditentity.LocalDateTimeBaseEntity;
+import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.enums.TitlePosition;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -63,11 +66,26 @@ public class UserTitle extends LocalDateTimeBaseEntity {
     @Builder.Default
     private Boolean isEquipped = false;
 
-    public void equip() {
+    @Enumerated(EnumType.STRING)
+    @Column(name = "equipped_position", length = 10)
+    @Comment("장착 위치 (LEFT: 좌측, RIGHT: 우측)")
+    private TitlePosition equippedPosition;
+
+    public void equip(TitlePosition position) {
         this.isEquipped = true;
+        this.equippedPosition = position;
     }
 
     public void unequip() {
         this.isEquipped = false;
+        this.equippedPosition = null;
+    }
+
+    /**
+     * @deprecated Use {@link #equip(TitlePosition)} instead
+     */
+    @Deprecated
+    public void equip() {
+        this.isEquipped = true;
     }
 }
