@@ -218,7 +218,9 @@ app:
       - http://localhost:8001
       - http://localhost:3000
       - https://local.level-up-together.com
+      - https://local.level-up-together.com:3000
       - https://dev.level-up-together.com
+      - https://dev.level-up-together.com:3000
       - https://level-up-together.com
   jwt:
     refresh:
