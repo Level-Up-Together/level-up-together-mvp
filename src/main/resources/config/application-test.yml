@@ -209,6 +209,8 @@ resilience4j:
         wait-duration-in-open-state: 5000
 
 app:
+  admin:
+    api-url: http://localhost:8080
   redirect-url: http://localhost:8001
   threshold-password-fail: 5
   oauth2:
