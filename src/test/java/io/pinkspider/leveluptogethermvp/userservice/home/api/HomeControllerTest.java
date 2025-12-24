@@ -74,8 +74,8 @@ class HomeControllerTest {
             .linkUrl("/guild/1")
             .guildId(1L)
             .sortOrder(1)
-            .startDate(LocalDateTime.now().minusDays(1))
-            .endDate(LocalDateTime.now().plusDays(30))
+            .startAt(LocalDateTime.now().minusDays(1))
+            .endAt(LocalDateTime.now().plusDays(30))
             .createdAt(LocalDateTime.now())
             .build();
     }
@@ -129,8 +129,8 @@ class HomeControllerTest {
                             fieldWithPath("value[].link_url").type(JsonFieldType.STRING).description("링크 URL").optional(),
                             fieldWithPath("value[].guild_id").type(JsonFieldType.NUMBER).description("연결된 길드 ID").optional(),
                             fieldWithPath("value[].sort_order").type(JsonFieldType.NUMBER).description("정렬 순서"),
-                            fieldWithPath("value[].start_date").type(JsonFieldType.STRING).description("시작일시").optional(),
-                            fieldWithPath("value[].end_date").type(JsonFieldType.STRING).description("종료일시").optional(),
+                            fieldWithPath("value[].start_at").type(JsonFieldType.STRING).description("시작일시").optional(),
+                            fieldWithPath("value[].end_at").type(JsonFieldType.STRING).description("종료일시").optional(),
                             fieldWithPath("value[].created_at").type(JsonFieldType.STRING).description("생성일시")
                         )
                         .build()
