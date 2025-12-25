@@ -73,9 +73,10 @@ public @interface NoProfanity {
      * 한글 초성(자음) 검사 여부
      * <p>
      * true인 경우 "ㅅㅂ", "ㅂㅅ" 같은 초성 비속어도 탐지합니다.
+     * 주의: 초성 검사 시 "새벽", "사별" 등 일반 단어도 차단될 수 있어 기본값은 false입니다.
      * </p>
      */
-    boolean checkKoreanJamo() default true;
+    boolean checkKoreanJamo() default false;
 
     /**
      * 레벤슈타인 거리 임계값 (STRICT 모드에서만 사용)
