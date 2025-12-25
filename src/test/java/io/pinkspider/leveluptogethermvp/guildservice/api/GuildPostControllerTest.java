@@ -553,6 +553,85 @@ class GuildPostControllerTest {
     }
 
     @Test
+    @DisplayName("POST /api/v1/guilds/{guildId}/posts : 공지글 작성 (마스터)")
+    void createNoticePostTest() throws Exception {
+        // given
+        GuildPostCreateRequest request = GuildPostCreateRequest.builder()
+            .title("길드 공지사항")
+            .content("길드 마스터가 작성한 공지사항입니다.")
+            .postType(GuildPostType.NOTICE)
+            .isPinned(true)
+            .build();
+
+        GuildPostResponse response = GuildPostResponse.builder()
+            .id(1L)
+            .guildId(1L)
+            .authorId(MOCK_USER_ID)
+            .authorNickname(MOCK_NICKNAME)
+            .title("길드 공지사항")
+            .content("길드 마스터가 작성한 공지사항입니다.")
+            .postType(GuildPostType.NOTICE)
+            .isPinned(true)
+            .viewCount(0)
+            .commentCount(0)
+            .createdAt(LocalDateTime.now())
+            .modifiedAt(LocalDateTime.now())
+            .build();
+
+        when(guildPostService.createPost(anyLong(), anyString(), anyString(), any(GuildPostCreateRequest.class)))
+            .thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/v1/guilds/{guildId}/posts", 1L)
+                .with(user(MOCK_USER_ID))
+                .header(X_USER_NICKNAME, MOCK_NICKNAME)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드게시판-11. 공지글 작성 (마스터)",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Post")
+                        .description("길드 공지글 작성 - 길드 마스터만 작성 가능, 상단 고정 옵션 포함 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .requestFields(
+                            fieldWithPath("title").type(JsonFieldType.STRING).description("공지글 제목"),
+                            fieldWithPath("content").type(JsonFieldType.STRING).description("공지글 내용"),
+                            fieldWithPath("post_type").type(JsonFieldType.STRING).description("게시글 유형 (NOTICE)"),
+                            fieldWithPath("is_pinned").type(JsonFieldType.BOOLEAN).description("상단 고정 여부 (true: 고정)")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("공지글 정보"),
+                            fieldWithPath("value.id").type(JsonFieldType.NUMBER).description("게시글 ID"),
+                            fieldWithPath("value.guild_id").type(JsonFieldType.NUMBER).description("길드 ID"),
+                            fieldWithPath("value.author_id").type(JsonFieldType.STRING).description("작성자 ID"),
+                            fieldWithPath("value.author_nickname").type(JsonFieldType.STRING).description("작성자 닉네임").optional(),
+                            fieldWithPath("value.title").type(JsonFieldType.STRING).description("제목"),
+                            fieldWithPath("value.content").type(JsonFieldType.STRING).description("내용"),
+                            fieldWithPath("value.post_type").type(JsonFieldType.STRING).description("게시글 유형 (NOTICE)"),
+                            fieldWithPath("value.is_pinned").type(JsonFieldType.BOOLEAN).description("상단 고정 여부"),
+                            fieldWithPath("value.view_count").type(JsonFieldType.NUMBER).description("조회수"),
+                            fieldWithPath("value.comment_count").type(JsonFieldType.NUMBER).description("댓글 수"),
+                            fieldWithPath("value.created_at").type(JsonFieldType.STRING).description("작성일시"),
+                            fieldWithPath("value.modified_at").type(JsonFieldType.STRING).description("수정일시")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
     @DisplayName("GET /api/v1/guilds/{guildId}/posts/notices : 공지글 목록 조회")
     void getNoticesTest() throws Exception {
         // given
