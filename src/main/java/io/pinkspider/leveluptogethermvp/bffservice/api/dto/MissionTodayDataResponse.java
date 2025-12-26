@@ -1,0 +1,48 @@
+package io.pinkspider.leveluptogethermvp.bffservice.api.dto;
+
+import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
+import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionResponse;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+/**
+ * 미션 오늘 BFF 응답 DTO
+ * 내 미션 목록과 오늘의 미션 실행 현황을 한 번에 반환합니다.
+ */
+@Getter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonNaming(SnakeCaseStrategy.class)
+public class MissionTodayDataResponse {
+
+    /**
+     * 내 미션 목록
+     */
+    private List<MissionResponse> myMissions;
+
+    /**
+     * 오늘의 미션 실행 현황
+     */
+    private List<MissionExecutionResponse> todayExecutions;
+
+    /**
+     * 오늘 완료한 미션 수
+     */
+    private int completedCount;
+
+    /**
+     * 오늘 진행 중인 미션 수
+     */
+    private int inProgressCount;
+
+    /**
+     * 오늘 미완료 미션 수
+     */
+    private int pendingCount;
+}
