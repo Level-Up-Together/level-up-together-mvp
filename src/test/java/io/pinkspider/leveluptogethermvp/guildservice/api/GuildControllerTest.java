@@ -97,6 +97,9 @@ class GuildControllerTest {
             .categoryId(1L)
             .categoryName("자기계발")
             .categoryIcon("📚")
+            .baseAddress("서울시 강남구")
+            .baseLatitude(37.5665)
+            .baseLongitude(126.978)
             .createdAt(LocalDateTime.now())
             .build();
     }
@@ -136,7 +139,10 @@ class GuildControllerTest {
                             fieldWithPath("visibility").type(JsonFieldType.STRING).description("공개 여부 (PUBLIC, PRIVATE)"),
                             fieldWithPath("category_id").type(JsonFieldType.NUMBER).description("카테고리 ID (필수)"),
                             fieldWithPath("max_members").type(JsonFieldType.NUMBER).description("최대 멤버 수").optional(),
-                            fieldWithPath("image_url").type(JsonFieldType.STRING).description("길드 이미지 URL").optional()
+                            fieldWithPath("image_url").type(JsonFieldType.STRING).description("길드 이미지 URL").optional(),
+                            fieldWithPath("base_address").type(JsonFieldType.STRING).description("거점 주소").optional(),
+                            fieldWithPath("base_latitude").type(JsonFieldType.NUMBER).description("거점 위도").optional(),
+                            fieldWithPath("base_longitude").type(JsonFieldType.NUMBER).description("거점 경도").optional()
                         )
                         .responseFields(
                             fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
@@ -155,6 +161,9 @@ class GuildControllerTest {
                             fieldWithPath("value.category_id").type(JsonFieldType.NUMBER).description("카테고리 ID").optional(),
                             fieldWithPath("value.category_name").type(JsonFieldType.STRING).description("카테고리 이름").optional(),
                             fieldWithPath("value.category_icon").type(JsonFieldType.STRING).description("카테고리 아이콘").optional(),
+                            fieldWithPath("value.base_address").type(JsonFieldType.STRING).description("거점 주소").optional(),
+                            fieldWithPath("value.base_latitude").type(JsonFieldType.NUMBER).description("거점 위도").optional(),
+                            fieldWithPath("value.base_longitude").type(JsonFieldType.NUMBER).description("거점 경도").optional(),
                             fieldWithPath("value.image_url").type(JsonFieldType.STRING).description("길드 이미지").optional(),
                             fieldWithPath("value.created_at").type(JsonFieldType.STRING).description("생성일시")
                         )
@@ -337,7 +346,10 @@ class GuildControllerTest {
                             fieldWithPath("visibility").type(JsonFieldType.STRING).description("공개 여부").optional(),
                             fieldWithPath("category_id").type(JsonFieldType.NUMBER).description("카테고리 ID").optional(),
                             fieldWithPath("max_members").type(JsonFieldType.NUMBER).description("최대 멤버 수").optional(),
-                            fieldWithPath("image_url").type(JsonFieldType.STRING).description("길드 이미지 URL").optional()
+                            fieldWithPath("image_url").type(JsonFieldType.STRING).description("길드 이미지 URL").optional(),
+                            fieldWithPath("base_address").type(JsonFieldType.STRING).description("거점 주소").optional(),
+                            fieldWithPath("base_latitude").type(JsonFieldType.NUMBER).description("거점 위도").optional(),
+                            fieldWithPath("base_longitude").type(JsonFieldType.NUMBER).description("거점 경도").optional()
                         )
                         .build()
                 )
