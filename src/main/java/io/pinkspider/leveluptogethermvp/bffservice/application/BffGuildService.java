@@ -136,7 +136,8 @@ public class BffGuildService {
         }
 
         boolean hasGuild = !myGuilds.isEmpty();
-        Long firstGuildId = hasGuild ? myGuilds.get(0).getId() : null;
+        // 모든 내 길드의 ID 목록 (카테고리별 1개 길드 정책으로 여러 개 가능)
+        List<Long> myGuildIds = myGuilds.stream().map(GuildResponse::getId).toList();
 
         // 병렬로 나머지 데이터 조회
         final List<GuildResponse> finalMyGuilds = myGuilds;
@@ -164,20 +165,34 @@ public class BffGuildService {
             }
         });
 
+        // 모든 내 길드의 공지사항 병합 조회
         CompletableFuture<List<GuildPostListResponse>> noticesFuture = CompletableFuture.supplyAsync(() -> {
-            if (firstGuildId == null) {
+            if (myGuildIds.isEmpty()) {
                 return Collections.emptyList();
             }
             try {
-                return guildPostService.getNotices(firstGuildId, userId);
+                // 모든 내 길드의 공지사항을 병합
+                return myGuildIds.stream()
+                    .flatMap(guildId -> {
+                        try {
+                            return guildPostService.getNotices(guildId, userId).stream();
+                        } catch (Exception e) {
+                            log.warn("Failed to fetch notices for guild {}: {}", guildId, e.getMessage());
+                            return java.util.stream.Stream.empty();
+                        }
+                    })
+                    .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt())) // 최신순 정렬
+                    .limit(10) // 최대 10개
+                    .toList();
             } catch (Exception e) {
                 log.error("Failed to fetch guild notices", e);
                 return Collections.emptyList();
             }
         });
 
+        // 모든 내 길드의 활동 피드 병합 조회
         CompletableFuture<FeedPageData> activityFeedsFuture = CompletableFuture.supplyAsync(() -> {
-            if (firstGuildId == null) {
+            if (myGuildIds.isEmpty()) {
                 return FeedPageData.builder()
                     .content(Collections.emptyList())
                     .page(0)
@@ -187,14 +202,27 @@ public class BffGuildService {
                     .build();
             }
             try {
-                Page<ActivityFeedResponse> feedsPage = activityFeedService.getGuildFeeds(
-                    firstGuildId, userId, 0, activityFeedSize);
+                // 모든 내 길드의 활동 피드를 병합
+                List<ActivityFeedResponse> allFeeds = myGuildIds.stream()
+                    .flatMap(guildId -> {
+                        try {
+                            return activityFeedService.getGuildFeeds(guildId, userId, 0, activityFeedSize)
+                                .getContent().stream();
+                        } catch (Exception e) {
+                            log.warn("Failed to fetch feeds for guild {}: {}", guildId, e.getMessage());
+                            return java.util.stream.Stream.empty();
+                        }
+                    })
+                    .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt())) // 최신순 정렬
+                    .limit(activityFeedSize)
+                    .toList();
+
                 return FeedPageData.builder()
-                    .content(feedsPage.getContent())
-                    .page(feedsPage.getNumber())
-                    .size(feedsPage.getSize())
-                    .totalElements(feedsPage.getTotalElements())
-                    .totalPages(feedsPage.getTotalPages())
+                    .content(allFeeds)
+                    .page(0)
+                    .size(activityFeedSize)
+                    .totalElements(allFeeds.size())
+                    .totalPages(1)
                     .build();
             } catch (Exception e) {
                 log.error("Failed to fetch guild activity feeds", e);
