@@ -19,6 +19,7 @@ import com.epages.restdocs.apispec.SimpleType;
 import io.pinkspider.global.component.LmObjectMapper;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildHeadquartersService;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildCreateRequest;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildExperienceResponse;
@@ -79,6 +80,9 @@ class GuildControllerTest {
 
     @MockitoBean
     private GuildExperienceService guildExperienceService;
+
+    @MockitoBean
+    private GuildHeadquartersService guildHeadquartersService;
 
     private static final String MOCK_USER_ID = "test-user-123";
 
