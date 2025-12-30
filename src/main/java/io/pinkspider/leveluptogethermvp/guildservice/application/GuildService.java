@@ -18,8 +18,13 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildReposit
 import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
+import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
+import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -40,6 +45,7 @@ public class GuildService {
     private final MissionCategoryService missionCategoryService;
     private final ApplicationContext applicationContext;
     private final GuildHeadquartersService guildHeadquartersService;
+    private final UserRepository userRepository;
 
     @Transactional
     public GuildResponse createGuild(String userId, GuildCreateRequest request) {
@@ -95,7 +101,7 @@ public class GuildService {
 
         log.info("길드 생성 완료: id={}, name={}, master={}", savedGuild.getId(), savedGuild.getName(), userId);
 
-        return GuildResponse.from(savedGuild, 1);
+        return buildGuildResponseWithCategory(savedGuild, 1);
     }
 
     public GuildResponse getGuild(Long guildId, String userId) {
@@ -106,14 +112,33 @@ public class GuildService {
         }
 
         int memberCount = (int) guildMemberRepository.countActiveMembers(guildId);
-        return GuildResponse.from(guild, memberCount);
+        return buildGuildResponseWithCategory(guild, memberCount);
+    }
+
+    private GuildResponse buildGuildResponseWithCategory(Guild guild, int memberCount) {
+        String categoryName = null;
+        String categoryIcon = null;
+
+        if (guild.getCategoryId() != null) {
+            try {
+                MissionCategoryResponse category = missionCategoryService.getCategory(guild.getCategoryId());
+                if (category != null) {
+                    categoryName = category.getName();
+                    categoryIcon = category.getIcon();
+                }
+            } catch (Exception e) {
+                log.warn("카테고리 조회 실패: categoryId={}", guild.getCategoryId(), e);
+            }
+        }
+
+        return GuildResponse.from(guild, memberCount, categoryName, categoryIcon);
     }
 
     public Page<GuildResponse> getPublicGuilds(Pageable pageable) {
         return guildRepository.findPublicGuilds(pageable)
             .map(guild -> {
                 int memberCount = (int) guildMemberRepository.countActiveMembers(guild.getId());
-                return GuildResponse.from(guild, memberCount);
+                return buildGuildResponseWithCategory(guild, memberCount);
             });
     }
 
@@ -121,7 +146,7 @@ public class GuildService {
         return guildRepository.searchPublicGuilds(keyword, pageable)
             .map(guild -> {
                 int memberCount = (int) guildMemberRepository.countActiveMembers(guild.getId());
-                return GuildResponse.from(guild, memberCount);
+                return buildGuildResponseWithCategory(guild, memberCount);
             });
     }
 
@@ -130,7 +155,7 @@ public class GuildService {
             .map(member -> {
                 Guild guild = member.getGuild();
                 int memberCount = (int) guildMemberRepository.countActiveMembers(guild.getId());
-                return GuildResponse.from(guild, memberCount);
+                return buildGuildResponseWithCategory(guild, memberCount);
             })
             .toList();
     }
@@ -175,7 +200,7 @@ public class GuildService {
 
         log.info("길드 수정 완료: id={}", guildId);
         int memberCount = (int) guildMemberRepository.countActiveMembers(guildId);
-        return GuildResponse.from(guild, memberCount);
+        return buildGuildResponseWithCategory(guild, memberCount);
     }
 
     @Transactional
@@ -359,8 +384,30 @@ public class GuildService {
             throw new IllegalStateException("비공개 길드의 멤버 목록을 조회할 수 없습니다.");
         }
 
-        return guildMemberRepository.findActiveMembers(guildId).stream()
-            .map(GuildMemberResponse::from)
+        List<GuildMember> members = guildMemberRepository.findActiveMembers(guildId);
+
+        // 모든 멤버의 userId를 수집하여 한 번에 사용자 정보 조회
+        List<String> userIds = members.stream()
+            .map(GuildMember::getUserId)
+            .toList();
+
+        Map<String, Users> userMap = userRepository.findAllByIdIn(userIds).stream()
+            .collect(Collectors.toMap(Users::getId, Function.identity()));
+
+        // 멤버 정보에 사용자 정보 추가
+        return members.stream()
+            .map(member -> {
+                GuildMemberResponse response = GuildMemberResponse.from(member);
+                Users user = userMap.get(member.getUserId());
+                if (user != null) {
+                    response.setNickname(user.getDisplayName());
+                    response.setProfileImageUrl(user.getPicture());
+                    // TODO: userLevel과 equippedTitleName은 별도 서비스에서 조회 필요
+                    response.setUserLevel(1);
+                    response.setEquippedTitleName(null);
+                }
+                return response;
+            })
             .toList();
     }
 
