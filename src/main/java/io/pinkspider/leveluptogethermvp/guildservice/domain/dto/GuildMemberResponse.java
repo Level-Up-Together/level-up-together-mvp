@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Builder
@@ -24,6 +25,16 @@ public class GuildMemberResponse {
     private GuildMemberRole role;
     private GuildMemberStatus status;
     private LocalDateTime joinedAt;
+
+    // User info fields
+    @Setter
+    private String nickname;
+    @Setter
+    private String profileImageUrl;
+    @Setter
+    private Integer userLevel;
+    @Setter
+    private String equippedTitleName;
 
     public static GuildMemberResponse from(GuildMember member) {
         return GuildMemberResponse.builder()
