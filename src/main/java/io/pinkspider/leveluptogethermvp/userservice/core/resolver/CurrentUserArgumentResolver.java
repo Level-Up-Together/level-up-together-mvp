@@ -38,10 +38,6 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
 
         // SecurityContext에서 추출 (JWT 인증 시 설정됨)
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        log.debug("CurrentUser 추출: authentication={}, isAuthenticated={}, principal={}",
-            authentication != null ? authentication.getClass().getSimpleName() : "null",
-            authentication != null && authentication.isAuthenticated(),
-            authentication != null ? authentication.getPrincipal() : "null");
         if (authentication != null && authentication.isAuthenticated()
             && !"anonymousUser".equals(authentication.getPrincipal())) {
             Object principal = authentication.getPrincipal();
@@ -53,7 +49,6 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
                 userId = principal.toString();
             }
         }
-        log.debug("CurrentUser 추출 결과: userId={}, required={}", userId, required);
 
         // 필수인데 없으면 예외
         if (userId == null && required) {
