@@ -186,6 +186,13 @@ public class MissionParticipantService {
         return MissionParticipantResponse.from(participant);
     }
 
+    /**
+     * 사용자가 해당 미션에 참여 중인지 확인
+     */
+    public boolean isParticipating(Long missionId, String userId) {
+        return participantRepository.existsActiveParticipation(missionId, userId);
+    }
+
     private Mission findMissionById(Long missionId) {
         return missionRepository.findById(missionId)
             .orElseThrow(() -> new IllegalArgumentException("미션을 찾을 수 없습니다: " + missionId));

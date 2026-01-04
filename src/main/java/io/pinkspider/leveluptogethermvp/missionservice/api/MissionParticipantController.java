@@ -96,6 +96,15 @@ public class MissionParticipantController {
         return ResponseEntity.ok(ApiResult.<MissionParticipantResponse>builder().value(response).build());
     }
 
+    @GetMapping("/{missionId}/is-participating")
+    public ResponseEntity<ApiResult<Boolean>> isParticipating(
+        @PathVariable Long missionId,
+        @CurrentUser String userId) {
+
+        boolean isParticipating = participantService.isParticipating(missionId, userId);
+        return ResponseEntity.ok(ApiResult.<Boolean>builder().value(isParticipating).build());
+    }
+
     @GetMapping("/my-participations")
     public ResponseEntity<ApiResult<List<MissionParticipantResponse>>> getMyParticipations(
         @CurrentUser String userId) {
