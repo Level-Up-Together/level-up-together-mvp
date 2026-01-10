@@ -20,6 +20,11 @@
 Multi-Service Monolith 구조로, 단일 배포 단위 내에서 서비스별로 독립된 데이터베이스를 사용합니다.
 MSA 전환을 대비하여 각 서비스가 자체 데이터베이스와 트랜잭션 매니저를 가지고 있습니다.
 
+**주요 아키텍처 특징:**
+- **Event-Driven**: Spring Events를 활용한 서비스 간 느슨한 결합
+- **Redis Caching**: 자주 조회되는 데이터의 캐싱으로 성능 최적화
+- **Saga Pattern**: 분산 트랜잭션 관리 (MSA 전환 대비)
+
 ### 아키텍처 다이어그램
 
 ```mermaid
@@ -128,10 +133,13 @@ graph LR
         NOTIF["notificationservice"]
         ADMIN["adminservice"]
         META["metaservice"]
+        GAMIF["gamificationservice"]
     end
 
     subgraph "Infrastructure"
         SAGA["saga"]
+        EVENTS["Spring Events"]
+        CACHE["Redis Cache"]
     end
 
     BFF --> USER
@@ -143,34 +151,104 @@ graph LR
     MISSION --> USER
     MISSION --> FEED
     MISSION --> SAGA
+    MISSION -.->|event| GAMIF
 
-    GUILD --> USER
-    GUILD --> FEED
+    GUILD -.->|event| GAMIF
+    GUILD --> CACHE
 
-    FEED --> USER
+    FEED --> CACHE
 
     NOTIF --> USER
 
     USER --> META
+    USER --> CACHE
     MISSION --> META
     GUILD --> META
 
+    GAMIF -.->|event| NOTIF
+
     style BFF fill:#e2e8f0,stroke:#4a5568
     style SAGA fill:#fed7d7,stroke:#c53030
+    style EVENTS fill:#fef3c7,stroke:#d97706
+    style CACHE fill:#dbeafe,stroke:#2563eb
 ```
+
+### Event-Driven 아키텍처
+
+서비스 간 직접 의존성을 줄이고 느슨한 결합을 위해 Spring Events를 활용합니다.
+
+```mermaid
+graph LR
+    subgraph "Event Publishers"
+        GUILD_SVC["GuildService"]
+        MISSION_SVC["MissionService"]
+        FRIEND_SVC["FriendService"]
+    end
+
+    subgraph "Events"
+        GJE["GuildJoinedEvent"]
+        GME["GuildMasterAssignedEvent"]
+        FRE["FriendRequestEvent"]
+        MCE["MissionCompletedEvent"]
+    end
+
+    subgraph "Event Listeners"
+        ACH_LISTENER["AchievementEventListener"]
+        NOTIF_LISTENER["NotificationEventListener"]
+    end
+
+    GUILD_SVC -->|publish| GJE
+    GUILD_SVC -->|publish| GME
+    FRIEND_SVC -->|publish| FRE
+    MISSION_SVC -->|publish| MCE
+
+    GJE -->|@TransactionalEventListener| ACH_LISTENER
+    GME -->|@TransactionalEventListener| ACH_LISTENER
+    FRE -->|@TransactionalEventListener| NOTIF_LISTENER
+    MCE -->|@TransactionalEventListener| NOTIF_LISTENER
+
+    style GJE fill:#fef3c7,stroke:#d97706
+    style GME fill:#fef3c7,stroke:#d97706
+    style FRE fill:#fef3c7,stroke:#d97706
+    style MCE fill:#fef3c7,stroke:#d97706
+```
+
+**주요 이벤트:**
+| 이벤트 | 발행 서비스 | 리스너 | 설명 |
+|--------|------------|--------|------|
+| `GuildJoinedEvent` | GuildService | AchievementEventListener | 길드 가입 시 업적 확인 |
+| `GuildMasterAssignedEvent` | GuildService | AchievementEventListener | 길드장 지정 시 업적 확인 |
+| `FriendRequestAcceptedEvent` | FriendService | NotificationEventListener | 친구 수락 알림 |
+| `MissionCompletedEvent` | MissionService | NotificationEventListener | 미션 완료 알림 |
+
+### 캐싱 전략
+
+Redis를 활용한 캐싱으로 서비스 간 호출을 최소화하고 성능을 최적화합니다.
+
+| 캐시 서비스 | 캐시 키 | TTL | 설명 |
+|------------|--------|-----|------|
+| `UserProfileCacheService` | `userProfile:{userId}` | 5분 | 유저 프로필 정보 (nickname, level, title) |
+| `FriendCacheService` | `friendIds:{userId}` | 10분 | 친구 ID 목록 |
+| `TitleService` | `userTitleInfo:{userId}` | 5분 | 장착된 칭호 정보 |
+| `MissionCategoryService` | `missionCategories:{categoryId}` | 1시간 | 미션 카테고리 정보 |
+
+**캐시 무효화:**
+- 데이터 수정/삭제 시 `@CacheEvict` 자동 무효화
+- 적절한 TTL로 캐시-DB 불일치 최소화
 
 ### 디렉토리 구조
 
 ```
 src/main/java/io/pinkspider/
 ├── leveluptogethermvp/
-│   ├── userservice/          # 인증, OAuth2, JWT, 사용자 관리, 경험치/레벨
+│   ├── userservice/          # 인증, OAuth2, JWT, 사용자 관리
 │   ├── missionservice/       # 미션 정의, 진행 관리, Saga 오케스트레이션
 │   ├── guildservice/         # 길드 생성, 멤버 관리, 길드 경험치
 │   ├── metaservice/          # 공통코드, 메타데이터, Redis 캐싱
 │   ├── feedservice/          # 활동 피드, 좋아요, 댓글
 │   ├── notificationservice/  # 알림 관리, 푸시 알림
 │   ├── adminservice/         # 추천 콘텐츠, 홈 배너 관리
+│   ├── gamificationservice/  # 칭호, 업적, 경험치, 출석
 │   ├── noticeservice/        # 공지사항 관리
 │   ├── supportservice/       # 고객지원
 │   ├── bffservice/           # Backend-for-Frontend 집계 레이어
@@ -178,7 +256,10 @@ src/main/java/io/pinkspider/
 │   └── profanity/            # 비속어 필터링
 └── global/
     ├── config/
-    │   └── datasource/       # 멀티 데이터소스 설정 (8개 DB)
+    │   └── datasource/       # 멀티 데이터소스 설정 (9개 DB)
+    ├── event/                # Spring Events (서비스 간 이벤트 통신)
+    │   ├── listener/         # @TransactionalEventListener 핸들러
+    │   └── *.java            # 이벤트 record 클래스
     ├── saga/                 # Saga 패턴 인프라 (MSA 전환 대비)
     ├── exception/            # 공통 예외 처리
     ├── security/             # JWT, OAuth2 보안 필터
@@ -346,12 +427,17 @@ erDiagram
 - OAuth2 소셜 로그인 (Google, Kakao, Apple)
 - JWT 기반 토큰 인증 (멀티 디바이스 지원)
 - 약관 동의 관리
-- 경험치/레벨 시스템
 - 친구 관리 (친구 요청/수락/거절)
-- 업적/칭호 시스템 (LEFT+RIGHT 조합 방식)
-- 출석 체크 (연속 출석 보너스)
 - 퀘스트 (일일/주간)
 - 마이페이지 (프로필, 통계)
+- `FriendCacheService`: 친구 목록 캐싱
+
+### 게이미피케이션 (Gamification Service)
+- 경험치/레벨 시스템
+- 업적/칭호 시스템 (LEFT+RIGHT 조합 방식)
+- 출석 체크 (연속 출석 보너스)
+- 사용자 통계 관리
+- `UserProfileCacheService`: 유저 프로필 캐싱 (nickname, level, title)
 
 ### 미션 (Mission Service)
 - 미션 생성 및 관리 (일일/주간/월간 인터벌)
@@ -370,19 +456,23 @@ erDiagram
 - 길드 채팅
 - 길드 거점 시스템 (지도 기반)
 - 길드원 칭호 색상 표시
+- Event-Driven: 가입/길드장 지정 시 업적 이벤트 발행
 
 ### 활동 피드 (Feed Service)
 - 활동 피드 생성 및 조회
-- 피드 좋아요/댓글
+- 피드 좋아요/댓글 (댓글 작성자 레벨 표시)
 - 피드 공개 범위 설정 (전체/친구/길드/비공개)
 - 미션 완료 시 자동 피드 생성
+- 피드 삭제 (본인 피드만)
 - 피드 검색 기능
+- `UserProfileCacheService` 활용한 유저 정보 캐싱
 
 ### 알림 (Notification Service)
 - 인앱 알림 관리
 - 푸시 알림 (FCM)
 - 알림 설정 (타입별 on/off)
 - 알림 읽음 처리
+- Event-Driven: `@TransactionalEventListener`로 알림 이벤트 수신
 
 ### 관리 (Admin Service)
 - 홈 배너 관리
@@ -444,6 +534,19 @@ erDiagram
 | `level-up-together-admin-frontend` | 어드민 프론트엔드 (Next.js) |
 | `level-up-together-sql` | SQL 스크립트 (DDL/DML) |
 | `config-repository` | Spring Cloud Config 저장소 |
+
+## 최근 업데이트
+
+### 2025-01 Event-Driven 전환
+- Spring Events 기반 서비스 간 통신 구현
+- Redis 캐싱 서비스 추가 (UserProfileCacheService, FriendCacheService)
+- GuildService → AchievementService 직접 의존성 제거
+- `@TransactionalEventListener(phase = AFTER_COMMIT)` 패턴 적용
+
+### 2025-01 피드 기능 개선
+- 댓글 작성자 레벨 표시 기능 추가 (`user_level` 필드)
+- 피드 삭제 기능 (본인 피드만)
+- 피드 작성자 프로필 캐싱 적용
 
 ## 개발 서버
 - https://dev.level-up-together.com:3000
