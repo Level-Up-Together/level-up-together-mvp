@@ -2,6 +2,7 @@ package io.pinkspider.global.saga;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -137,11 +138,12 @@ class SagaOrchestratorTest {
         void execute_retryOnFailure() {
             // given
             SagaStep<TestContext> step1 = mock(SagaStep.class);
-            when(step1.getName()).thenReturn("RetryStep");
-            when(step1.shouldExecute()).thenReturn(ctx -> true);
-            when(step1.getMaxRetries()).thenReturn(2);
-            when(step1.getRetryDelayMs()).thenReturn(10L);
-            when(step1.isMandatory()).thenReturn(true);
+            lenient().when(step1.getName()).thenReturn("RetryStep");
+            lenient().when(step1.shouldExecute()).thenReturn(ctx -> true);
+            lenient().when(step1.getMaxRetries()).thenReturn(2);
+            lenient().when(step1.getRetryDelayMs()).thenReturn(10L);
+            lenient().when(step1.isMandatory()).thenReturn(true);
+            lenient().when(step1.compensate(any())).thenReturn(SagaStepResult.success());
             when(step1.execute(any()))
                 .thenReturn(SagaStepResult.failure("첫 번째 시도 실패"))
                 .thenReturn(SagaStepResult.failure("두 번째 시도 실패"))
@@ -203,32 +205,32 @@ class SagaOrchestratorTest {
 
     private SagaStep<TestContext> createMockStep(String name, boolean success, boolean mandatory) {
         SagaStep<TestContext> step = mock(SagaStep.class);
-        when(step.getName()).thenReturn(name);
-        when(step.shouldExecute()).thenReturn(ctx -> true);
-        when(step.getMaxRetries()).thenReturn(0);
-        when(step.getRetryDelayMs()).thenReturn(0L);
-        when(step.isMandatory()).thenReturn(mandatory);
+        lenient().when(step.getName()).thenReturn(name);
+        lenient().when(step.shouldExecute()).thenReturn(ctx -> true);
+        lenient().when(step.getMaxRetries()).thenReturn(0);
+        lenient().when(step.getRetryDelayMs()).thenReturn(0L);
+        lenient().when(step.isMandatory()).thenReturn(mandatory);
 
         if (success) {
-            when(step.execute(any())).thenReturn(SagaStepResult.success());
+            lenient().when(step.execute(any())).thenReturn(SagaStepResult.success());
         } else {
-            when(step.execute(any())).thenReturn(SagaStepResult.failure("Step failed"));
+            lenient().when(step.execute(any())).thenReturn(SagaStepResult.failure("Step failed"));
         }
 
-        when(step.compensate(any())).thenReturn(SagaStepResult.success());
+        lenient().when(step.compensate(any())).thenReturn(SagaStepResult.success());
 
         return step;
     }
 
     private SagaStep<TestContext> createConditionalMockStep(String name, boolean shouldExecute) {
         SagaStep<TestContext> step = mock(SagaStep.class);
-        when(step.getName()).thenReturn(name);
-        when(step.shouldExecute()).thenReturn(ctx -> shouldExecute);
-        when(step.getMaxRetries()).thenReturn(0);
-        when(step.getRetryDelayMs()).thenReturn(0L);
-        when(step.isMandatory()).thenReturn(true);
-        when(step.execute(any())).thenReturn(SagaStepResult.success());
-        when(step.compensate(any())).thenReturn(SagaStepResult.success());
+        lenient().when(step.getName()).thenReturn(name);
+        lenient().when(step.shouldExecute()).thenReturn(ctx -> shouldExecute);
+        lenient().when(step.getMaxRetries()).thenReturn(0);
+        lenient().when(step.getRetryDelayMs()).thenReturn(0L);
+        lenient().when(step.isMandatory()).thenReturn(true);
+        lenient().when(step.execute(any())).thenReturn(SagaStepResult.success());
+        lenient().when(step.compensate(any())).thenReturn(SagaStepResult.success());
         return step;
     }
 

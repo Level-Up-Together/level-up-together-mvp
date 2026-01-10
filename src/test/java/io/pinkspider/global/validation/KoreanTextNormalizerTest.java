@@ -110,17 +110,17 @@ class KoreanTextNormalizerTest {
         }
 
         @Test
-        @DisplayName("영어는 그대로 유지된다")
-        void keepEnglish() {
+        @DisplayName("영어는 무시되고 한글 초성만 추출된다")
+        void extractOnlyKoreanChosung() {
             String result = normalizer.extractChosung("hello안녕");
-            assertThat(result).isEqualTo("helloㅇㄴ");
+            assertThat(result).isEqualTo("ㅇㄴ");
         }
 
         @Test
-        @DisplayName("숫자는 그대로 유지된다")
-        void keepNumbers() {
+        @DisplayName("숫자는 무시되고 한글 초성만 추출된다")
+        void extractOnlyKoreanChosungIgnoringNumbers() {
             String result = normalizer.extractChosung("안녕123");
-            assertThat(result).isEqualTo("ㅇㄴ123");
+            assertThat(result).isEqualTo("ㅇㄴ");
         }
 
         @Test
