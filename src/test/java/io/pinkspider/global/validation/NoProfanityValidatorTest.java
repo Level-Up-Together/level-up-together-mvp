@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,11 +50,11 @@ class NoProfanityValidatorTest {
         int levenshteinThreshold
     ) {
         NoProfanity annotation = mock(NoProfanity.class);
-        when(annotation.message()).thenReturn(message);
-        when(annotation.mode()).thenReturn(mode);
-        when(annotation.fieldName()).thenReturn(fieldName);
-        when(annotation.checkKoreanJamo()).thenReturn(checkKoreanJamo);
-        when(annotation.levenshteinThreshold()).thenReturn(levenshteinThreshold);
+        lenient().when(annotation.message()).thenReturn(message);
+        lenient().when(annotation.mode()).thenReturn(mode);
+        lenient().when(annotation.fieldName()).thenReturn(fieldName);
+        lenient().when(annotation.checkKoreanJamo()).thenReturn(checkKoreanJamo);
+        lenient().when(annotation.levenshteinThreshold()).thenReturn(levenshteinThreshold);
         return annotation;
     }
 

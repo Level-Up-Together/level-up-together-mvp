@@ -180,7 +180,6 @@ tasks.named('test') {
     systemProperty 'file.encoding', 'UTF-8'
 
     useJUnitPlatform {
-        exclude("io/pinkspider/global/**/*.class")
         excludeTags 'excluded'
     }
 }
