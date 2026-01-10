@@ -56,7 +56,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Security**: JWT filter (`JwtAuthenticationFilter`), OAuth2 providers
 - **Caching**: Redis with Lettuce client (two templates: `redisTemplateForString`, `redisTemplateForObject`)
 - **Messaging**: Kafka topics (loggerTopic, httpLoggerTopic, alimTalkTopic, appPushTopic, emailTopic, userCommunicationTopic)
-- **Events**: Spring Events for notification system (`io.pinkspider.global.event`)
+- **Events**: Spring Events for notification system and cross-service communication (`io.pinkspider.global.event`)
+  - `@TransactionalEventListener(phase = AFTER_COMMIT)` for event handlers
+  - Event records: `GuildJoinedEvent`, `GuildMasterAssignedEvent`, `FriendRequestEvent`, etc.
+- **Caching**: Redis caching with `@Cacheable`/`@CacheEvict` annotations
+  - `FriendCacheService` - 친구 목록 캐싱 (TTL 10분)
+  - `UserProfileCacheService` - 유저 프로필 캐싱 (TTL 5분)
+  - `TitleService` - 칭호 정보 캐싱 (TTL 5분)
+  - `MissionCategoryService` - 카테고리 캐싱 (TTL 1시간)
 - **Exception Handling**: Extend `CustomException` from `io.pinkspider.global.exception`
 - **Encryption**: `CryptoConverter` for sensitive field encryption
 - **Translation**: Google Translation API integration (`io.pinkspider.global.translation`)
@@ -206,9 +213,6 @@ class YourServiceTest {
 - 테스트: JUnit 5 + Mockito
 
 ## 작업 완료 시 규칙
-- 작업이 끝나면 반드시 변경 있는 프로젝트의 커밋 메시지를 생성해줄 것(커밋은 내가 직접)
-- 커밋 메시지 형식: `feat|fix|refactor: 간단한 설명`
-- 한글로 커밋 메시지 작성
 - 새로 작성된 코드에 대한 테스트 코드 병행 작성 필수
 - 필요시 CLAUDE.md, README.md 업데이트
 
