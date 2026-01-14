@@ -16,6 +16,7 @@ public record SeasonRankRewardResponse(
     String rankingTypeDisplay,
     Long titleId,
     String titleName,
+    String titleRarity,
     Integer sortOrder,
     Boolean isActive
 ) {
@@ -31,6 +32,7 @@ public record SeasonRankRewardResponse(
             reward.getRankingTypeDisplay(),
             reward.getTitleId(),
             reward.getTitleName(),
+            reward.getTitleRarity(),
             reward.getSortOrder(),
             reward.getIsActive()
         );
