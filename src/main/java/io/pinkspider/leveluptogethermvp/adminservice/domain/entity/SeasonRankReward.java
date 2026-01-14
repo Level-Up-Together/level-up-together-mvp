@@ -73,6 +73,10 @@ public class SeasonRankReward extends LocalDateTimeBaseEntity {
     @Comment("보상 칭호 이름 (비정규화)")
     private String titleName;
 
+    @Column(name = "title_rarity", length = 20)
+    @Comment("보상 칭호 희귀도 (비정규화)")
+    private String titleRarity;
+
     @Column(name = "category_id")
     @Comment("카테고리 ID (NULL이면 전체 랭킹)")
     private Long categoryId;
