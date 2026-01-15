@@ -3,7 +3,6 @@ package io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserAchievement;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AchievementType;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,7 +18,7 @@ public class UserAchievementResponse {
 
     private Long id;
     private Long achievementId;
-    private AchievementType achievementType;
+    private String code;
     private String name;
     private String description;
     private String categoryCode;
@@ -40,7 +39,7 @@ public class UserAchievementResponse {
         return UserAchievementResponse.builder()
             .id(userAchievement.getId())
             .achievementId(achievement.getId())
-            .achievementType(achievement.getAchievementType())
+            .code(achievement.getCode())
             .name(achievement.getName())
             .description(achievement.getDescription())
             .categoryCode(achievement.getCategoryCode())

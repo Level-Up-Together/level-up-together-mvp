@@ -2,6 +2,7 @@ package io.pinkspider.leveluptogethermvp.bffservice.application;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.application.SeasonRankingService;
+import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse.FeedPageData;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse.GuildPageData;
@@ -41,6 +42,7 @@ public class BffHomeService {
     private final GuildService guildService;
     private final NoticeService noticeService;
     private final SeasonRankingService seasonRankingService;
+    private final AchievementService achievementService;
 
     /**
      * 홈 화면에 필요한 모든 데이터를 한 번에 조회합니다.
@@ -69,6 +71,15 @@ public class BffHomeService {
      */
     public HomeDataResponse getHomeData(String userId, Long categoryId, int feedPage, int feedSize, int publicGuildSize, String locale) {
         log.info("BFF getHomeData called: userId={}, categoryId={}, feedPage={}, feedSize={}, locale={}", userId, categoryId, feedPage, feedSize, locale);
+
+        // 업적 동기화 (fire-and-forget) - 기존 유저 업적 소급 적용 및 자동 보상 수령
+        CompletableFuture.runAsync(() -> {
+            try {
+                achievementService.syncUserAchievements(userId);
+            } catch (Exception e) {
+                log.error("업적 동기화 중 오류 발생: userId={}, error={}", userId, e.getMessage());
+            }
+        });
 
         // 병렬로 모든 데이터 조회
         CompletableFuture<FeedPageData> feedsFuture = CompletableFuture.supplyAsync(() -> {

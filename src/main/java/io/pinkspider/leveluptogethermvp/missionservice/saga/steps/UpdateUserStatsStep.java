@@ -58,16 +58,10 @@ public class UpdateUserStatsStep implements SagaStep<MissionCompletionContext> {
             // 미션 완료 기록
             userStatsService.recordMissionCompletion(userId, isGuildMission);
 
-            // 업적 체크
-            UserStats updatedStats = userStatsService.getOrCreateUserStats(userId);
-            achievementService.checkMissionAchievements(
-                userId,
-                updatedStats.getTotalMissionCompletions(),
-                isGuildMission);
-            achievementService.checkStreakAchievements(
-                userId,
-                updatedStats.getCurrentStreak());
+            // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
+            achievementService.checkAchievementsByDataSource(userId, "USER_STATS");
 
+            UserStats updatedStats = userStatsService.getOrCreateUserStats(userId);
             log.info("User stats updated: userId={}, totalCompletions={}, streak={}",
                 userId, updatedStats.getTotalMissionCompletions(), updatedStats.getCurrentStreak());
 
