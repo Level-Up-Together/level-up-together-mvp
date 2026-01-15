@@ -104,12 +104,10 @@ public class FriendService {
             userId, friendship.getUserId(), accepterNickname, friendship.getId()
         ));
 
-        // 양쪽 모두 친구 업적 체크
+        // 양쪽 모두 친구 업적 체크 - 동적 Strategy 패턴 사용
         try {
-            int accepterFriendCount = friendshipRepository.countFriends(userId);
-            int requesterFriendCount = friendshipRepository.countFriends(friendship.getUserId());
-            achievementService.checkFriendAchievements(userId, accepterFriendCount);
-            achievementService.checkFriendAchievements(friendship.getUserId(), requesterFriendCount);
+            achievementService.checkAchievementsByDataSource(userId, "FRIEND_SERVICE");
+            achievementService.checkAchievementsByDataSource(friendship.getUserId(), "FRIEND_SERVICE");
         } catch (Exception e) {
             log.warn("친구 업적 체크 실패: {}", e.getMessage());
         }

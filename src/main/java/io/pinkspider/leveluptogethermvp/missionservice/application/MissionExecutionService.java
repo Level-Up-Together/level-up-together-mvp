@@ -228,9 +228,8 @@ public class MissionExecutionService {
         boolean isGuildMission = mission.isGuildMission();
         try {
             userStatsService.recordMissionCompletion(userId, isGuildMission);
-            var userStats = userStatsService.getOrCreateUserStats(userId);
-            achievementService.checkMissionAchievements(userId, userStats.getTotalMissionCompletions(), isGuildMission);
-            achievementService.checkStreakAchievements(userId, userStats.getCurrentStreak());
+            // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
+            achievementService.checkAchievementsByDataSource(userId, "USER_STATS");
         } catch (Exception e) {
             log.warn("업적 업데이트 실패: userId={}, error={}", userId, e.getMessage());
         }
@@ -524,9 +523,8 @@ public class MissionExecutionService {
             // 미션 전체 완료 업적 체크
             try {
                 userStatsService.recordMissionFullCompletion(participant.getUserId());
-                var userStats = userStatsService.getOrCreateUserStats(participant.getUserId());
-                achievementService.checkMissionFullCompletionAchievements(
-                    participant.getUserId(), userStats.getTotalMissionFullCompletions());
+                // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
+                achievementService.checkAchievementsByDataSource(participant.getUserId(), "USER_STATS");
             } catch (Exception e) {
                 log.warn("미션 전체 완료 업적 업데이트 실패: userId={}, error={}", participant.getUserId(), e.getMessage());
             }

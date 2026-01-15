@@ -75,10 +75,10 @@ public class UserExperienceService {
 
         if (levelAfter > levelBefore) {
             log.info("레벨 업! userId={}, {} -> {}", userId, levelBefore, levelAfter);
-            // 레벨 업적 체크 (순환 의존성 방지를 위해 ApplicationContext 사용)
+            // 동적 Strategy 패턴으로 USER_EXPERIENCE 관련 업적 체크 (순환 의존성 방지를 위해 ApplicationContext 사용)
             try {
                 AchievementService achievementService = applicationContext.getBean(AchievementService.class);
-                achievementService.checkLevelAchievements(userId, levelAfter);
+                achievementService.checkAchievementsByDataSource(userId, "USER_EXPERIENCE");
             } catch (Exception e) {
                 log.warn("레벨 업적 체크 실패: userId={}, level={}, error={}", userId, levelAfter, e.getMessage());
             }
