@@ -9,7 +9,6 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strategy
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strategy.AchievementCheckStrategyRegistry;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserAchievement;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AchievementType;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.AchievementRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserAchievementRepository;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
@@ -80,69 +79,8 @@ public class AchievementService {
             .toList();
     }
 
-    // 업적 진행도 업데이트
-    @Transactional
-    public void updateAchievementProgress(String userId, AchievementType type, int count) {
-        Achievement achievement = achievementRepository.findByAchievementType(type).orElse(null);
-        if (achievement == null || !achievement.getIsActive()) {
-            return;
-        }
-
-        UserAchievement userAchievement = userAchievementRepository
-            .findByUserIdAndAchievementType(userId, type)
-            .orElseGet(() -> createUserAchievement(userId, achievement));
-
-        if (userAchievement.getIsCompleted()) {
-            return; // 이미 완료된 업적
-        }
-
-        userAchievement.setCount(count);
-
-        if (userAchievement.getIsCompleted()) {
-            userStatsService.recordAchievementCompleted(userId);
-            log.info("업적 달성! userId={}, achievement={}", userId, type.getDisplayName());
-
-            // 업적 달성 이벤트 발행 (알림 발송용)
-            eventPublisher.publishEvent(new AchievementCompletedEvent(
-                userId,
-                achievement.getId(),
-                achievement.getName()
-            ));
-        }
-    }
-
-    @Transactional
-    public void incrementAchievementProgress(String userId, AchievementType type) {
-        Achievement achievement = achievementRepository.findByAchievementType(type).orElse(null);
-        if (achievement == null || !achievement.getIsActive()) {
-            return;
-        }
-
-        UserAchievement userAchievement = userAchievementRepository
-            .findByUserIdAndAchievementType(userId, type)
-            .orElseGet(() -> createUserAchievement(userId, achievement));
-
-        if (userAchievement.getIsCompleted()) {
-            return;
-        }
-
-        userAchievement.incrementCount();
-
-        if (userAchievement.getIsCompleted()) {
-            userStatsService.recordAchievementCompleted(userId);
-            log.info("업적 달성! userId={}, achievement={}", userId, type.getDisplayName());
-
-            // 업적 달성 이벤트 발행 (알림 발송용)
-            eventPublisher.publishEvent(new AchievementCompletedEvent(
-                userId,
-                achievement.getId(),
-                achievement.getName()
-            ));
-        }
-    }
-
     // 업적 보상 수령
-    @Transactional
+    @Transactional(transactionManager = "gamificationTransactionManager")
     public UserAchievementResponse claimReward(String userId, Long achievementId) {
         UserAchievement userAchievement = userAchievementRepository
             .findByUserIdAndAchievementId(userId, achievementId)
@@ -173,72 +111,48 @@ public class AchievementService {
         return UserAchievementResponse.from(userAchievement);
     }
 
-    // 미션 관련 업적 체크
-    @Transactional
-    public void checkMissionAchievements(String userId, int totalCompletions, boolean isGuildMission) {
-        // 일반 미션 완료 업적
-        checkAndUpdateAchievement(userId, AchievementType.FIRST_MISSION_COMPLETE, totalCompletions);
-        checkAndUpdateAchievement(userId, AchievementType.MISSION_COMPLETE_10, totalCompletions);
-        checkAndUpdateAchievement(userId, AchievementType.MISSION_COMPLETE_50, totalCompletions);
-        checkAndUpdateAchievement(userId, AchievementType.MISSION_COMPLETE_100, totalCompletions);
-        checkAndUpdateAchievement(userId, AchievementType.MISSION_COMPLETE_500, totalCompletions);
+    // =============================================
+    // 업적 동기화 (홈 접근 시 호출)
+    // =============================================
 
-        // 길드 미션 업적
-        if (isGuildMission) {
-            var stats = userStatsService.getOrCreateUserStats(userId);
-            int guildCompletions = stats.getTotalGuildMissionCompletions();
-            checkAndUpdateAchievement(userId, AchievementType.GUILD_MISSION_COMPLETE_10, guildCompletions);
-            checkAndUpdateAchievement(userId, AchievementType.GUILD_MISSION_COMPLETE_50, guildCompletions);
-            checkAndUpdateAchievement(userId, AchievementType.GUILD_MISSION_COMPLETE_100, guildCompletions);
+    /**
+     * 유저의 모든 업적을 체크하고 완료된 업적의 보상을 자동으로 수령합니다.
+     * 홈 화면 접근 시 호출되어 기존 유저들의 업적을 소급 적용합니다.
+     * @param userId 사용자 ID
+     */
+    @Transactional(transactionManager = "gamificationTransactionManager")
+    public void syncUserAchievements(String userId) {
+        log.info("업적 동기화 시작: userId={}", userId);
+
+        try {
+            // 동적 Strategy 패턴을 사용하여 모든 업적 체크
+            checkAllDynamicAchievements(userId);
+
+            // 완료되었지만 보상을 받지 않은 업적 자동 수령
+            autoClaimRewards(userId);
+
+            log.info("업적 동기화 완료: userId={}", userId);
+        } catch (Exception e) {
+            log.error("업적 동기화 실패: userId={}, error={}", userId, e.getMessage(), e);
         }
     }
 
-    @Transactional
-    public void checkMissionFullCompletionAchievements(String userId, int totalFullCompletions) {
-        checkAndUpdateAchievement(userId, AchievementType.MISSION_FULL_COMPLETE_1, totalFullCompletions);
-        checkAndUpdateAchievement(userId, AchievementType.MISSION_FULL_COMPLETE_10, totalFullCompletions);
-    }
+    /**
+     * 완료되었지만 보상을 받지 않은 업적의 보상을 자동으로 수령합니다.
+     */
+    @Transactional(transactionManager = "gamificationTransactionManager")
+    public void autoClaimRewards(String userId) {
+        List<UserAchievement> claimableAchievements = userAchievementRepository.findClaimableByUserId(userId);
 
-    @Transactional
-    public void checkStreakAchievements(String userId, int currentStreak) {
-        checkAndUpdateAchievement(userId, AchievementType.STREAK_3_DAYS, currentStreak);
-        checkAndUpdateAchievement(userId, AchievementType.STREAK_7_DAYS, currentStreak);
-        checkAndUpdateAchievement(userId, AchievementType.STREAK_14_DAYS, currentStreak);
-        checkAndUpdateAchievement(userId, AchievementType.STREAK_30_DAYS, currentStreak);
-        checkAndUpdateAchievement(userId, AchievementType.STREAK_100_DAYS, currentStreak);
-    }
-
-    @Transactional
-    public void checkLevelAchievements(String userId, int level) {
-        checkAndUpdateAchievement(userId, AchievementType.REACH_LEVEL_5, level);
-        checkAndUpdateAchievement(userId, AchievementType.REACH_LEVEL_10, level);
-        checkAndUpdateAchievement(userId, AchievementType.REACH_LEVEL_20, level);
-        checkAndUpdateAchievement(userId, AchievementType.REACH_LEVEL_50, level);
-        checkAndUpdateAchievement(userId, AchievementType.REACH_LEVEL_100, level);
-    }
-
-    @Transactional
-    public void checkGuildJoinAchievement(String userId) {
-        incrementAchievementProgress(userId, AchievementType.FIRST_GUILD_JOIN);
-    }
-
-    @Transactional
-    public void checkGuildMasterAchievement(String userId) {
-        incrementAchievementProgress(userId, AchievementType.GUILD_MASTER);
-    }
-
-    // 소셜 관련 업적 체크
-    @Transactional
-    public void checkFriendAchievements(String userId, int totalFriends) {
-        checkAndUpdateAchievement(userId, AchievementType.FIRST_FRIEND, totalFriends);
-        checkAndUpdateAchievement(userId, AchievementType.FRIENDS_10, totalFriends);
-        checkAndUpdateAchievement(userId, AchievementType.FRIENDS_50, totalFriends);
-    }
-
-    @Transactional
-    public void checkLikeAchievements(String userId, int totalLikes) {
-        checkAndUpdateAchievement(userId, AchievementType.FIRST_LIKE, totalLikes);
-        checkAndUpdateAchievement(userId, AchievementType.LIKES_100, totalLikes);
+        for (UserAchievement ua : claimableAchievements) {
+            try {
+                claimReward(userId, ua.getAchievement().getId());
+                log.info("업적 보상 자동 수령: userId={}, achievement={}", userId, ua.getAchievement().getName());
+            } catch (Exception e) {
+                log.warn("업적 보상 자동 수령 실패: userId={}, achievement={}, error={}",
+                    userId, ua.getAchievement().getName(), e.getMessage());
+            }
+        }
     }
 
     // =============================================
@@ -250,7 +164,7 @@ public class AchievementService {
      * @param userId 사용자 ID
      * @param dataSource 데이터 소스 (USER_STATS, USER_EXPERIENCE, FRIEND_SERVICE, GUILD_SERVICE, FEED_SERVICE)
      */
-    @Transactional
+    @Transactional(transactionManager = "gamificationTransactionManager")
     public void checkAchievementsByDataSource(String userId, String dataSource) {
         AchievementCheckStrategy strategy = strategyRegistry.getStrategy(dataSource);
         if (strategy == null) {
@@ -270,7 +184,7 @@ public class AchievementService {
      * 이벤트 발생 시 전체 업적을 체크하는 용도로 사용합니다.
      * @param userId 사용자 ID
      */
-    @Transactional
+    @Transactional(transactionManager = "gamificationTransactionManager")
     public void checkAllDynamicAchievements(String userId) {
         List<Achievement> achievements = achievementRepository.findAllWithCheckLogicAndIsActiveTrue();
 
@@ -335,10 +249,6 @@ public class AchievementService {
                 }
             }
         }
-    }
-
-    private void checkAndUpdateAchievement(String userId, AchievementType type, int count) {
-        updateAchievementProgress(userId, type, count);
     }
 
     private UserAchievement createUserAchievement(String userId, Achievement achievement) {

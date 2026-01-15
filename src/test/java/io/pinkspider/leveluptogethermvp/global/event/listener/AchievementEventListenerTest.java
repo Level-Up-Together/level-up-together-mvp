@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.global.event.listener;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
@@ -42,7 +43,7 @@ class AchievementEventListenerTest {
             eventListener.handleGuildJoined(event);
 
             // then
-            verify(achievementService).checkGuildJoinAchievement("user-123");
+            verify(achievementService).checkAchievementsByDataSource("user-123", "GUILD_SERVICE");
         }
 
         @Test
@@ -53,7 +54,7 @@ class AchievementEventListenerTest {
                 "user-123", 1L, "테스트 길드"
             );
             doThrow(new RuntimeException("업적 체크 실패"))
-                .when(achievementService).checkGuildJoinAchievement(any());
+                .when(achievementService).checkAchievementsByDataSource(any(), eq("GUILD_SERVICE"));
 
             // when & then - 예외가 발생하지 않아야 함
             eventListener.handleGuildJoined(event);
@@ -76,7 +77,7 @@ class AchievementEventListenerTest {
             eventListener.handleGuildMasterAssigned(event);
 
             // then
-            verify(achievementService).checkGuildMasterAchievement("user-123");
+            verify(achievementService).checkAchievementsByDataSource("user-123", "GUILD_SERVICE");
         }
 
         @Test
@@ -87,7 +88,7 @@ class AchievementEventListenerTest {
                 "user-123", 1L, "테스트 길드"
             );
             doThrow(new RuntimeException("업적 체크 실패"))
-                .when(achievementService).checkGuildMasterAchievement(any());
+                .when(achievementService).checkAchievementsByDataSource(any(), eq("GUILD_SERVICE"));
 
             // when & then - 예외가 발생하지 않아야 함
             eventListener.handleGuildMasterAssigned(event);

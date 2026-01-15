@@ -3,7 +3,6 @@ package io.pinkspider.leveluptogethermvp.userservice.achievement.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,10 +10,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strategy.AchievementCheckStrategy;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strategy.AchievementCheckStrategyRegistry;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserAchievement;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AchievementType;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.AchievementRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserAchievementRepository;
@@ -54,6 +53,12 @@ class AchievementServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private AchievementCheckStrategyRegistry strategyRegistry;
+
+    @Mock
+    private AchievementCheckStrategy mockStrategy;
+
     @InjectMocks
     private AchievementService achievementService;
 
@@ -79,16 +84,19 @@ class AchievementServiceTest {
         }
     }
 
-    private Achievement createTestAchievement(Long id, AchievementType type, int targetCount, int rewardExp) {
+    private Achievement createTestAchievement(Long id, String code, int targetCount, int rewardExp) {
         Achievement achievement = Achievement.builder()
-            .name(type.getDisplayName())
-            .description(type.getDisplayName() + " 설명")
-            .achievementType(type)
+            .name(code + " 업적")
+            .description(code + " 설명")
+            .code(code)
             .categoryCode("MISSION")
             .requiredCount(targetCount)
             .rewardExp(rewardExp)
             .isActive(true)
             .isHidden(false)
+            .checkLogicDataSource("USER_STATS")
+            .checkLogicDataField("totalMissionCompletions")
+            .comparisonOperator("GTE")
             .build();
         setAchievementId(achievement, id);
         return achievement;
@@ -114,8 +122,8 @@ class AchievementServiceTest {
         @DisplayName("전체 업적 목록을 조회한다")
         void getAllAchievements_success() {
             // given
-            Achievement achievement1 = createTestAchievement(1L, AchievementType.FIRST_MISSION_COMPLETE, 1, 50);
-            Achievement achievement2 = createTestAchievement(2L, AchievementType.MISSION_COMPLETE_10, 10, 100);
+            Achievement achievement1 = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
+            Achievement achievement2 = createTestAchievement(2L, "MISSION_COMPLETE_10", 10, 100);
 
             when(achievementRepository.findVisibleAchievements()).thenReturn(List.of(achievement1, achievement2));
 
@@ -124,6 +132,8 @@ class AchievementServiceTest {
 
             // then
             assertThat(result).hasSize(2);
+            assertThat(result.get(0).getCode()).isEqualTo("FIRST_MISSION_COMPLETE");
+            assertThat(result.get(1).getCode()).isEqualTo("MISSION_COMPLETE_10");
         }
     }
 
@@ -135,7 +145,7 @@ class AchievementServiceTest {
         @DisplayName("카테고리별 업적을 조회한다")
         void getAchievementsByCategoryCode_success() {
             // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.FIRST_MISSION_COMPLETE, 1, 50);
+            Achievement achievement = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
 
             when(achievementRepository.findVisibleAchievementsByCategoryCode("MISSION"))
                 .thenReturn(List.of(achievement));
@@ -145,6 +155,7 @@ class AchievementServiceTest {
 
             // then
             assertThat(result).hasSize(1);
+            assertThat(result.get(0).getCategoryCode()).isEqualTo("MISSION");
         }
     }
 
@@ -156,7 +167,7 @@ class AchievementServiceTest {
         @DisplayName("사용자의 업적 목록을 조회한다")
         void getUserAchievements_success() {
             // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.FIRST_MISSION_COMPLETE, 1, 50);
+            Achievement achievement = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
             UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
 
             when(userAchievementRepository.findByUserIdWithAchievement(TEST_USER_ID))
@@ -167,104 +178,7 @@ class AchievementServiceTest {
 
             // then
             assertThat(result).hasSize(1);
-        }
-    }
-
-    @Nested
-    @DisplayName("updateAchievementProgress 테스트")
-    class UpdateAchievementProgressTest {
-
-        @Test
-        @DisplayName("업적 진행도를 업데이트한다")
-        void updateAchievementProgress_success() {
-            // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.MISSION_COMPLETE_10, 10, 100);
-            UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 5, false);
-
-            when(achievementRepository.findByAchievementType(AchievementType.MISSION_COMPLETE_10))
-                .thenReturn(Optional.of(achievement));
-            when(userAchievementRepository.findByUserIdAndAchievementType(TEST_USER_ID, AchievementType.MISSION_COMPLETE_10))
-                .thenReturn(Optional.of(userAchievement));
-
-            // when
-            achievementService.updateAchievementProgress(TEST_USER_ID, AchievementType.MISSION_COMPLETE_10, 7);
-
-            // then
-            assertThat(userAchievement.getCurrentCount()).isEqualTo(7);
-        }
-
-        @Test
-        @DisplayName("업적이 없으면 업데이트하지 않는다")
-        void updateAchievementProgress_noAchievement() {
-            // given
-            when(achievementRepository.findByAchievementType(AchievementType.MISSION_COMPLETE_10))
-                .thenReturn(Optional.empty());
-
-            // when
-            achievementService.updateAchievementProgress(TEST_USER_ID, AchievementType.MISSION_COMPLETE_10, 5);
-
-            // then
-            verify(userAchievementRepository, never()).findByUserIdAndAchievementType(anyString(), any());
-        }
-
-        @Test
-        @DisplayName("비활성화된 업적은 업데이트하지 않는다")
-        void updateAchievementProgress_inactiveAchievement() {
-            // given
-            Achievement inactiveAchievement = createTestAchievement(1L, AchievementType.MISSION_COMPLETE_10, 10, 100);
-            inactiveAchievement.setIsActive(false);
-
-            when(achievementRepository.findByAchievementType(AchievementType.MISSION_COMPLETE_10))
-                .thenReturn(Optional.of(inactiveAchievement));
-
-            // when
-            achievementService.updateAchievementProgress(TEST_USER_ID, AchievementType.MISSION_COMPLETE_10, 5);
-
-            // then
-            verify(userAchievementRepository, never()).findByUserIdAndAchievementType(anyString(), any());
-        }
-
-        @Test
-        @DisplayName("완료된 업적은 업데이트하지 않는다")
-        void updateAchievementProgress_alreadyCompleted() {
-            // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.MISSION_COMPLETE_10, 10, 100);
-            UserAchievement completedAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 10, true);
-
-            when(achievementRepository.findByAchievementType(AchievementType.MISSION_COMPLETE_10))
-                .thenReturn(Optional.of(achievement));
-            when(userAchievementRepository.findByUserIdAndAchievementType(TEST_USER_ID, AchievementType.MISSION_COMPLETE_10))
-                .thenReturn(Optional.of(completedAchievement));
-
-            // when
-            achievementService.updateAchievementProgress(TEST_USER_ID, AchievementType.MISSION_COMPLETE_10, 15);
-
-            // then
-            assertThat(completedAchievement.getCurrentCount()).isEqualTo(10); // 변하지 않음
-        }
-    }
-
-    @Nested
-    @DisplayName("incrementAchievementProgress 테스트")
-    class IncrementAchievementProgressTest {
-
-        @Test
-        @DisplayName("업적 진행도를 1 증가시킨다")
-        void incrementAchievementProgress_success() {
-            // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.FIRST_GUILD_JOIN, 1, 50);
-            UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 0, false);
-
-            when(achievementRepository.findByAchievementType(AchievementType.FIRST_GUILD_JOIN))
-                .thenReturn(Optional.of(achievement));
-            when(userAchievementRepository.findByUserIdAndAchievementType(TEST_USER_ID, AchievementType.FIRST_GUILD_JOIN))
-                .thenReturn(Optional.of(userAchievement));
-
-            // when
-            achievementService.incrementAchievementProgress(TEST_USER_ID, AchievementType.FIRST_GUILD_JOIN);
-
-            // then
-            assertThat(userAchievement.getCurrentCount()).isEqualTo(1);
+            assertThat(result.get(0).getCode()).isEqualTo("FIRST_MISSION_COMPLETE");
         }
     }
 
@@ -277,7 +191,7 @@ class AchievementServiceTest {
         void claimReward_success() {
             // given
             Long achievementId = 1L;
-            Achievement achievement = createTestAchievement(achievementId, AchievementType.FIRST_MISSION_COMPLETE, 1, 50);
+            Achievement achievement = createTestAchievement(achievementId, "FIRST_MISSION_COMPLETE", 1, 50);
             UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
 
             when(userAchievementRepository.findByUserIdAndAchievementId(TEST_USER_ID, achievementId))
@@ -299,7 +213,7 @@ class AchievementServiceTest {
             // given
             Long achievementId = 1L;
             Long rewardTitleId = 10L;
-            Achievement achievement = createTestAchievement(achievementId, AchievementType.FIRST_MISSION_COMPLETE, 1, 50);
+            Achievement achievement = createTestAchievement(achievementId, "FIRST_MISSION_COMPLETE", 1, 50);
             achievement.setRewardTitleId(rewardTitleId);
             UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
 
@@ -328,74 +242,173 @@ class AchievementServiceTest {
     }
 
     @Nested
-    @DisplayName("checkMissionAchievements 테스트")
-    class CheckMissionAchievementsTest {
+    @DisplayName("syncUserAchievements 테스트")
+    class SyncUserAchievementsTest {
 
         @Test
-        @DisplayName("미션 완료 업적을 체크한다")
-        void checkMissionAchievements_success() {
+        @DisplayName("업적 동기화 시 모든 동적 업적을 체크한다")
+        void syncUserAchievements_checksAllDynamicAchievements() {
             // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.FIRST_MISSION_COMPLETE, 1, 50);
-            UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 0, false);
+            Achievement achievement = createTestAchievement(1L, "MISSION_COMPLETE_10", 10, 100);
 
-            when(achievementRepository.findByAchievementType(any(AchievementType.class)))
-                .thenReturn(Optional.of(achievement));
-            when(userAchievementRepository.findByUserIdAndAchievementType(anyString(), any(AchievementType.class)))
-                .thenReturn(Optional.of(userAchievement));
+            when(achievementRepository.findAllWithCheckLogicAndIsActiveTrue())
+                .thenReturn(List.of(achievement));
+            when(strategyRegistry.getStrategy("USER_STATS")).thenReturn(mockStrategy);
+            when(mockStrategy.checkCondition(anyString(), any(Achievement.class))).thenReturn(false);
+            when(mockStrategy.fetchCurrentValue(anyString(), anyString())).thenReturn(5);
+            when(userAchievementRepository.findByUserIdAndAchievementId(anyString(), anyLong()))
+                .thenReturn(Optional.empty());
+            when(userAchievementRepository.save(any(UserAchievement.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+            when(userAchievementRepository.findClaimableByUserId(TEST_USER_ID))
+                .thenReturn(List.of());
 
             // when
-            achievementService.checkMissionAchievements(TEST_USER_ID, 5, false);
+            achievementService.syncUserAchievements(TEST_USER_ID);
 
             // then
-            verify(achievementRepository).findByAchievementType(AchievementType.FIRST_MISSION_COMPLETE);
+            verify(achievementRepository).findAllWithCheckLogicAndIsActiveTrue();
+            verify(strategyRegistry).getStrategy("USER_STATS");
         }
     }
 
     @Nested
-    @DisplayName("checkLevelAchievements 테스트")
-    class CheckLevelAchievementsTest {
+    @DisplayName("checkAllDynamicAchievements 테스트")
+    class CheckAllDynamicAchievementsTest {
 
         @Test
-        @DisplayName("레벨 업적을 체크한다")
-        void checkLevelAchievements_success() {
+        @DisplayName("조건이 충족되면 업적을 완료 처리한다")
+        void checkAllDynamicAchievements_completesAchievement() {
             // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.REACH_LEVEL_5, 5, 100);
-            UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 0, false);
+            Achievement achievement = createTestAchievement(1L, "MISSION_COMPLETE_10", 10, 100);
+            // 진행 중인 업적 (currentCount=5, 아직 미완료)
+            UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 5, false);
 
-            when(achievementRepository.findByAchievementType(any(AchievementType.class)))
-                .thenReturn(Optional.of(achievement));
-            when(userAchievementRepository.findByUserIdAndAchievementType(anyString(), any(AchievementType.class)))
+            when(achievementRepository.findAllWithCheckLogicAndIsActiveTrue())
+                .thenReturn(List.of(achievement));
+            when(strategyRegistry.getStrategy("USER_STATS")).thenReturn(mockStrategy);
+            when(mockStrategy.checkCondition(TEST_USER_ID, achievement)).thenReturn(true);
+            // fetchCurrentValue가 10 이상 반환하면 setCount 후 completion이 트리거됨
+            when(mockStrategy.fetchCurrentValue(TEST_USER_ID, "totalMissionCompletions")).thenReturn(15);
+            when(userAchievementRepository.findByUserIdAndAchievementId(TEST_USER_ID, 1L))
                 .thenReturn(Optional.of(userAchievement));
 
             // when
-            achievementService.checkLevelAchievements(TEST_USER_ID, 10);
+            achievementService.checkAllDynamicAchievements(TEST_USER_ID);
 
             // then
-            verify(achievementRepository).findByAchievementType(AchievementType.REACH_LEVEL_5);
+            verify(mockStrategy).checkCondition(TEST_USER_ID, achievement);
+            // setCount(15) 호출 후 userAchievement.currentCount == 15 >= requiredCount(10)이므로 완료됨
+            assertThat(userAchievement.getCurrentCount()).isEqualTo(15);
+            assertThat(userAchievement.getIsCompleted()).isTrue();
+        }
+
+        @Test
+        @DisplayName("이미 완료된 업적은 스킵한다")
+        void checkAllDynamicAchievements_skipsCompletedAchievement() {
+            // given
+            Achievement achievement = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
+            UserAchievement completedAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
+
+            when(achievementRepository.findAllWithCheckLogicAndIsActiveTrue())
+                .thenReturn(List.of(achievement));
+            when(strategyRegistry.getStrategy("USER_STATS")).thenReturn(mockStrategy);
+            when(userAchievementRepository.findByUserIdAndAchievementId(TEST_USER_ID, 1L))
+                .thenReturn(Optional.of(completedAchievement));
+
+            // when
+            achievementService.checkAllDynamicAchievements(TEST_USER_ID);
+
+            // then
+            verify(mockStrategy, never()).checkCondition(anyString(), any());
+        }
+
+        @Test
+        @DisplayName("Strategy가 없는 데이터 소스는 스킵한다")
+        void checkAllDynamicAchievements_skipsUnknownDataSource() {
+            // given
+            Achievement achievement = createTestAchievement(1L, "UNKNOWN_ACHIEVEMENT", 1, 50);
+
+            when(achievementRepository.findAllWithCheckLogicAndIsActiveTrue())
+                .thenReturn(List.of(achievement));
+            when(strategyRegistry.getStrategy("USER_STATS")).thenReturn(null);
+
+            // when
+            achievementService.checkAllDynamicAchievements(TEST_USER_ID);
+
+            // then
+            verify(userAchievementRepository, never()).findByUserIdAndAchievementId(anyString(), anyLong());
         }
     }
 
     @Nested
-    @DisplayName("checkFriendAchievements 테스트")
-    class CheckFriendAchievementsTest {
+    @DisplayName("autoClaimRewards 테스트")
+    class AutoClaimRewardsTest {
 
         @Test
-        @DisplayName("친구 업적을 체크한다")
-        void checkFriendAchievements_success() {
+        @DisplayName("수령 가능한 업적 보상을 자동으로 수령한다")
+        void autoClaimRewards_claimsAllClaimable() {
             // given
-            Achievement achievement = createTestAchievement(1L, AchievementType.FIRST_FRIEND, 1, 50);
-            UserAchievement userAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 0, false);
+            Achievement achievement = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
+            UserAchievement claimableAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
 
-            when(achievementRepository.findByAchievementType(any(AchievementType.class)))
-                .thenReturn(Optional.of(achievement));
-            when(userAchievementRepository.findByUserIdAndAchievementType(anyString(), any(AchievementType.class)))
-                .thenReturn(Optional.of(userAchievement));
+            when(userAchievementRepository.findClaimableByUserId(TEST_USER_ID))
+                .thenReturn(List.of(claimableAchievement));
+            when(userAchievementRepository.findByUserIdAndAchievementId(TEST_USER_ID, 1L))
+                .thenReturn(Optional.of(claimableAchievement));
 
             // when
-            achievementService.checkFriendAchievements(TEST_USER_ID, 3);
+            achievementService.autoClaimRewards(TEST_USER_ID);
 
             // then
-            verify(achievementRepository).findByAchievementType(AchievementType.FIRST_FRIEND);
+            assertThat(claimableAchievement.getIsRewardClaimed()).isTrue();
+            verify(userExperienceService).addExperience(
+                eq(TEST_USER_ID), eq(50), eq(ExpSourceType.ACHIEVEMENT), eq(1L), anyString(), eq("기타"));
+        }
+    }
+
+    @Nested
+    @DisplayName("getCompletedAchievements 테스트")
+    class GetCompletedAchievementsTest {
+
+        @Test
+        @DisplayName("완료된 업적 목록을 조회한다")
+        void getCompletedAchievements_success() {
+            // given
+            Achievement achievement = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
+            UserAchievement completedAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
+
+            when(userAchievementRepository.findCompletedByUserId(TEST_USER_ID))
+                .thenReturn(List.of(completedAchievement));
+
+            // when
+            List<UserAchievementResponse> result = achievementService.getCompletedAchievements(TEST_USER_ID);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getIsCompleted()).isTrue();
+        }
+    }
+
+    @Nested
+    @DisplayName("getClaimableAchievements 테스트")
+    class GetClaimableAchievementsTest {
+
+        @Test
+        @DisplayName("수령 가능한 업적 목록을 조회한다")
+        void getClaimableAchievements_success() {
+            // given
+            Achievement achievement = createTestAchievement(1L, "FIRST_MISSION_COMPLETE", 1, 50);
+            UserAchievement claimableAchievement = createTestUserAchievement(1L, TEST_USER_ID, achievement, 1, true);
+
+            when(userAchievementRepository.findClaimableByUserId(TEST_USER_ID))
+                .thenReturn(List.of(claimableAchievement));
+
+            // when
+            List<UserAchievementResponse> result = achievementService.getClaimableAchievements(TEST_USER_ID);
+
+            // then
+            assertThat(result).hasSize(1);
         }
     }
 }
