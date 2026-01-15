@@ -154,8 +154,7 @@ class UpdateUserStatsStepTest {
             // then
             assertThat(result.isSuccess()).isTrue();
             verify(userStatsService).recordMissionCompletion(TEST_USER_ID, false);
-            verify(achievementService).checkMissionAchievements(eq(TEST_USER_ID), eq(11), eq(false));
-            verify(achievementService).checkStreakAchievements(eq(TEST_USER_ID), eq(6));
+            verify(achievementService).checkAchievementsByDataSource(eq(TEST_USER_ID), eq("USER_STATS"));
         }
 
         @Test

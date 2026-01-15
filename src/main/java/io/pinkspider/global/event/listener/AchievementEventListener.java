@@ -26,14 +26,14 @@ public class AchievementEventListener {
 
     /**
      * 길드 가입 이벤트 처리
-     * - 길드 가입 업적 체크
+     * - 동적 Strategy 패턴으로 GUILD_SERVICE 관련 업적 체크
      */
     @Async(EVENT_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleGuildJoined(GuildJoinedEvent event) {
         log.debug("길드 가입 이벤트 수신: userId={}, guildId={}", event.userId(), event.guildId());
         try {
-            achievementService.checkGuildJoinAchievement(event.userId());
+            achievementService.checkAchievementsByDataSource(event.userId(), "GUILD_SERVICE");
         } catch (Exception e) {
             log.warn("길드 가입 업적 체크 실패: userId={}, guildId={}, error={}",
                 event.userId(), event.guildId(), e.getMessage());
@@ -42,14 +42,14 @@ public class AchievementEventListener {
 
     /**
      * 길드 마스터 할당 이벤트 처리
-     * - 길드 마스터 업적 체크
+     * - 동적 Strategy 패턴으로 GUILD_SERVICE 관련 업적 체크
      */
     @Async(EVENT_EXECUTOR)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleGuildMasterAssigned(GuildMasterAssignedEvent event) {
         log.debug("길드 마스터 할당 이벤트 수신: userId={}, guildId={}", event.userId(), event.guildId());
         try {
-            achievementService.checkGuildMasterAchievement(event.userId());
+            achievementService.checkAchievementsByDataSource(event.userId(), "GUILD_SERVICE");
         } catch (Exception e) {
             log.warn("길드 마스터 업적 체크 실패: userId={}, guildId={}, error={}",
                 event.userId(), event.guildId(), e.getMessage());

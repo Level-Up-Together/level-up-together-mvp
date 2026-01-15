@@ -1,7 +1,6 @@
 package io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserAchievement;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AchievementType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,8 +20,8 @@ public interface UserAchievementRepository extends JpaRepository<UserAchievement
     @Query("SELECT ua FROM UserAchievement ua JOIN FETCH ua.achievement WHERE ua.userId = :userId AND ua.isCompleted = false")
     List<UserAchievement> findInProgressByUserId(@Param("userId") String userId);
 
-    @Query("SELECT ua FROM UserAchievement ua JOIN FETCH ua.achievement a WHERE ua.userId = :userId AND a.achievementType = :type")
-    Optional<UserAchievement> findByUserIdAndAchievementType(@Param("userId") String userId, @Param("type") AchievementType type);
+    @Query("SELECT ua FROM UserAchievement ua JOIN FETCH ua.achievement a WHERE ua.userId = :userId AND a.code = :code")
+    Optional<UserAchievement> findByUserIdAndAchievementCode(@Param("userId") String userId, @Param("code") String code);
 
     Optional<UserAchievement> findByUserIdAndAchievementId(String userId, Long achievementId);
 

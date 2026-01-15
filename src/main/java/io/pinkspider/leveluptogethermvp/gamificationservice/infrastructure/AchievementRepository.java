@@ -1,7 +1,6 @@
 package io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AchievementType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,7 +11,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AchievementRepository extends JpaRepository<Achievement, Long> {
 
-    Optional<Achievement> findByAchievementType(AchievementType type);
+    Optional<Achievement> findByCode(String code);
+
+    boolean existsByCode(String code);
 
     List<Achievement> findByIsActiveTrue();
 
