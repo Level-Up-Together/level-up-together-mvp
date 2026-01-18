@@ -512,6 +512,36 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 - 통합 검색 (피드, 미션, 사용자, 길드)
 - 다중 서비스 데이터 조합
 
+## HTTP API 테스트
+
+`http/` 폴더에 IntelliJ HTTP Client 형식의 API 테스트 파일이 있습니다:
+
+```
+http/
+├── http-client.env.json    # 환경 설정 (dev, local, test)
+├── oauth-jwt.http          # OAuth2 로그인, JWT 토큰 관리
+├── mission.http            # 미션 CRUD, 참가자, 실행 추적
+├── guild.http              # 길드 관리, 채팅, 게시판, 거점
+├── activity-feed.http      # 피드, 좋아요, 댓글
+├── friend.http             # 친구 요청/수락/거절
+├── mypage.http             # 프로필, 닉네임, 칭호
+├── achievement.http        # 업적, 칭호, 레벨 랭킹
+├── attendance.http         # 출석 체크
+├── notification.http       # 알림 관리
+├── device-token.http       # FCM 토큰 관리
+├── event.http              # 이벤트 API
+├── bff.http                # BFF 홈, 통합 검색
+├── home.http               # 홈 배너, 추천 콘텐츠
+├── meta.http               # 메타데이터, 공통 코드
+├── user-terms.http         # 약관 동의
+└── user-experience.http    # 경험치, 레벨
+```
+
+**환경 변수:**
+- `{{baseUrl}}`: API 서버 주소
+- `{{accessToken}}`: JWT 액세스 토큰
+- `{{refreshToken}}`: JWT 리프레시 토큰
+
 ## API 응답 형식
 
 모든 REST 엔드포인트는 `ApiResult<T>` 래퍼를 사용합니다:
