@@ -2,6 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## HTTP API 테스트
+
+`http/` 폴더에 IntelliJ HTTP Client 형식의 API 테스트 파일이 있습니다:
+
+| 파일 | 설명 |
+|------|------|
+| `oauth-jwt.http` | OAuth2 로그인, JWT 토큰 관리, 모바일 소셜 로그인 |
+| `mission.http` | 미션 CRUD, 참가자, 실행 추적, 캘린더 |
+| `guild.http` | 길드 관리, 채팅, 게시판, 거점, DM |
+| `activity-feed.http` | 피드, 좋아요, 댓글, 검색 |
+| `friend.http` | 친구 요청/수락/거절/차단 |
+| `mypage.http` | 프로필, 닉네임, 칭호 관리 |
+| `achievement.http` | 업적, 칭호, 레벨 랭킹 |
+| `attendance.http` | 출석 체크 |
+| `notification.http` | 알림 관리, 읽음 처리 |
+| `device-token.http` | FCM 토큰 등록/삭제 |
+| `event.http` | 이벤트 API |
+| `bff.http` | BFF 홈, 통합 검색, 시즌 |
+| `home.http` | 홈 배너, 추천 콘텐츠 |
+| `meta.http` | 메타데이터, 공통 코드 |
+| `user-terms.http` | 약관 동의 |
+| `user-experience.http` | 경험치, 레벨 |
+
+환경 설정: `http/http-client.env.json`
+```json
+{
+  "dev": { "baseUrl": "https://dev-api.level-up-together.com" },
+  "local": { "baseUrl": "https://local.level-up-together.com:8443" },
+  "test": { "baseUrl": "http://localhost:18080" }
+}
+```
+
 ## Build & Development Commands
 
 ```bash
