@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -245,7 +246,7 @@ class DailyMissionInstanceServiceTest {
         }
 
         @Test
-        @DisplayName("이미 진행 중인 미션이 있으면 예외가 발생한다")
+        @DisplayName("오늘 날짜에 이미 진행 중인 미션이 있으면 예외가 발생한다")
         void startInstance_alreadyInProgress_throwsException() {
             // given
             DailyMissionInstance inProgressInstance = DailyMissionInstance.createFrom(participant, LocalDate.now());
@@ -260,6 +261,34 @@ class DailyMissionInstanceServiceTest {
             assertThatThrownBy(() -> service.startInstance(INSTANCE_ID, TEST_USER_ID))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이미 진행 중인 미션이 있습니다");
+        }
+
+        @Test
+        @DisplayName("지난 날짜의 진행 중인 미션은 자동으로 MISSED 처리하고 새 인스턴스를 시작한다")
+        void startInstance_pastDateInProgress_autoMissed() {
+            // given: 어제 날짜의 IN_PROGRESS 인스턴스
+            LocalDate yesterday = LocalDate.now().minusDays(1);
+            DailyMissionInstance pastInProgressInstance = DailyMissionInstance.createFrom(participant, yesterday);
+            setId(pastInProgressInstance, 999L);
+            setStatus(pastInProgressInstance, ExecutionStatus.IN_PROGRESS);
+            setStartedAt(pastInProgressInstance, LocalDateTime.now().minusDays(1));
+
+            when(instanceRepository.findInProgressByUserId(TEST_USER_ID))
+                .thenReturn(Optional.of(pastInProgressInstance));
+            when(instanceRepository.save(pastInProgressInstance))
+                .thenReturn(pastInProgressInstance);
+            when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
+                .thenReturn(Optional.of(instance));
+            when(instanceRepository.save(instance))
+                .thenReturn(instance);
+
+            // when
+            DailyMissionInstanceResponse response = service.startInstance(INSTANCE_ID, TEST_USER_ID);
+
+            // then
+            assertThat(response).isNotNull();
+            assertThat(pastInProgressInstance.getStatus()).isEqualTo(ExecutionStatus.MISSED);
+            verify(instanceRepository, times(2)).save(any(DailyMissionInstance.class));
         }
 
         @Test
