@@ -3,6 +3,7 @@ package io.pinkspider.leveluptogethermvp.missionservice.domain.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
@@ -77,6 +78,32 @@ public class MissionExecutionResponse {
             .imageUrl(execution.getImageUrl())
             .feedId(execution.getFeedId())
             .createdAt(execution.getCreatedAt())
+            .build();
+    }
+
+    /**
+     * DailyMissionInstance를 MissionExecutionResponse로 변환
+     * 고정 미션(pinned mission)의 일일 인스턴스를 동일한 응답 포맷으로 변환
+     */
+    public static MissionExecutionResponse fromDailyMissionInstance(DailyMissionInstance instance) {
+        return MissionExecutionResponse.builder()
+            .id(instance.getId())
+            .participantId(instance.getParticipant().getId())
+            .missionId(instance.getParticipant().getMission().getId())
+            .missionTitle(instance.getMissionTitle())
+            .missionCategoryName(instance.getCategoryName())
+            .missionType(instance.getParticipant().getMission().getType())
+            .userId(instance.getParticipant().getUserId())
+            .executionDate(instance.getInstanceDate())
+            .status(instance.getStatus())
+            .startedAt(instance.getStartedAt())
+            .completedAt(instance.getCompletedAt())
+            .durationMinutes(instance.getDurationMinutes())
+            .expEarned(instance.getExpEarned())
+            .note(instance.getNote())
+            .imageUrl(instance.getImageUrl())
+            .feedId(instance.getFeedId())
+            .createdAt(instance.getCreatedAt())
             .build();
     }
 }

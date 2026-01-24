@@ -6,6 +6,7 @@ import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperience
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
+import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MonthlyCalendarResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MonthlyCalendarResponse.DailyMission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
@@ -14,6 +15,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionPart
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionInterval;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantStatus;
+import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.DailyMissionInstanceRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExecutionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
@@ -48,6 +50,7 @@ public class MissionExecutionService {
 
     private final MissionExecutionRepository executionRepository;
     private final MissionParticipantRepository participantRepository;
+    private final DailyMissionInstanceRepository dailyMissionInstanceRepository;
     private final UserExperienceService userExperienceService;
     private final GuildExperienceService guildExperienceService;
     private final UserStatsService userStatsService;
@@ -371,18 +374,36 @@ public class MissionExecutionService {
 
     /**
      * 오늘 실행해야 할 미션 목록 조회
-     * 고정 미션(isPinned=true)인 경우 오늘 날짜의 execution이 없으면 자동 생성
+     * 일반 미션(MissionExecution)과 고정 미션(DailyMissionInstance) 모두 포함
      */
     @Transactional
     public List<MissionExecutionResponse> getTodayExecutions(String userId) {
         LocalDate today = LocalDate.now();
 
-        // 고정 미션의 오늘 execution 자동 생성
+        // 고정 미션의 오늘 execution 자동 생성 (일반 MissionExecution용)
         ensurePinnedMissionExecutionsForToday(userId, today);
 
-        return executionRepository.findByUserIdAndExecutionDate(userId, today).stream()
+        List<MissionExecutionResponse> responses = new ArrayList<>();
+
+        // 일반 미션 Execution 조회
+        List<MissionExecutionResponse> regularExecutions = executionRepository
+            .findByUserIdAndExecutionDate(userId, today).stream()
             .map(MissionExecutionResponse::from)
             .toList();
+        responses.addAll(regularExecutions);
+
+        // 고정 미션 DailyMissionInstance 조회
+        List<DailyMissionInstance> dailyInstances = dailyMissionInstanceRepository
+            .findByUserIdAndInstanceDateWithMission(userId, today);
+        List<MissionExecutionResponse> instanceResponses = dailyInstances.stream()
+            .map(MissionExecutionResponse::fromDailyMissionInstance)
+            .toList();
+        responses.addAll(instanceResponses);
+
+        log.info("getTodayExecutions: userId={}, regularCount={}, instanceCount={}",
+            userId, regularExecutions.size(), instanceResponses.size());
+
+        return responses;
     }
 
     /**
