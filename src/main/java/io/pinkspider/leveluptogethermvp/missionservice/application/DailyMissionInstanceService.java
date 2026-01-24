@@ -96,12 +96,23 @@ public class DailyMissionInstanceService {
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstanceResponse startInstance(Long instanceId, String userId) {
+        LocalDate today = LocalDate.now();
+
         // 이미 진행 중인 인스턴스가 있는지 확인
         instanceRepository.findInProgressByUserId(userId).ifPresent(inProgress -> {
-            throw new IllegalStateException(
-                String.format("이미 진행 중인 미션이 있습니다: %s. 해당 미션을 완료하거나 취소한 후 시작해주세요.",
-                    inProgress.getMissionTitle())
-            );
+            // 지난 날짜의 IN_PROGRESS 인스턴스는 자동으로 MISSED 처리
+            if (inProgress.getInstanceDate().isBefore(today)) {
+                log.info("지난 날짜 IN_PROGRESS 인스턴스 자동 MISSED 처리: instanceId={}, date={}, title={}",
+                    inProgress.getId(), inProgress.getInstanceDate(), inProgress.getMissionTitle());
+                inProgress.markAsMissed();
+                instanceRepository.save(inProgress);
+            } else {
+                // 오늘 날짜의 진행 중인 인스턴스가 있으면 에러
+                throw new IllegalStateException(
+                    String.format("이미 진행 중인 미션이 있습니다: %s. 해당 미션을 완료하거나 취소한 후 시작해주세요.",
+                        inProgress.getMissionTitle())
+                );
+            }
         });
 
         DailyMissionInstance instance = findInstanceById(instanceId);
