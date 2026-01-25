@@ -10,6 +10,8 @@ import io.pinkspider.global.event.FriendRequestProcessedEvent;
 import io.pinkspider.global.event.FriendRequestRejectedEvent;
 import io.pinkspider.global.event.GuildBulletinCreatedEvent;
 import io.pinkspider.global.event.GuildChatMessageEvent;
+import io.pinkspider.global.event.GuildCreationEligibleEvent;
+import io.pinkspider.global.event.GuildInvitationEvent;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
@@ -240,6 +242,41 @@ public class NotificationEventListener {
             }
         } catch (Exception e) {
             log.error("길드 채팅 알림 처리 실패: error={}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 길드 창설 가능 레벨 도달 이벤트 처리
+     */
+    @Async(EVENT_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleGuildCreationEligible(GuildCreationEligibleEvent event) {
+        try {
+            log.debug("길드 창설 가능 이벤트 처리: userId={}, level={}", event.userId(), event.level());
+            notificationService.notifyGuildCreationEligible(event.userId());
+        } catch (Exception e) {
+            log.error("길드 창설 가능 알림 생성 실패: userId={}, error={}", event.userId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 길드 초대 이벤트 처리
+     */
+    @Async(EVENT_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleGuildInvitation(GuildInvitationEvent event) {
+        try {
+            log.debug("길드 초대 이벤트 처리: inviteeId={}, guildId={}, invitationId={}",
+                event.inviteeId(), event.guildId(), event.invitationId());
+            notificationService.notifyGuildInvitation(
+                event.inviteeId(),
+                event.inviterNickname(),
+                event.guildId(),
+                event.guildName(),
+                event.invitationId()
+            );
+        } catch (Exception e) {
+            log.error("길드 초대 알림 생성 실패: inviteeId={}, error={}", event.inviteeId(), e.getMessage(), e);
         }
     }
 }

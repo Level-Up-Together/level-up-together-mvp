@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.userservice.experience.application;
 
 import io.pinkspider.global.cache.LevelConfigCacheService;
+import io.pinkspider.global.event.GuildCreationEligibleEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
 import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.infrastructure.LevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
@@ -16,6 +17,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -27,12 +29,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true, transactionManager = "gamificationTransactionManager")
 public class UserExperienceService {
 
+    private static final int GUILD_CREATION_MIN_LEVEL = 20;
+
     private final UserExperienceRepository userExperienceRepository;
     private final ExperienceHistoryRepository experienceHistoryRepository;
     private final UserCategoryExperienceRepository userCategoryExperienceRepository;
     private final LevelConfigCacheService levelConfigCacheService;
     private final LevelConfigRepository levelConfigRepository; // for write operations
     private final ApplicationContext applicationContext;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(transactionManager = "gamificationTransactionManager")
     public UserExperienceResponse addExperience(String userId, int expAmount, ExpSourceType sourceType,
@@ -83,6 +88,12 @@ public class UserExperienceService {
                 achievementService.checkAchievementsByDataSource(userId, "USER_EXPERIENCE");
             } catch (Exception e) {
                 log.warn("레벨 업적 체크 실패: userId={}, level={}, error={}", userId, levelAfter, e.getMessage());
+            }
+
+            // 길드 창설 가능 레벨(20) 도달 시 이벤트 발행
+            if (levelAfter >= GUILD_CREATION_MIN_LEVEL && levelBefore < GUILD_CREATION_MIN_LEVEL) {
+                eventPublisher.publishEvent(new GuildCreationEligibleEvent(userId, levelAfter));
+                log.info("길드 창설 가능 레벨 도달: userId={}, level={}", userId, levelAfter);
             }
         }
 

@@ -167,7 +167,7 @@ dependencyManagement {
 }
 
 openapi3 {
-    def serverIp = System.getenv('LUT_IP') ?: 'localhost'
+    def serverIp = System.getenv('LUT_IP') ?: 'dev.level-up-together.com'
     def serverPort = System.getenv('USER_SERVICE_PORT') ?: '8443'
     server = "http://${serverIp}:${serverPort}"
     title = getRootProject().name + " API 문서"
