@@ -32,6 +32,7 @@ import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFee
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.missionservice.application.LocalMissionImageStorageService;
+import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.DailyMissionInstanceRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -85,6 +86,12 @@ class MissionExecutionServiceTest {
 
     @Mock
     private TitleService titleService;
+
+    @Mock
+    private DailyMissionInstanceRepository dailyMissionInstanceRepository;
+
+    @Mock
+    private DailyMissionInstanceService dailyMissionInstanceService;
 
     @InjectMocks
     private MissionExecutionService executionService;
@@ -845,6 +852,10 @@ class MissionExecutionServiceTest {
             when(executionRepository.findByUserIdAndExecutionDate(eq(testUserId), any(LocalDate.class)))
                 .thenReturn(List.of(execution1, execution2));
 
+            // 고정 미션 인스턴스 조회 mock (없음)
+            when(dailyMissionInstanceRepository.findByUserIdAndInstanceDateWithMission(eq(testUserId), any(LocalDate.class)))
+                .thenReturn(List.of());
+
             // when
             List<MissionExecutionResponse> responses = executionService.getTodayExecutions(testUserId);
 
@@ -861,6 +872,10 @@ class MissionExecutionServiceTest {
                 .thenReturn(List.of());
 
             when(executionRepository.findByUserIdAndExecutionDate(eq(testUserId), any(LocalDate.class)))
+                .thenReturn(List.of());
+
+            // 고정 미션 인스턴스 조회 mock (없음)
+            when(dailyMissionInstanceRepository.findByUserIdAndInstanceDateWithMission(eq(testUserId), any(LocalDate.class)))
                 .thenReturn(List.of());
 
             // when
@@ -924,6 +939,10 @@ class MissionExecutionServiceTest {
             when(executionRepository.findByUserIdAndExecutionDate(eq(testUserId), eq(today)))
                 .thenReturn(List.of(newExecution));
 
+            // 고정 미션 인스턴스 조회 mock (없음)
+            when(dailyMissionInstanceRepository.findByUserIdAndInstanceDateWithMission(eq(testUserId), eq(today)))
+                .thenReturn(List.of());
+
             // when
             List<MissionExecutionResponse> responses = executionService.getTodayExecutions(testUserId);
 
@@ -976,6 +995,10 @@ class MissionExecutionServiceTest {
 
             when(executionRepository.findByUserIdAndExecutionDate(eq(testUserId), eq(today)))
                 .thenReturn(List.of(existingExecution));
+
+            // 고정 미션 인스턴스 조회 mock (없음)
+            when(dailyMissionInstanceRepository.findByUserIdAndInstanceDateWithMission(eq(testUserId), eq(today)))
+                .thenReturn(List.of());
 
             // when
             List<MissionExecutionResponse> responses = executionService.getTodayExecutions(testUserId);

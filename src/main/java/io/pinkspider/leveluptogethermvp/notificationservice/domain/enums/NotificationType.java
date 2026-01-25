@@ -10,6 +10,7 @@ public enum NotificationType {
     SYSTEM("시스템", "SYSTEM"),
     ANNOUNCEMENT("공지사항", "SYSTEM"),
     LEVEL_UP("레벨 업", "SYSTEM"),
+    GUILD_CREATION_ELIGIBLE("길드 창설 가능", "SYSTEM"),
 
     // 친구 관련
     FRIEND_REQUEST("친구 요청", "FRIEND"),

@@ -340,4 +340,23 @@ public class NotificationService {
             "'" + achievementName + "' 업적을 달성했습니다!",
             "ACHIEVEMENT", achievementId, "/mypage/achievements");
     }
+
+    // 길드 창설 가능 알림 (레벨 20 도달)
+    @Transactional(transactionManager = "notificationTransactionManager")
+    public void notifyGuildCreationEligible(String userId) {
+        createNotification(userId, NotificationType.GUILD_CREATION_ELIGIBLE,
+            "길드 창설이 가능해졌습니다!",
+            "레벨 20에 도달하여 이제 나만의 길드를 만들 수 있습니다.",
+            "LEVEL", null, "/guilds/create");
+    }
+
+    // 길드 초대 알림 (초대 ID 포함, 수락/거절 액션용)
+    @Transactional(transactionManager = "notificationTransactionManager")
+    public void notifyGuildInvitation(String inviteeId, String inviterNickname, Long guildId,
+                                      String guildName, Long invitationId) {
+        createNotification(inviteeId, NotificationType.GUILD_INVITE,
+            "길드 초대",
+            inviterNickname + "님이 '" + guildName + "' 길드로 초대했습니다.",
+            "GUILD_INVITATION", invitationId, "/guild-invitations/" + invitationId);
+    }
 }
