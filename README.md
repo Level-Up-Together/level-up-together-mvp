@@ -299,6 +299,7 @@ erDiagram
     guild_db {
         guild PK
         guild_member FK
+        guild_invitation FK
         guild_post
         guild_post_comment
         guild_chat_message
@@ -371,7 +372,7 @@ erDiagram
 |-------------|--------|---------------------|------------|
 | `user_db` | userservice | `userTransactionManager` (Primary) | users, quest, friend |
 | `mission_db` | missionservice | `missionTransactionManager` | mission, mission_execution, mission_participant, daily_mission_instance |
-| `guild_db` | guildservice | `guildTransactionManager` | guild, guild_member, guild_post, guild_chat |
+| `guild_db` | guildservice | `guildTransactionManager` | guild, guild_member, guild_invitation, guild_post, guild_chat |
 | `meta_db` | metaservice | `metaTransactionManager` | common_code, level_config, calendar_holiday |
 | `feed_db` | feedservice | `feedTransactionManager` | activity_feed, feed_comment, feed_like |
 | `notification_db` | notificationservice | `notificationTransactionManager` | notification, notification_preference |
@@ -477,12 +478,16 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 ### 길드 (Guild Service)
 - 길드 생성 및 관리
 - 멤버 가입/탈퇴/추방 관리
+- **길드 초대 시스템** (비공개 길드용)
+  - 마스터/관리자가 유저 초대
+  - 초대 수락/거절/취소/만료 상태 관리
+  - 같은 카테고리 중복 가입 방지
 - 길드 경험치/레벨 시스템
 - 길드 게시판 (공지사항, 일반 게시글)
 - 길드 채팅
 - 길드 거점 시스템 (지도 기반)
 - 길드원 칭호 색상 표시
-- Event-Driven: 가입/길드장 지정 시 업적 이벤트 발행
+- Event-Driven: 가입/길드장 지정/초대 시 이벤트 발행
 
 ### 활동 피드 (Feed Service)
 - 활동 피드 생성 및 조회
@@ -641,6 +646,13 @@ public void updateGuild(...) { ... }
 SSH 터널이나 외부 서비스 연결이 필요한 테스트는 로컬에서 실패할 수 있습니다. `@ActiveProfiles("test")` 확인이 필요합니다.
 
 ## 최근 업데이트
+
+### 2026-01 길드 초대 시스템
+- `GuildInvitation` 엔티티 추가 (비공개 길드 초대 관리)
+- `GuildInvitationService` 서비스 추가
+- `GuildInvitationController` REST API 추가
+- `GuildInvitationEvent` 이벤트 추가 (알림 연동)
+- 같은 카테고리 중복 가입 방지 검증 로직
 
 ### 2026-01 고정 미션 Template-Instance 패턴
 - `DailyMissionInstance` 엔티티 추가 (고정 미션 일일 인스턴스)
