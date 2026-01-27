@@ -435,6 +435,29 @@ class FriendServiceTest {
             // then
             assertThat(result.getContent()).hasSize(1);
         }
+
+        @Test
+        @DisplayName("칭호가 없는 친구도 페이지로 정상적으로 조회한다")
+        void getFriends_withNullTitle_success() {
+            // given
+            Pageable pageable = PageRequest.of(0, 10);
+            Friendship friendship = createTestFriendship(1L, TEST_USER_ID, FRIEND_USER_ID, FriendshipStatus.ACCEPTED);
+            Page<Friendship> page = new PageImpl<>(List.of(friendship), pageable, 1);
+            Users friend = createTestUser(FRIEND_USER_ID, "친구");
+
+            when(friendshipRepository.findFriends(TEST_USER_ID, pageable)).thenReturn(page);
+            when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(friend));
+            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
+            when(userTitleRepository.findEquippedByUserIdAndPosition(FRIEND_USER_ID, TitlePosition.LEFT))
+                .thenReturn(Optional.empty()); // 칭호 없음
+
+            // when
+            Page<FriendResponse> result = friendService.getFriends(TEST_USER_ID, pageable);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getFriendTitle()).isNull();
+        }
     }
 
     @Nested
@@ -556,6 +579,60 @@ class FriendServiceTest {
 
             // then
             assertThat(result).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("칭호가 없는 친구도 정상적으로 조회한다")
+        void getAllFriends_withNullTitle_success() {
+            // given
+            Friendship friendship = createTestFriendship(1L, TEST_USER_ID, FRIEND_USER_ID, FriendshipStatus.ACCEPTED);
+            Users friend = createTestUser(FRIEND_USER_ID, "친구");
+
+            when(friendshipRepository.findAllFriends(TEST_USER_ID)).thenReturn(List.of(friendship));
+            when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(friend));
+            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
+            when(userTitleRepository.findEquippedByUserIdAndPosition(FRIEND_USER_ID, TitlePosition.LEFT))
+                .thenReturn(Optional.empty()); // 칭호 없음
+
+            // when
+            List<FriendResponse> result = friendService.getAllFriends(TEST_USER_ID);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getFriendTitle()).isNull();
+        }
+
+        @Test
+        @DisplayName("칭호가 있는 친구와 없는 친구가 섞여있어도 정상적으로 조회한다")
+        void getAllFriends_withMixedTitles_success() {
+            // given
+            String friendWithTitleId = "friend-with-title";
+            String friendWithoutTitleId = "friend-without-title";
+
+            Friendship friendship1 = createTestFriendship(1L, TEST_USER_ID, friendWithTitleId, FriendshipStatus.ACCEPTED);
+            Friendship friendship2 = createTestFriendship(2L, TEST_USER_ID, friendWithoutTitleId, FriendshipStatus.ACCEPTED);
+
+            Users friendWithTitle = createTestUser(friendWithTitleId, "칭호있는친구");
+            Users friendWithoutTitle = createTestUser(friendWithoutTitleId, "칭호없는친구");
+
+            Title title = createTestTitle(1L, "테스트 칭호");
+            UserTitle userTitle = createTestUserTitle(1L, friendWithTitleId, title);
+
+            when(friendshipRepository.findAllFriends(TEST_USER_ID))
+                .thenReturn(List.of(friendship1, friendship2));
+            when(userRepository.findAllById(List.of(friendWithTitleId, friendWithoutTitleId)))
+                .thenReturn(List.of(friendWithTitle, friendWithoutTitle));
+            when(userExperienceRepository.findByUserId(anyString())).thenReturn(Optional.empty());
+            when(userTitleRepository.findEquippedByUserIdAndPosition(friendWithTitleId, TitlePosition.LEFT))
+                .thenReturn(Optional.of(userTitle));
+            when(userTitleRepository.findEquippedByUserIdAndPosition(friendWithoutTitleId, TitlePosition.LEFT))
+                .thenReturn(Optional.empty()); // 칭호 없음
+
+            // when
+            List<FriendResponse> result = friendService.getAllFriends(TEST_USER_ID);
+
+            // then
+            assertThat(result).hasSize(2);
         }
     }
 
