@@ -335,6 +335,7 @@ class DailyMissionInstanceServiceTest {
                 eq(ExpSourceType.MISSION_EXECUTION),
                 eq(MISSION_ID),
                 anyString(),
+                anyLong(),
                 anyString()
             );
             verify(userStatsService).recordMissionCompletion(TEST_USER_ID, false);
@@ -365,7 +366,7 @@ class DailyMissionInstanceServiceTest {
             assertThat(response.getNote()).isEqualTo("완료!");
             // 경험치 지급은 됨
             verify(userExperienceService).addExperience(
-                eq(TEST_USER_ID), anyInt(), any(), anyLong(), anyString(), anyString());
+                eq(TEST_USER_ID), anyInt(), any(), anyLong(), anyString(), anyLong(), anyString());
         }
     }
 
