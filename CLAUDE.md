@@ -318,3 +318,38 @@ if (isPinnedMission(missionId, userId)) {
 # mission_db에서 실행
 psql -d mission_db -f level-up-together-sql/queries/migration/20260122_create_daily_mission_instance.sql
 ```
+
+## Guild Service: Guild Invitation (길드 초대)
+
+비공개 길드를 위한 초대 시스템입니다.
+
+### GuildInvitation 엔티티
+- 비공개 길드 마스터/관리자가 다른 유저를 초대
+- 초대 상태: `PENDING`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `EXPIRED`
+- 만료 시간 지원 (7일)
+- 같은 카테고리의 다른 길드 가입자는 초대 불가
+
+### API 엔드포인트
+```
+POST   /api/v1/guilds/{guildId}/invitations         - 초대 발송
+GET    /api/v1/users/me/guild-invitations           - 내 대기중 초대 목록
+POST   /api/v1/guild-invitations/{id}/accept        - 초대 수락
+POST   /api/v1/guild-invitations/{id}/reject        - 초대 거절
+DELETE /api/v1/guild-invitations/{id}               - 초대 취소 (마스터)
+```
+
+### 관련 파일
+- `domain/entity/GuildInvitation.java` - 초대 엔티티
+- `domain/enums/GuildInvitationStatus.java` - 초대 상태 Enum
+- `application/GuildInvitationService.java` - 초대 서비스
+- `api/GuildInvitationController.java` - REST 컨트롤러
+- `infrastructure/GuildInvitationRepository.java` - 리포지토리
+
+### 이벤트
+- `GuildInvitationEvent`: 초대 발송 시 알림 이벤트 발행
+
+### 마이그레이션
+```bash
+# guild_db에서 실행
+psql -d guild_db -f level-up-together-sql/archive/queries/migration/20260124_create_guild_invitation.sql
+```
