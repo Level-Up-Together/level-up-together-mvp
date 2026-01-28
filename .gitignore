@@ -44,6 +44,8 @@ logs
 /src/main/generated/
 /src/test/generated_tests/
 /docs/deploy.sh
+/docs/deploy.sh.org
+/docs/test.puml
 
 ### Claude Code ###
 *-command-message*.txt
