@@ -90,7 +90,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Messaging**: Kafka topics (loggerTopic, httpLoggerTopic, alimTalkTopic, appPushTopic, emailTopic, userCommunicationTopic)
 - **Events**: Spring Events for notification system and cross-service communication (`io.pinkspider.global.event`)
   - `@TransactionalEventListener(phase = AFTER_COMMIT)` for event handlers
-  - Event records: `GuildJoinedEvent`, `GuildMasterAssignedEvent`, `FriendRequestEvent`, etc.
+  - Event records: `GuildJoinedEvent`, `GuildMasterAssignedEvent`, `GuildInvitationEvent`, `FriendRequestEvent`, `FriendRequestAcceptedEvent`, `TitleAcquiredEvent`, `AchievementCompletedEvent`, `MissionStateChangedEvent`, etc.
+  - Event listeners: `AchievementEventListener`, `NotificationEventListener`, `MissionStateHistoryEventListener`
 - **Caching**: Redis caching with `@Cacheable`/`@CacheEvict` annotations
   - `FriendCacheService` - 친구 목록 캐싱 (TTL 10분)
   - `UserProfileCacheService` - 유저 프로필 캐싱 (TTL 5분)
@@ -188,6 +189,9 @@ public class YourServiceException extends CustomException {
 | logger-service | 09 |
 | stats-service | 10 |
 | batch-service | 11 |
+| gamification-service | 12 |
+| feed-service | 13 |
+| notification-service | 14 |
 
 ## Database Configuration
 
@@ -238,6 +242,21 @@ class YourServiceTest {
             throw new RuntimeException(e);
         }
     }
+}
+```
+
+### Integration Tests
+Use `@SpringBootTest` with test profile for integration testing:
+```java
+@SpringBootTest
+@ActiveProfiles("test")
+@Transactional(transactionManager = "yourTransactionManager")
+class YourIntegrationTest {
+    @Autowired
+    private YourService service;
+
+    @Autowired
+    private YourRepository repository;
 }
 ```
 
@@ -353,3 +372,86 @@ DELETE /api/v1/guild-invitations/{id}               - 초대 취소 (마스터)
 # guild_db에서 실행
 psql -d guild_db -f level-up-together-sql/archive/queries/migration/20260124_create_guild_invitation.sql
 ```
+
+## Saga Pattern: Mission Completion 예시
+
+미션 완료 시 여러 서비스에 걸친 분산 트랜잭션을 Saga 패턴으로 관리합니다.
+
+### Saga 구조
+```
+missionservice/saga/
+├── MissionCompletionSaga.java        - Saga 오케스트레이터
+├── MissionCompletionContext.java     - Saga 컨텍스트 (공유 데이터)
+└── steps/
+    ├── LoadMissionDataStep.java      - 미션 데이터 로드
+    ├── CompleteExecutionStep.java    - 실행 완료 처리
+    ├── UpdateParticipantProgressStep.java - 참가자 진행 업데이트
+    ├── GrantUserExperienceStep.java  - 유저 경험치 지급
+    ├── GrantGuildExperienceStep.java - 길드 경험치 지급
+    ├── UpdateUserStatsStep.java      - 유저 통계 업데이트
+    └── CreateFeedFromMissionStep.java - 피드 생성
+```
+
+### Saga Step 구현
+```java
+@Component
+public class YourStep extends AbstractSagaStep<YourContext> {
+
+    @Override
+    public String getStepName() {
+        return "YOUR_STEP";
+    }
+
+    @Override
+    protected SagaStepResult executeInternal(YourContext context) {
+        // 비즈니스 로직
+        return SagaStepResult.success();
+    }
+
+    @Override
+    protected SagaStepResult compensateInternal(YourContext context) {
+        // 보상 트랜잭션 (롤백 로직)
+        return SagaStepResult.success();
+    }
+}
+```
+
+## Event-Driven 패턴
+
+### 이벤트 발행
+```java
+@Service
+@RequiredArgsConstructor
+public class YourService {
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Transactional(transactionManager = "yourTransactionManager")
+    public void doSomething() {
+        // 비즈니스 로직
+        eventPublisher.publishEvent(new YourEvent(userId, data));
+    }
+}
+```
+
+### 이벤트 수신
+```java
+@Component
+@RequiredArgsConstructor
+public class YourEventListener {
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleEvent(YourEvent event) {
+        // 이벤트 처리 (다른 서비스 호출, 알림 발송 등)
+    }
+}
+```
+
+### 주요 이벤트 흐름
+| 발행 서비스 | 이벤트 | 수신 리스너 | 처리 내용 |
+|------------|--------|------------|----------|
+| GuildService | `GuildJoinedEvent` | `AchievementEventListener` | 길드 가입 업적 체크 |
+| GuildService | `GuildInvitationEvent` | `NotificationEventListener` | 초대 알림 발송 |
+| FriendService | `FriendRequestAcceptedEvent` | `NotificationEventListener` | 친구 수락 알림 |
+| GamificationService | `TitleAcquiredEvent` | `NotificationEventListener` | 칭호 획득 알림 |
+| GamificationService | `AchievementCompletedEvent` | `NotificationEventListener` | 업적 달성 알림 |
+| MissionService | `MissionStateChangedEvent` | `MissionStateHistoryEventListener` | 미션 상태 이력 저장 |

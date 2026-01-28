@@ -389,9 +389,9 @@ public class MyPageService {
         if (nickname.length() > 10) {
             throw new CustomException("NICKNAME_004", "닉네임은 10자 이하여야 합니다.");
         }
-        // 한글, 영문, 숫자만 허용
-        if (!nickname.matches("^[가-힣a-zA-Z0-9]+$")) {
-            throw new CustomException("NICKNAME_005", "닉네임은 한글, 영문, 숫자만 사용 가능합니다.");
+        // 한글, 영문, 숫자, 아랍어 허용
+        if (!nickname.matches("^[가-힣a-zA-Z0-9\u0600-\u06FF]+$")) {
+            throw new CustomException("NICKNAME_005", "닉네임은 한글, 영문, 숫자, 아랍어만 사용 가능합니다.");
         }
     }
 

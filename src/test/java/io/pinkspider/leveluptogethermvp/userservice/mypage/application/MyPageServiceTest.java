@@ -432,6 +432,66 @@ class MyPageServiceTest {
         }
 
         @Test
+        @DisplayName("영문 닉네임으로 변경할 수 있다")
+        void updateNickname_english_success() {
+            // given
+            Users user = createTestUser(TEST_USER_ID, "테스터");
+            String englishNickname = "TestUser";
+            when(userRepository.existsByNicknameAndIdNot(englishNickname, TEST_USER_ID)).thenReturn(false);
+            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(Users.class))).thenReturn(user);
+            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
+
+            // when
+            ProfileInfo result = myPageService.updateNickname(TEST_USER_ID, englishNickname);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(userRepository).save(any(Users.class));
+        }
+
+        @Test
+        @DisplayName("아랍어 닉네임으로 변경할 수 있다")
+        void updateNickname_arabic_success() {
+            // given
+            Users user = createTestUser(TEST_USER_ID, "테스터");
+            String arabicNickname = "محمد";
+            when(userRepository.existsByNicknameAndIdNot(arabicNickname, TEST_USER_ID)).thenReturn(false);
+            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(Users.class))).thenReturn(user);
+            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
+
+            // when
+            ProfileInfo result = myPageService.updateNickname(TEST_USER_ID, arabicNickname);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(userRepository).save(any(Users.class));
+        }
+
+        @Test
+        @DisplayName("한글, 영문, 숫자 혼합 닉네임으로 변경할 수 있다")
+        void updateNickname_mixed_success() {
+            // given
+            Users user = createTestUser(TEST_USER_ID, "테스터");
+            String mixedNickname = "테스트User1";
+            when(userRepository.existsByNicknameAndIdNot(mixedNickname, TEST_USER_ID)).thenReturn(false);
+            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(Users.class))).thenReturn(user);
+            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
+
+            // when
+            ProfileInfo result = myPageService.updateNickname(TEST_USER_ID, mixedNickname);
+
+            // then
+            assertThat(result).isNotNull();
+            verify(userRepository).save(any(Users.class));
+        }
+
+        @Test
         @DisplayName("닉네임이 2자 미만이면 예외가 발생한다")
         void updateNickname_tooShort_throwsException() {
             // when & then
