@@ -116,19 +116,22 @@ public class DailyMissionInstanceScheduler {
     }
 
     /**
-     * 특정 사용자의 오늘 인스턴스를 수동 생성 (실시간 참여 시 사용)
+     * 특정 사용자의 오늘 PENDING 인스턴스를 조회하거나 생성 (실시간 참여 시 사용)
      *
      * @param participant 참여자
-     * @return 생성된 인스턴스 (이미 존재하면 기존 인스턴스 반환)
+     * @return PENDING 상태 인스턴스 (없으면 새로 생성)
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstance createOrGetTodayInstance(MissionParticipant participant) {
         LocalDate today = LocalDate.now();
 
-        // 이미 존재하면 반환
-        return instanceRepository.findByParticipantIdAndInstanceDate(participant.getId(), today)
+        // PENDING 상태 인스턴스가 있으면 반환, 없으면 새로 생성
+        return instanceRepository.findPendingByParticipantIdAndDate(participant.getId(), today)
+            .stream()
+            .findFirst()
             .orElseGet(() -> {
-                DailyMissionInstance instance = DailyMissionInstance.createFrom(participant, today);
+                int nextSequence = instanceRepository.findMaxSequenceNumber(participant.getId(), today) + 1;
+                DailyMissionInstance instance = DailyMissionInstance.createFrom(participant, today, nextSequence);
                 return instanceRepository.save(instance);
             });
     }

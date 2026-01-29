@@ -43,8 +43,8 @@ import org.hibernate.annotations.Comment;
 @AllArgsConstructor
 @Table(name = "daily_mission_instance",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_instance_participant_date",
-        columnNames = {"participant_id", "instance_date"}
+        name = "uk_instance_participant_date_seq",
+        columnNames = {"participant_id", "instance_date", "sequence_number"}
     ),
     indexes = {
         @Index(name = "idx_instance_user_date", columnList = "participant_id, instance_date"),
@@ -71,6 +71,12 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
     @Column(name = "instance_date", nullable = false)
     @Comment("인스턴스 날짜 (해당 일자의 미션)")
     private LocalDate instanceDate;
+
+    @NotNull
+    @Column(name = "sequence_number", nullable = false)
+    @Comment("당일 수행 순번 (1부터 시작)")
+    @Builder.Default
+    private Integer sequenceNumber = 1;
 
     // ============ 미션 정보 스냅샷 (원본 미션 변경에 영향받지 않음) ============
 
@@ -290,6 +296,13 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
      * 미션 참여자와 미션 정보로부터 일일 인스턴스 생성
      */
     public static DailyMissionInstance createFrom(MissionParticipant participant, LocalDate date) {
+        return createFrom(participant, date, 1);
+    }
+
+    /**
+     * 미션 참여자와 미션 정보로부터 일일 인스턴스 생성 (순번 지정)
+     */
+    public static DailyMissionInstance createFrom(MissionParticipant participant, LocalDate date, int sequenceNumber) {
         Mission mission = participant.getMission();
         String categoryName = (mission.getCategory() != null) ? mission.getCategory().getName() : mission.getCustomCategory();
         Long categoryId = (mission.getCategory() != null) ? mission.getCategory().getId() : null;
@@ -297,6 +310,7 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
         return DailyMissionInstance.builder()
             .participant(participant)
             .instanceDate(date)
+            .sequenceNumber(sequenceNumber)
             .missionTitle(mission.getTitle())
             .missionDescription(mission.getDescription())
             .categoryName(categoryName)
@@ -304,6 +318,8 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
             .expPerCompletion(mission.getExpPerCompletion())
             .status(ExecutionStatus.PENDING)
             .expEarned(0)
+            .completionCount(0)
+            .totalExpEarned(0)
             .isSharedToFeed(false)
             .build();
     }
