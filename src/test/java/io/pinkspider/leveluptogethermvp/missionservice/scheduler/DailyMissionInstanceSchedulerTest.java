@@ -191,12 +191,14 @@ class DailyMissionInstanceSchedulerTest {
     class CreateOrGetTodayInstanceTest {
 
         @Test
-        @DisplayName("오늘 인스턴스가 없으면 새로 생성한다")
+        @DisplayName("PENDING 인스턴스가 없으면 새로 생성한다")
         void createOrGetTodayInstance_creates() {
             // given
             LocalDate today = LocalDate.now();
-            when(instanceRepository.findByParticipantIdAndInstanceDate(eq(1L), eq(today)))
-                .thenReturn(Optional.empty());
+            when(instanceRepository.findPendingByParticipantIdAndDate(eq(1L), eq(today)))
+                .thenReturn(List.of());
+            when(instanceRepository.findMaxSequenceNumber(eq(1L), eq(today)))
+                .thenReturn(0);
             when(instanceRepository.save(any(DailyMissionInstance.class)))
                 .thenAnswer(invocation -> {
                     DailyMissionInstance instance = invocation.getArgument(0);
@@ -211,19 +213,20 @@ class DailyMissionInstanceSchedulerTest {
             assertThat(result).isNotNull();
             assertThat(result.getInstanceDate()).isEqualTo(today);
             assertThat(result.getMissionTitle()).isEqualTo("매일 30분 운동");
+            assertThat(result.getSequenceNumber()).isEqualTo(1);
             verify(instanceRepository).save(any(DailyMissionInstance.class));
         }
 
         @Test
-        @DisplayName("오늘 인스턴스가 있으면 기존 인스턴스를 반환한다")
+        @DisplayName("PENDING 인스턴스가 있으면 기존 인스턴스를 반환한다")
         void createOrGetTodayInstance_returnsExisting() {
             // given
             LocalDate today = LocalDate.now();
             DailyMissionInstance existingInstance = DailyMissionInstance.createFrom(participant1, today);
             setId(existingInstance, 100L);
 
-            when(instanceRepository.findByParticipantIdAndInstanceDate(eq(1L), eq(today)))
-                .thenReturn(Optional.of(existingInstance));
+            when(instanceRepository.findPendingByParticipantIdAndDate(eq(1L), eq(today)))
+                .thenReturn(List.of(existingInstance));
 
             // when
             DailyMissionInstance result = scheduler.createOrGetTodayInstance(participant1);

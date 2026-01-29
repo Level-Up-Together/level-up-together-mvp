@@ -129,16 +129,22 @@ public class DailyMissionInstanceService {
 
     /**
      * 고정 미션 시작 (missionId + date로 조회 후 시작)
-     * 인스턴스가 없으면 자동 생성
+     * PENDING 상태 인스턴스가 있으면 재사용, 없으면 새로 생성
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstanceResponse startInstanceByMission(Long missionId, String userId, LocalDate date) {
         MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
 
-        // 인스턴스가 없으면 자동 생성
-        DailyMissionInstance instance = instanceRepository.findByParticipantIdAndInstanceDate(participant.getId(), date)
-            .orElseGet(() -> instanceScheduler.createOrGetTodayInstance(participant));
+        // PENDING 상태 인스턴스가 있으면 재사용, 없으면 새로 생성
+        DailyMissionInstance instance = instanceRepository.findPendingByParticipantIdAndDate(participant.getId(), date)
+            .stream()
+            .findFirst()
+            .orElseGet(() -> {
+                int nextSequence = instanceRepository.findMaxSequenceNumber(participant.getId(), date) + 1;
+                DailyMissionInstance newInstance = DailyMissionInstance.createFrom(participant, date, nextSequence);
+                return instanceRepository.save(newInstance);
+            });
 
         return startInstance(instance.getId(), userId);
     }
@@ -201,22 +207,27 @@ public class DailyMissionInstanceService {
         // 완료 정보 저장
         instanceRepository.save(instance);
 
-        int completionCount = instance.getCompletionCount();
-        int totalExpEarned = instance.getTotalExpEarned();
+        log.info("고정 미션 인스턴스 완료: instanceId={}, userId={}, expEarned={}, shareToFeed={}, sequenceNumber={}",
+            instanceId, userId, expEarned, shareToFeed, instance.getSequenceNumber());
 
-        log.info("고정 미션 인스턴스 완료: instanceId={}, userId={}, expEarned={}, shareToFeed={}, completionCount={}, totalExpEarned={}",
-            instanceId, userId, expEarned, shareToFeed, completionCount, totalExpEarned);
-
-        // 응답은 완료 상태로 반환 (completionCount, totalExpEarned 포함)
+        // 응답은 완료 상태로 반환
         DailyMissionInstanceResponse response = DailyMissionInstanceResponse.from(instance);
 
-        // 고정 미션은 완료 후 자동으로 PENDING 상태로 리셋 (하루에 여러 번 수행 가능)
-        instance.resetToPending();
-        instanceRepository.save(instance);
-
-        log.info("고정 미션 인스턴스 자동 리셋: instanceId={}, userId={}, 다음 수행 가능", instanceId, userId);
+        // 다음 수행을 위한 새 인스턴스 생성 (PENDING 상태)
+        createNextInstance(instance.getParticipant(), instance.getInstanceDate());
 
         return response;
+    }
+
+    /**
+     * 다음 수행을 위한 새 인스턴스 생성
+     */
+    private void createNextInstance(MissionParticipant participant, LocalDate date) {
+        int nextSequence = instanceRepository.findMaxSequenceNumber(participant.getId(), date) + 1;
+        DailyMissionInstance newInstance = DailyMissionInstance.createFrom(participant, date, nextSequence);
+        instanceRepository.save(newInstance);
+        log.info("다음 수행용 새 인스턴스 생성: participantId={}, date={}, sequenceNumber={}",
+            participant.getId(), date, nextSequence);
     }
 
     /**

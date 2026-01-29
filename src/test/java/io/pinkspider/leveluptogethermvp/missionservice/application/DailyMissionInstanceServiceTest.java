@@ -658,15 +658,15 @@ class DailyMissionInstanceServiceTest {
     class ByMissionMethodsTest {
 
         @Test
-        @DisplayName("missionId와 date로 인스턴스를 시작한다")
+        @DisplayName("missionId와 date로 PENDING 인스턴스를 시작한다")
         void startInstanceByMission_success() {
             // given
             LocalDate today = LocalDate.now();
 
             when(participantRepository.findByMissionIdAndUserId(MISSION_ID, TEST_USER_ID))
                 .thenReturn(Optional.of(participant));
-            when(instanceRepository.findByParticipantIdAndInstanceDate(PARTICIPANT_ID, today))
-                .thenReturn(Optional.of(instance));
+            when(instanceRepository.findPendingByParticipantIdAndDate(PARTICIPANT_ID, today))
+                .thenReturn(List.of(instance));
             when(instanceRepository.findInProgressByUserId(TEST_USER_ID))
                 .thenReturn(Optional.empty());
             when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
@@ -682,30 +682,41 @@ class DailyMissionInstanceServiceTest {
         }
 
         @Test
-        @DisplayName("인스턴스가 없으면 자동 생성 후 시작한다")
+        @DisplayName("PENDING 인스턴스가 없으면 새로 생성 후 시작한다")
         void startInstanceByMission_createsIfNotExists() {
             // given
             LocalDate today = LocalDate.now();
 
             when(participantRepository.findByMissionIdAndUserId(MISSION_ID, TEST_USER_ID))
                 .thenReturn(Optional.of(participant));
-            when(instanceRepository.findByParticipantIdAndInstanceDate(PARTICIPANT_ID, today))
-                .thenReturn(Optional.empty());
-            when(instanceScheduler.createOrGetTodayInstance(participant))
-                .thenReturn(instance);
+            when(instanceRepository.findPendingByParticipantIdAndDate(PARTICIPANT_ID, today))
+                .thenReturn(List.of());
+            when(instanceRepository.findMaxSequenceNumber(PARTICIPANT_ID, today))
+                .thenReturn(0);
+            when(instanceRepository.save(any(DailyMissionInstance.class)))
+                .thenAnswer(invocation -> {
+                    DailyMissionInstance saved = invocation.getArgument(0);
+                    // ID 설정 (리플렉션)
+                    try {
+                        java.lang.reflect.Field idField = DailyMissionInstance.class.getDeclaredField("id");
+                        idField.setAccessible(true);
+                        idField.set(saved, INSTANCE_ID);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return saved;
+                });
             when(instanceRepository.findInProgressByUserId(TEST_USER_ID))
                 .thenReturn(Optional.empty());
             when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
                 .thenReturn(Optional.of(instance));
-            when(instanceRepository.save(any(DailyMissionInstance.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
             DailyMissionInstanceResponse response = service.startInstanceByMission(MISSION_ID, TEST_USER_ID, today);
 
             // then
             assertThat(response).isNotNull();
-            verify(instanceScheduler).createOrGetTodayInstance(participant);
+            verify(instanceRepository).findMaxSequenceNumber(PARTICIPANT_ID, today);
         }
 
         @Test
