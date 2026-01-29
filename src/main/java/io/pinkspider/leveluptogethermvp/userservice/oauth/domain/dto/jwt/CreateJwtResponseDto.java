@@ -30,4 +30,6 @@ public class CreateJwtResponseDto {
     private String userId;
 
     private String deviceId;
+
+    private boolean nicknameSet;
 }

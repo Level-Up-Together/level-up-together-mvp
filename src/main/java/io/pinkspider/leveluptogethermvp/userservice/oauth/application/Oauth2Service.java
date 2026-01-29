@@ -187,6 +187,7 @@ public class Oauth2Service {
                 .expiresIn(900) // 15분
                 .userId(userId)
                 .deviceId(deviceId)
+                .nicknameSet(users.isNicknameSet())
                 .build();
         } catch (Exception e) {
             log.error("Mobile login failed - provider: {}, error: {}", provider, e.getMessage());
@@ -250,6 +251,7 @@ public class Oauth2Service {
             .expiresIn(900) // 15분
             .userId(userId)
             .deviceId(deviceId)
+            .nicknameSet(users.isNicknameSet())
             .build();
     }
 
