@@ -369,4 +369,13 @@ public class NotificationService {
             inviterNickname + "님이 '" + guildName + "' 길드로 초대했습니다.",
             "GUILD_INVITATION", invitationId, "/guild-invitations/" + invitationId);
     }
+
+    // 가입 환영 알림
+    @Transactional(transactionManager = "notificationTransactionManager")
+    public void notifyWelcome(String userId, String nickname) {
+        createNotification(userId, NotificationType.WELCOME,
+            "Level Up Together에 오신 것을 환영합니다!",
+            nickname + "님, 함께 성장하는 여정을 시작해보세요.",
+            null, null, "/home");
+    }
 }

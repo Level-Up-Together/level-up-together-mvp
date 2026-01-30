@@ -280,11 +280,14 @@ public class AchievementService {
                     userStatsService.recordAchievementCompleted(userId);
                     log.info("동적 업적 달성! userId={}, achievement={}", userId, achievement.getName());
 
-                    eventPublisher.publishEvent(new AchievementCompletedEvent(
-                        userId,
-                        achievement.getId(),
-                        achievement.getName()
-                    ));
+                    // 숨김 업적은 알림을 보내지 않음
+                    if (!Boolean.TRUE.equals(achievement.getIsHidden())) {
+                        eventPublisher.publishEvent(new AchievementCompletedEvent(
+                            userId,
+                            achievement.getId(),
+                            achievement.getName()
+                        ));
+                    }
                 }
             }
         } else {
