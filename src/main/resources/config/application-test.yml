@@ -258,6 +258,10 @@ app:
   oauth2:
     google-token-url: "https://oauth2.googleapis.com"
     kakao-token-url: "https://kauth.kakao.com/oauth/token"
+    kakao-webhook:
+      admin-key: ${KAKAO_ADMIN_KEY:test-admin-key}
+      rest-api-key: ${KAKAO_REST_API_KEY:test-rest-api-key}
+      app-id: ${KAKAO_APP_ID:test-app-id}
     allowed-origins:
       - http://localhost:8001
       - http://localhost:3000

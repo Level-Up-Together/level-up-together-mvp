@@ -105,3 +105,34 @@ Accept: application/json
 GET {{baseUrl}}/jwt/token-status
 Authorization: Bearer {{accessToken}}
 Accept: application/json
+
+### ============================================================
+### Kakao Webhook APIs
+### ============================================================
+
+### ----------------------------------------------------------
+### 카카오 연결 해제 웹훅 (Unlink Webhook) - GET
+### 카카오에서 사용자가 앱 연결을 끊었을 때 호출됩니다.
+### Authorization 헤더에 어드민 키가 필요합니다.
+### ----------------------------------------------------------
+GET {{baseUrl}}/api/v1/oauth/kakao/webhook/unlink?app_id=123456&user_id=987654321&referrer_type=UNLINK_FROM_APPS
+Authorization: KakaoAK test-admin-key
+Accept: application/json
+
+### ----------------------------------------------------------
+### 카카오 연결 해제 웹훅 (Unlink Webhook) - POST
+### ----------------------------------------------------------
+POST {{baseUrl}}/api/v1/oauth/kakao/webhook/unlink?app_id=123456&user_id=987654321&referrer_type=ACCOUNT_DELETE
+Authorization: KakaoAK test-admin-key
+Accept: application/json
+
+### ----------------------------------------------------------
+### 카카오 계정 상태 변경 웹훅 (Account Status Change Webhook)
+### SSF 규격에 따른 SET(Security Event Token) JWT를 전송합니다.
+### Content-Type은 application/secevent+jwt 입니다.
+### 실제 테스트는 카카오 개발자센터의 웹훅 테스트 도구를 사용하세요.
+### ----------------------------------------------------------
+# POST {{baseUrl}}/api/v1/oauth/kakao/webhook/status
+# Content-Type: application/secevent+jwt
+#
+# eyJraWQiOiJrYWthb19zc2ZfMSIsInR5cCI6InNlY2V2ZW50K2p3dCIsImFsZyI6IlJTMjU2In0.eyJhdWQiOiJ0ZXN0LXJlc3QtYXBpLWtleSIsInN1YiI6Ijk4NzY1NDMyMSIsImlzcyI6Imh0dHBzOi8va2F1dGgua2FrYW8uY29tIiwiaWF0IjoxNzA2NzU1MjAwLCJ0b2UiOjE3MDY3NTUyMDAsImp0aSI6InVuaXF1ZS1ldmVudC1pZCIsImV2ZW50cyI6eyJodHRwczovL3NjaGVtYXMua2FrYW8uY29tL2V2ZW50cy9vYXV0aC91c2VyLXVubGlua2VkIjp7fX19.signature

@@ -14,6 +14,7 @@ public class OAuth2Properties {
     private String googleTokenUrl;
     private String kakaoTokenUrl;
     private List<String> allowedOrigins = new ArrayList<>();
+    private KakaoWebhook kakaoWebhook = new KakaoWebhook();
 
     public boolean isAllowedOrigin(String origin) {
         if (origin == null || origin.isBlank()) {
@@ -21,5 +22,12 @@ public class OAuth2Properties {
         }
         return allowedOrigins.stream()
             .anyMatch(allowed -> origin.equalsIgnoreCase(allowed));
+    }
+
+    @Data
+    public static class KakaoWebhook {
+        private String adminKey;
+        private String restApiKey;
+        private String appId;
     }
 }
