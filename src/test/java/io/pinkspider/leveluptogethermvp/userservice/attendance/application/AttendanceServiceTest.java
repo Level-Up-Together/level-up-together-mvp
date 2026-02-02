@@ -86,7 +86,7 @@ class AttendanceServiceTest {
                     .rewardType(AttendanceRewardType.DAILY)
                     .rewardExp(10)
                     .build()));
-            when(attendanceRecordRepository.save(any(AttendanceRecord.class))).thenReturn(savedRecord);
+            when(attendanceRecordRepository.saveAndFlush(any(AttendanceRecord.class))).thenReturn(savedRecord);
 
             // when
             AttendanceCheckInResponse result = attendanceService.checkIn(TEST_USER_ID);
@@ -94,7 +94,7 @@ class AttendanceServiceTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.isAlreadyCheckedIn()).isFalse();
-            verify(attendanceRecordRepository).save(any(AttendanceRecord.class));
+            verify(attendanceRecordRepository).saveAndFlush(any(AttendanceRecord.class));
             verify(userExperienceService).addExperience(
                 eq(TEST_USER_ID), anyInt(), eq(ExpSourceType.EVENT), anyLong(), anyString(), eq("기타"));
         }
@@ -137,7 +137,7 @@ class AttendanceServiceTest {
                     .rewardType(AttendanceRewardType.DAILY)
                     .rewardExp(10)
                     .build()));
-            when(attendanceRecordRepository.save(any(AttendanceRecord.class))).thenReturn(savedRecord);
+            when(attendanceRecordRepository.saveAndFlush(any(AttendanceRecord.class))).thenReturn(savedRecord);
 
             // when
             AttendanceCheckInResponse result = attendanceService.checkIn(TEST_USER_ID);
@@ -172,7 +172,7 @@ class AttendanceServiceTest {
                     .rewardType(AttendanceRewardType.CONSECUTIVE_3)
                     .rewardExp(20)
                     .build()));
-            when(attendanceRecordRepository.save(any(AttendanceRecord.class))).thenReturn(savedRecord);
+            when(attendanceRecordRepository.saveAndFlush(any(AttendanceRecord.class))).thenReturn(savedRecord);
 
             // when
             AttendanceCheckInResponse result = attendanceService.checkIn(TEST_USER_ID);

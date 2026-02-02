@@ -261,7 +261,7 @@ class AchievementServiceTest {
             when(mockStrategy.fetchCurrentValue(anyString(), anyString())).thenReturn(5);
             when(userAchievementRepository.findByUserIdAndAchievementId(anyString(), anyLong()))
                 .thenReturn(Optional.empty());
-            when(userAchievementRepository.save(any(UserAchievement.class)))
+            when(userAchievementRepository.saveAndFlush(any(UserAchievement.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
             when(userAchievementRepository.findClaimableByUserId(TEST_USER_ID))
                 .thenReturn(List.of());
@@ -509,7 +509,7 @@ class AchievementServiceTest {
             when(mockStrategy.fetchCurrentValue(TEST_USER_ID, "totalMissionCompletions")).thenReturn(10);
             when(userAchievementRepository.findByUserIdAndAchievementId(TEST_USER_ID, 1L))
                 .thenReturn(Optional.empty());
-            when(userAchievementRepository.save(any(UserAchievement.class)))
+            when(userAchievementRepository.saveAndFlush(any(UserAchievement.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
             // when

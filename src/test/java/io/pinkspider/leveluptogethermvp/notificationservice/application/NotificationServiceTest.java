@@ -597,14 +597,16 @@ class NotificationServiceTest {
             preference.setSystemNotifications(true);  // ACHIEVEMENT 카테고리는 기본적으로 true로 처리
             Notification savedNotification = createTestNotification(1L, TEST_USER_ID, NotificationType.TITLE_ACQUIRED);
 
+            when(notificationRepository.existsByUserIdAndReferenceTypeAndReferenceId(TEST_USER_ID, "TITLE", 1L))
+                .thenReturn(false);
             when(preferenceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(preference));
-            when(notificationRepository.save(any(Notification.class))).thenReturn(savedNotification);
+            when(notificationRepository.saveAndFlush(any(Notification.class))).thenReturn(savedNotification);
 
             // when
             notificationService.notifyTitleAcquired(TEST_USER_ID, 1L, "초보 모험가", "COMMON");
 
             // then
-            verify(notificationRepository).save(any(Notification.class));
+            verify(notificationRepository).saveAndFlush(any(Notification.class));
         }
 
         @Test
@@ -767,14 +769,16 @@ class NotificationServiceTest {
             NotificationPreference preference = createTestPreference(1L, TEST_USER_ID);
             Notification savedNotification = createTestNotification(1L, TEST_USER_ID, NotificationType.ACHIEVEMENT_COMPLETED);
 
+            when(notificationRepository.existsByUserIdAndReferenceTypeAndReferenceId(TEST_USER_ID, "ACHIEVEMENT", 1L))
+                .thenReturn(false);
             when(preferenceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(preference));
-            when(notificationRepository.save(any(Notification.class))).thenReturn(savedNotification);
+            when(notificationRepository.saveAndFlush(any(Notification.class))).thenReturn(savedNotification);
 
             // when
             notificationService.notifyAchievementCompleted(TEST_USER_ID, 1L, "미션 마스터");
 
             // then
-            verify(notificationRepository).save(any(Notification.class));
+            verify(notificationRepository).saveAndFlush(any(Notification.class));
         }
     }
 }
