@@ -25,6 +25,8 @@ public class DeviceTokenService {
 
     /**
      * 디바이스 토큰 등록/업데이트
+     * - 한 유저당 하나의 활성 디바이스만 유지
+     * - 새 디바이스 등록 시 기존 디바이스 비활성화
      */
     @Transactional(transactionManager = "notificationTransactionManager")
     public DeviceTokenResponse registerToken(String userId, DeviceTokenRequest request) {
@@ -41,12 +43,14 @@ public class DeviceTokenService {
                 existing.deactivate();
                 deviceTokenRepository.save(existing);
             } else {
-                // 같은 사용자의 토큰이면 활성화 및 정보 업데이트
+                // 같은 사용자의 토큰이면 다른 디바이스 비활성화 후 현재 토큰 활성화
+                deviceTokenRepository.deactivateAllByUserId(userId);
                 existing.activate();
                 existing.setDeviceId(request.deviceId());
                 existing.setDeviceName(request.deviceName());
                 existing.setAppVersion(request.appVersion());
                 DeviceToken saved = deviceTokenRepository.save(existing);
+                log.info("Device token reactivated, other devices deactivated for user: {}", userId);
                 return DeviceTokenResponse.from(saved);
             }
         }
@@ -57,14 +61,21 @@ public class DeviceTokenService {
                     deviceTokenRepository.findByUserIdAndDeviceId(userId, request.deviceId());
 
             if (existingByDevice.isPresent()) {
+                // 다른 디바이스 비활성화
+                deviceTokenRepository.deactivateAllByUserId(userId);
+
                 DeviceToken existing = existingByDevice.get();
                 existing.updateToken(request.fcmToken());
                 existing.setDeviceName(request.deviceName());
                 existing.setAppVersion(request.appVersion());
                 DeviceToken saved = deviceTokenRepository.save(existing);
+                log.info("Device token updated, other devices deactivated for user: {}", userId);
                 return DeviceTokenResponse.from(saved);
             }
         }
+
+        // 새 토큰 생성 전 기존 모든 토큰 비활성화
+        deviceTokenRepository.deactivateAllByUserId(userId);
 
         // 새 토큰 생성
         DeviceToken newToken = DeviceToken.builder()
@@ -79,7 +90,7 @@ public class DeviceTokenService {
                 .build();
 
         DeviceToken saved = deviceTokenRepository.save(newToken);
-        log.info("Device token registered successfully: {}", saved.getId());
+        log.info("New device token registered, other devices deactivated for user: {}", saved.getId());
 
         return DeviceTokenResponse.from(saved);
     }
