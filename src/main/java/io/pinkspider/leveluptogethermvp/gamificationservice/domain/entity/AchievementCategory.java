@@ -1,5 +1,6 @@
 package io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.pinkspider.global.domain.auditentity.LocalDateTimeBaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,6 +30,7 @@ import org.hibernate.annotations.Comment;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Table(name = "achievement_category",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_achievement_category_code",
