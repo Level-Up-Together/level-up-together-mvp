@@ -2,8 +2,10 @@ package io.pinkspider.leveluptogethermvp.notificationservice.api;
 
 import io.pinkspider.global.api.ApiResult;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.DeviceTokenService;
+import io.pinkspider.leveluptogethermvp.notificationservice.application.FcmPushService;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.DeviceTokenRequest;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.DeviceTokenResponse;
+import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.PushMessageRequest;
 import io.pinkspider.leveluptogethermvp.userservice.core.annotation.CurrentUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import java.util.List;
 public class DeviceTokenController {
 
     private final DeviceTokenService deviceTokenService;
+    private final FcmPushService fcmPushService;
 
     /**
      * 디바이스 토큰 등록
@@ -87,6 +90,31 @@ public class DeviceTokenController {
         } catch (Exception e) {
             log.error("Failed to reset badge count for user: {}, error: {}", userId, e.getMessage(), e);
             throw e;
+        }
+    }
+
+    /**
+     * 테스트 푸시 알림 발송 (디버깅용)
+     */
+    @PostMapping("/test-push")
+    public ResponseEntity<ApiResult<String>> sendTestPush(
+            @CurrentUser String userId
+    ) {
+        log.info("Test push notification request from user: {}", userId);
+        try {
+            PushMessageRequest pushRequest = PushMessageRequest.of(
+                "테스트 알림",
+                "FCM 푸시 테스트입니다. 시간: " + java.time.LocalDateTime.now()
+            );
+            fcmPushService.sendToUser(userId, pushRequest);
+            return ResponseEntity.ok(ApiResult.<String>builder()
+                .value("Push sent to user: " + userId)
+                .build());
+        } catch (Exception e) {
+            log.error("Failed to send test push for user: {}, error: {}", userId, e.getMessage(), e);
+            return ResponseEntity.ok(ApiResult.<String>builder()
+                .value("Failed: " + e.getMessage())
+                .build());
         }
     }
 }
