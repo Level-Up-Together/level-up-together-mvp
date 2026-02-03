@@ -80,8 +80,13 @@ public class DeviceTokenController {
     public ResponseEntity<ApiResult<Void>> resetBadgeCount(
             @CurrentUser String userId
     ) {
-        log.debug("Reset badge count request from user: {}", userId);
-        deviceTokenService.resetBadgeCount(userId);
-        return ResponseEntity.ok(ApiResult.<Void>builder().build());
+        log.info("Reset badge count request from user: {}", userId);
+        try {
+            deviceTokenService.resetBadgeCount(userId);
+            return ResponseEntity.ok(ApiResult.<Void>builder().build());
+        } catch (Exception e) {
+            log.error("Failed to reset badge count for user: {}, error: {}", userId, e.getMessage(), e);
+            throw e;
+        }
     }
 }

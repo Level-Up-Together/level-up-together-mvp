@@ -43,7 +43,7 @@ class FcmPushIntegrationTest {
 
     // ⚠️ 실제 앱에서 발급받은 FCM 토큰으로 교체하세요
 //    private static final String FCM_TOKEN = "fCOGOrM-Q0G_5reL31nEd2:APA91bHIIapqUlLNmeS_WhTPDZ6zg3n9BIGDKY_M0XsdPq_j_mEUgrOT63zZZMk32k3CZ0BW6eM5PgHu-f9P1LohgoQknJXLCSrLVnF9JTTqjkYmaObhOdw";
-    private static final String FCM_TOKEN = "d0yQcipNdU2crOrHKrT7Tk:APA91bHpzDI5LhvwiIdNp1kKgz3wzKwY0gU8tcMNqagLM9mKlszawyYxxsuzYJpIkm5xNbvS673TXL-gabf2LqWyU6fhXibGKe0zJGVVdqjCBtOowfFRdsk";
+    private static final String FCM_TOKEN = "fCOGOrM-Q0G_5reL31nEd2:APA91bHIIapqUlLNmeS_WhTPDZ6zg3n9BIGDKY_M0XsdPq_j_mEUgrOT63zZZMk32k3CZ0BW6eM5PgHu-f9P1LohgoQknJXLCSrLVnF9JTTqjkYmaObhOdw";
 
     private static final String SERVICE_ACCOUNT_PATH = "firebase-service-account.json";
 
@@ -92,7 +92,7 @@ class FcmPushIntegrationTest {
     }
 
     @Test
-    @Disabled("실제 푸시 전송 테스트 - FCM_TOKEN 설정 후 @Disabled 제거")
+//    @Disabled("실제 푸시 전송 테스트 - FCM_TOKEN 설정 후 @Disabled 제거")
     void sendPushNotification_실제전송테스트() {
         try {
             // Given

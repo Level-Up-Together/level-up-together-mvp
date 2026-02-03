@@ -68,7 +68,7 @@ public interface DeviceTokenRepository extends JpaRepository<DeviceToken, Long> 
     /**
      * 사용자의 배지 카운트 초기화
      */
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE DeviceToken dt SET dt.badgeCount = 0 WHERE dt.userId = :userId")
     void resetBadgeCountByUserId(@Param("userId") String userId);
 
