@@ -629,7 +629,7 @@ public class ActivityFeedService {
             ));
         }
 
-        return FeedCommentResponse.from(saved);
+        return FeedCommentResponse.from(saved, null, userId);
     }
 
     /**
