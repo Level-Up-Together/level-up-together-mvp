@@ -28,6 +28,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -133,12 +134,23 @@ public class DailyMissionInstanceService {
 
     /**
      * 고정 미션 시작 (missionId + date로 조회 후 시작)
-     * PENDING 상태 인스턴스가 있으면 재사용, 없으면 새로 생성
+     * 1. 이미 IN_PROGRESS 인스턴스가 있으면 그것을 반환 (이미 수행중)
+     * 2. PENDING 상태 인스턴스가 있으면 재사용
+     * 3. 없으면 새로 생성
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstanceResponse startInstanceByMission(Long missionId, String userId, LocalDate date) {
         MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
+
+        // 이미 IN_PROGRESS 인스턴스가 있으면 그것을 반환 (뒤로가기 후 재진입 시)
+        Optional<DailyMissionInstance> inProgressInstance = instanceRepository
+            .findInProgressByParticipantIdAndDate(participant.getId(), date);
+        if (inProgressInstance.isPresent()) {
+            log.info("이미 수행중인 고정 미션 인스턴스 반환: missionId={}, instanceId={}, userId={}",
+                missionId, inProgressInstance.get().getId(), userId);
+            return DailyMissionInstanceResponse.from(inProgressInstance.get());
+        }
 
         // PENDING 상태 인스턴스가 있으면 재사용, 없으면 새로 생성
         DailyMissionInstance instance = instanceRepository.findPendingByParticipantIdAndDate(participant.getId(), date)
