@@ -62,70 +62,43 @@ public class MissionExecutionService {
     private final TitleService titleService;
     private final DailyMissionInstanceService dailyMissionInstanceService;
 
+    /**
+     * 미션 참여 시 실행 일정 생성
+     *
+     * - 고정 미션(isPinned=true): DailyMissionInstance를 사용하므로 여기서 생성하지 않음
+     * - 일반 미션(isPinned=false): 오늘 하루치만 생성 (1회성 미션)
+     */
     @Transactional
     public void generateExecutionsForParticipant(MissionParticipant participant) {
         Mission mission = participant.getMission();
         LocalDate today = LocalDate.now();
 
-        // 시작일 결정: startAt이 없거나 과거이면 오늘부터 시작
-        LocalDate startDate;
-        if (mission.getStartAt() != null) {
-            LocalDate missionStartDate = mission.getStartAt().toLocalDate();
-            // 미션 시작일이 과거인 경우 오늘부터 시작
-            startDate = missionStartDate.isBefore(today) ? today : missionStartDate;
-        } else {
-            startDate = today;
+        // 고정 미션(isPinned=true)은 DailyMissionInstance를 사용하므로 여기서 생성하지 않음
+        if (Boolean.TRUE.equals(mission.getIsPinned())) {
+            log.info("고정 미션은 DailyMissionInstance를 사용하므로 MissionExecution 생성 건너뜀: missionId={}",
+                mission.getId());
+            return;
         }
 
-        // 종료일 결정: 시작일 기준으로 durationDays 적용
-        LocalDate endDate;
-        if (mission.getDurationDays() != null) {
-            endDate = startDate.plusDays(mission.getDurationDays());
-        } else if (mission.getEndAt() != null) {
-            LocalDate missionEndDate = mission.getEndAt().toLocalDate();
-            // 종료일이 시작일보다 이전이면 durationDays 또는 기본값 사용
-            if (missionEndDate.isBefore(startDate)) {
-                endDate = startDate.plusDays(30);
-            } else {
-                endDate = missionEndDate;
-            }
-        } else {
-            endDate = startDate.plusDays(30);
-        }
-
-        MissionInterval interval = mission.getMissionInterval() != null
-            ? mission.getMissionInterval()
-            : MissionInterval.DAILY;
-
+        // 일반 미션(isPinned=false 또는 null)은 오늘 하루치만 생성
         // 기존 실행 날짜 조회 (재참여 시 중복 방지)
-        Set<LocalDate> existingDates = executionRepository.findByParticipantId(participant.getId())
-            .stream()
-            .map(MissionExecution::getExecutionDate)
-            .collect(Collectors.toSet());
+        boolean alreadyExists = executionRepository.findByParticipantIdAndExecutionDate(
+            participant.getId(), today).isPresent();
 
-        List<MissionExecution> executions = new ArrayList<>();
-        LocalDate currentDate = startDate;
-
-        while (!currentDate.isAfter(endDate)) {
-            // 이미 존재하는 날짜는 건너뛰기
-            if (!existingDates.contains(currentDate)) {
-                MissionExecution execution = MissionExecution.builder()
-                    .participant(participant)
-                    .executionDate(currentDate)
-                    .status(ExecutionStatus.PENDING)
-                    .build();
-                executions.add(execution);
-            }
-            currentDate = currentDate.plusDays(interval.getDays());
+        if (alreadyExists) {
+            log.info("미션 수행 일정 생성 건너뜀: participantId={}, 오늘 날짜 기존재", participant.getId());
+            return;
         }
 
-        if (!executions.isEmpty()) {
-            executionRepository.saveAll(executions);
-            log.info("미션 수행 일정 생성: participantId={}, 신규 {}개 (기존 {}개 제외)",
-                participant.getId(), executions.size(), existingDates.size());
-        } else {
-            log.info("미션 수행 일정 생성 건너뜀: participantId={}, 모든 날짜 기존재", participant.getId());
-        }
+        MissionExecution execution = MissionExecution.builder()
+            .participant(participant)
+            .executionDate(today)
+            .status(ExecutionStatus.PENDING)
+            .build();
+
+        executionRepository.save(execution);
+        log.info("일반 미션 수행 일정 생성: participantId={}, missionId={}, date={}",
+            participant.getId(), mission.getId(), today);
     }
 
     /**
@@ -447,7 +420,7 @@ public class MissionExecutionService {
             if (!hasInstance) {
                 // 고정 미션의 오늘 DailyMissionInstance 자동 생성
                 DailyMissionInstance instance = DailyMissionInstance.createFrom(participant, today);
-                dailyMissionInstanceRepository.save(instance);
+                dailyMissionInstanceRepository.saveAndFlush(instance);
 
                 log.info("고정 미션 오늘 인스턴스 자동 생성: missionId={}, userId={}, date={}",
                     participant.getMission().getId(), userId, today);

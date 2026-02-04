@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -399,241 +400,155 @@ class MissionExecutionServiceTest {
     class GenerateExecutionsForParticipantTest {
 
         @Test
-        @DisplayName("미션 시작일이 과거인 경우 오늘부터 시작한다")
-        void generateExecutionsForParticipant_pastStartDate_startsFromToday() {
+        @DisplayName("일반 미션(isPinned=false)은 오늘 하루치만 생성한다")
+        void generateExecutionsForParticipant_regularMission_createsTodayOnly() {
             // given
             LocalDate today = LocalDate.now();
-            LocalDate pastStartDate = today.minusDays(30);
 
-            Mission missionWithPastStart = Mission.builder()
-                .title("과거 시작 미션")
+            Mission regularMission = Mission.builder()
+                .title("일반 미션")
                 .description("테스트")
                 .status(MissionStatus.OPEN)
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
                 .creatorId(testUserId)
-                .missionInterval(MissionInterval.DAILY)
-                .startAt(pastStartDate.atStartOfDay())
-                .durationDays(7)
+                .isPinned(false)
                 .expPerCompletion(10)
                 .build();
-            setMissionId(missionWithPastStart, 10L);
+            setMissionId(regularMission, 10L);
 
             MissionParticipant participant = MissionParticipant.builder()
-                .mission(missionWithPastStart)
+                .mission(regularMission)
                 .userId(testUserId)
                 .status(ParticipantStatus.ACCEPTED)
                 .build();
             setParticipantId(participant, 10L);
 
-            when(executionRepository.findByParticipantId(participant.getId()))
-                .thenReturn(new ArrayList<>());
-
-            List<MissionExecution> capturedExecutions = new ArrayList<>();
-            when(executionRepository.saveAll(any())).thenAnswer(invocation -> {
-                List<MissionExecution> executions = invocation.getArgument(0);
-                capturedExecutions.addAll(executions);
-                return executions;
-            });
+            when(executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), today))
+                .thenReturn(Optional.empty());
+            when(executionRepository.save(any(MissionExecution.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
             executionService.generateExecutionsForParticipant(participant);
 
             // then
-            verify(executionRepository).saveAll(argThat(executions -> {
-                List<MissionExecution> list = (List<MissionExecution>) executions;
-                // 8개 (오늘 + 7일)
-                if (list.size() != 8) return false;
-
-                // 첫 번째 실행 날짜가 오늘인지 확인
-                return list.get(0).getExecutionDate().equals(today);
-            }));
+            verify(executionRepository).save(argThat(execution ->
+                execution.getExecutionDate().equals(today) &&
+                execution.getStatus() == ExecutionStatus.PENDING
+            ));
         }
 
         @Test
-        @DisplayName("미션 시작일이 미래인 경우 미션 시작일부터 시작한다")
-        void generateExecutionsForParticipant_futureStartDate_startsFromMissionStart() {
+        @DisplayName("고정 미션(isPinned=true)은 MissionExecution 생성을 건너뛴다")
+        void generateExecutionsForParticipant_pinnedMission_skipsCreation() {
             // given
-            LocalDate today = LocalDate.now();
-            LocalDate futureStartDate = today.plusDays(5);
-
-            Mission missionWithFutureStart = Mission.builder()
-                .title("미래 시작 미션")
+            Mission pinnedMission = Mission.builder()
+                .title("고정 미션")
                 .description("테스트")
                 .status(MissionStatus.OPEN)
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
                 .creatorId(testUserId)
-                .missionInterval(MissionInterval.DAILY)
-                .startAt(futureStartDate.atStartOfDay())
-                .durationDays(7)
+                .isPinned(true)
                 .expPerCompletion(10)
                 .build();
-            setMissionId(missionWithFutureStart, 11L);
+            setMissionId(pinnedMission, 11L);
 
             MissionParticipant participant = MissionParticipant.builder()
-                .mission(missionWithFutureStart)
+                .mission(pinnedMission)
                 .userId(testUserId)
                 .status(ParticipantStatus.ACCEPTED)
                 .build();
             setParticipantId(participant, 11L);
 
-            when(executionRepository.findByParticipantId(participant.getId()))
-                .thenReturn(new ArrayList<>());
-
             // when
             executionService.generateExecutionsForParticipant(participant);
 
-            // then
-            verify(executionRepository).saveAll(argThat(executions -> {
-                List<MissionExecution> list = (List<MissionExecution>) executions;
-                // 8개 (시작일 + 7일)
-                if (list.size() != 8) return false;
-
-                // 첫 번째 실행 날짜가 미래 시작일인지 확인
-                return list.get(0).getExecutionDate().equals(futureStartDate);
-            }));
+            // then - 고정 미션은 DailyMissionInstance를 사용하므로 save 호출 없음
+            verify(executionRepository, never()).save(any(MissionExecution.class));
+            verify(executionRepository, never()).saveAll(any());
         }
 
         @Test
-        @DisplayName("미션 시작일이 null인 경우 오늘부터 시작한다")
-        void generateExecutionsForParticipant_nullStartDate_startsFromToday() {
+        @DisplayName("이미 오늘 날짜의 execution이 있으면 생성을 건너뛴다")
+        void generateExecutionsForParticipant_alreadyExists_skipsCreation() {
             // given
             LocalDate today = LocalDate.now();
 
-            Mission missionWithNullStart = Mission.builder()
-                .title("시작일 없는 미션")
+            Mission regularMission = Mission.builder()
+                .title("일반 미션")
                 .description("테스트")
                 .status(MissionStatus.OPEN)
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
                 .creatorId(testUserId)
-                .missionInterval(MissionInterval.DAILY)
-                .startAt(null)
-                .durationDays(7)
+                .isPinned(false)
                 .expPerCompletion(10)
                 .build();
-            setMissionId(missionWithNullStart, 12L);
+            setMissionId(regularMission, 12L);
 
             MissionParticipant participant = MissionParticipant.builder()
-                .mission(missionWithNullStart)
+                .mission(regularMission)
                 .userId(testUserId)
                 .status(ParticipantStatus.ACCEPTED)
                 .build();
             setParticipantId(participant, 12L);
 
-            when(executionRepository.findByParticipantId(participant.getId()))
-                .thenReturn(new ArrayList<>());
+            MissionExecution existingExecution = MissionExecution.builder()
+                .participant(participant)
+                .executionDate(today)
+                .status(ExecutionStatus.PENDING)
+                .build();
+
+            when(executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), today))
+                .thenReturn(Optional.of(existingExecution));
 
             // when
             executionService.generateExecutionsForParticipant(participant);
 
-            // then
-            verify(executionRepository).saveAll(argThat(executions -> {
-                List<MissionExecution> list = (List<MissionExecution>) executions;
-                // 첫 번째 실행 날짜가 오늘인지 확인
-                return list.get(0).getExecutionDate().equals(today);
-            }));
+            // then - 이미 존재하므로 save 호출 없음
+            verify(executionRepository, never()).save(any(MissionExecution.class));
         }
 
         @Test
-        @DisplayName("종료일이 시작일보다 이전인 경우 기본값(30일)을 사용한다")
-        void generateExecutionsForParticipant_endDateBeforeStartDate_usesDefaultDuration() {
+        @DisplayName("isPinned가 null인 경우 일반 미션으로 처리하여 오늘 하루치만 생성한다")
+        void generateExecutionsForParticipant_isPinnedNull_createsTodayOnly() {
             // given
             LocalDate today = LocalDate.now();
-            LocalDate pastStartDate = today.minusDays(60);
-            LocalDate pastEndDate = today.minusDays(30);
 
-            Mission missionWithPastDates = Mission.builder()
-                .title("과거 날짜 미션")
+            Mission missionWithNullPinned = Mission.builder()
+                .title("isPinned null 미션")
                 .description("테스트")
                 .status(MissionStatus.OPEN)
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
                 .creatorId(testUserId)
-                .missionInterval(MissionInterval.DAILY)
-                .startAt(pastStartDate.atStartOfDay())
-                .endAt(pastEndDate.atStartOfDay())
-                .durationDays(null) // durationDays 없음
+                .isPinned(null) // null
                 .expPerCompletion(10)
                 .build();
-            setMissionId(missionWithPastDates, 13L);
+            setMissionId(missionWithNullPinned, 13L);
 
             MissionParticipant participant = MissionParticipant.builder()
-                .mission(missionWithPastDates)
+                .mission(missionWithNullPinned)
                 .userId(testUserId)
                 .status(ParticipantStatus.ACCEPTED)
                 .build();
             setParticipantId(participant, 13L);
 
-            when(executionRepository.findByParticipantId(participant.getId()))
-                .thenReturn(new ArrayList<>());
+            when(executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), today))
+                .thenReturn(Optional.empty());
+            when(executionRepository.save(any(MissionExecution.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
             executionService.generateExecutionsForParticipant(participant);
 
             // then
-            verify(executionRepository).saveAll(argThat(executions -> {
-                List<MissionExecution> list = (List<MissionExecution>) executions;
-                // 31개 (오늘 + 30일)
-                if (list.size() != 31) return false;
-
-                // 첫 번째 실행 날짜가 오늘인지 확인
-                if (!list.get(0).getExecutionDate().equals(today)) return false;
-
-                // 마지막 실행 날짜가 오늘 + 30일인지 확인
-                return list.get(list.size() - 1).getExecutionDate().equals(today.plusDays(30));
-            }));
-        }
-
-        @Test
-        @DisplayName("시스템 미션북에서 미션 추가 시 오늘부터 시작한다")
-        void generateExecutionsForParticipant_systemMission_startsFromToday() {
-            // given - 시스템 미션 (과거 날짜로 설정된 상태)
-            LocalDate today = LocalDate.now();
-            LocalDate pastStartDate = today.minusDays(100);
-            LocalDate pastEndDate = today.minusDays(70);
-
-            Mission systemMission = Mission.builder()
-                .title("시스템 미션")
-                .description("미션북에서 제공하는 미션")
-                .status(MissionStatus.OPEN)
-                .visibility(MissionVisibility.PUBLIC)
-                .type(MissionType.PERSONAL)
-                .creatorId("admin")
-                .missionInterval(MissionInterval.DAILY)
-                .startAt(pastStartDate.atStartOfDay())
-                .endAt(pastEndDate.atStartOfDay())
-                .durationDays(30)
-                .expPerCompletion(10)
-                .build();
-            setMissionId(systemMission, 14L);
-
-            MissionParticipant participant = MissionParticipant.builder()
-                .mission(systemMission)
-                .userId(testUserId)
-                .status(ParticipantStatus.ACCEPTED)
-                .build();
-            setParticipantId(participant, 14L);
-
-            when(executionRepository.findByParticipantId(participant.getId()))
-                .thenReturn(new ArrayList<>());
-
-            // when
-            executionService.generateExecutionsForParticipant(participant);
-
-            // then
-            verify(executionRepository).saveAll(argThat(executions -> {
-                List<MissionExecution> list = (List<MissionExecution>) executions;
-                // 31개 (오늘 + durationDays(30))
-                if (list.size() != 31) return false;
-
-                // 첫 번째 실행 날짜가 오늘인지 확인
-                if (!list.get(0).getExecutionDate().equals(today)) return false;
-
-                // 마지막 실행 날짜가 오늘 + 30일인지 확인
-                return list.get(list.size() - 1).getExecutionDate().equals(today.plusDays(30));
-            }));
+            verify(executionRepository).save(argThat(execution ->
+                execution.getExecutionDate().equals(today) &&
+                execution.getStatus() == ExecutionStatus.PENDING
+            ));
         }
     }
 
@@ -931,8 +846,8 @@ class MissionExecutionServiceTest {
             when(dailyMissionInstanceRepository.existsByParticipantIdAndInstanceDate(eq(100L), eq(today)))
                 .thenReturn(false);
 
-            // DailyMissionInstance 저장 mock
-            when(dailyMissionInstanceRepository.save(any(DailyMissionInstance.class)))
+            // DailyMissionInstance 저장 mock (saveAndFlush 사용)
+            when(dailyMissionInstanceRepository.saveAndFlush(any(DailyMissionInstance.class)))
                 .thenAnswer(invocation -> {
                     DailyMissionInstance instance = invocation.getArgument(0);
                     setInstanceId(instance, 200L);
@@ -955,7 +870,7 @@ class MissionExecutionServiceTest {
 
             // then
             assertThat(responses).hasSize(1);
-            verify(dailyMissionInstanceRepository).save(any(DailyMissionInstance.class));
+            verify(dailyMissionInstanceRepository).saveAndFlush(any(DailyMissionInstance.class));
         }
 
         @Test
