@@ -319,7 +319,7 @@ public class NotificationService {
         createNotification(feedOwnerId, NotificationType.COMMENT_ON_MY_FEED,
             "새 댓글",
             commenterNickname + "님이 회원님의 글에 댓글을 남겼습니다.",
-            "FEED", feedId, "/feed/" + feedId);
+            "FEED", feedId, "/home/" + feedId);
     }
 
     // 내 미션에 댓글 알림
@@ -329,7 +329,7 @@ public class NotificationService {
         createNotification(missionCreatorId, NotificationType.COMMENT_ON_MY_MISSION,
             "새 댓글",
             commenterNickname + "님이 '" + missionTitle + "' 미션에 댓글을 남겼습니다.",
-            "MISSION", missionId, "/mission/" + missionId);
+            "MISSION", missionId, "/mission/progress/" + missionId);
     }
 
     // 칭호 획득 알림 (중복 방지 - 레이스 컨디션 안전)
