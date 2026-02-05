@@ -110,6 +110,16 @@ public class Users extends LocalDateTimeBaseEntity {
     }
 
     /**
+     * 회원 탈퇴 처리
+     */
+    public void withdraw() {
+        this.status = UserStatus.WITHDRAWN;
+        this.nickname = "탈퇴한 사용자";
+        this.picture = null;
+        this.bio = null;
+    }
+
+    /**
      * 표시용 이름 반환 (닉네임 > 이메일 앞부분)
      */
     public String getDisplayName() {

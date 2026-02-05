@@ -476,6 +476,32 @@ public class MyPageService {
             .build();
     }
 
+    /**
+     * 회원 탈퇴
+     *
+     * @param userId 사용자 ID
+     */
+    @Transactional
+    public void withdrawUser(String userId) {
+        Users user = findUserOrThrow(userId);
+
+        // 이미 탈퇴한 사용자인지 확인
+        if (user.getStatus() == io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.enums.UserStatus.WITHDRAWN) {
+            throw new CustomException("USER_002", "이미 탈퇴한 사용자입니다.");
+        }
+
+        // 프로필 이미지 삭제
+        if (user.getPicture() != null) {
+            profileImageStorageService.delete(user.getPicture());
+        }
+
+        // 사용자 상태를 WITHDRAWN으로 변경
+        user.withdraw();
+        userRepository.save(user);
+
+        log.info("회원 탈퇴 처리 완료: userId={}", userId);
+    }
+
     // ============== Private Helper Methods ==============
 
     private Users findUserOrThrow(String userId) {

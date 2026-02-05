@@ -18,6 +18,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -199,5 +200,19 @@ public class MyPageController {
             .build();
 
         return ResponseEntity.ok(ApiResult.<NicknameStatusResponse>builder().value(response).build());
+    }
+
+    /**
+     * 회원 탈퇴
+     *
+     * @param userId 사용자 ID (JWT 토큰에서 추출)
+     * @return 탈퇴 완료 메시지
+     */
+    @DeleteMapping("/account")
+    public ResponseEntity<ApiResult<String>> withdrawAccount(
+        @CurrentUser String userId) {
+
+        myPageService.withdrawUser(userId);
+        return ResponseEntity.ok(ApiResult.<String>builder().value("회원 탈퇴가 완료되었습니다.").build());
     }
 }
