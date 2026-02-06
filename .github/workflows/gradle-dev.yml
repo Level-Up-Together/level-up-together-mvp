@@ -35,7 +35,7 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.DEV_KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > src/main/resources/keystore.p12
+          echo "$KEYSTORE_BASE64" | base64 -d > src/main/resources/keystore-dev.p12
           echo "✅ Keystore restored successfully"
 
       # 5. JDK 설정

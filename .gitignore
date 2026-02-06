@@ -71,3 +71,4 @@ src/main/resources/firebase-service-account-prod.json
 *.jks
 *.keystore
 *.p12.org
+/docs/keystore-prod-base64.txt
