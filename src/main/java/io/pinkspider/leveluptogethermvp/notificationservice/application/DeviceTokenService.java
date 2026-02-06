@@ -38,10 +38,22 @@ public class DeviceTokenService {
         if (existingByToken.isPresent()) {
             DeviceToken existing = existingByToken.get();
 
-            // 다른 사용자의 토큰이면 기존 것을 비활성화
+            // 다른 사용자의 토큰이면 기존 것을 현재 사용자로 이전
             if (!existing.getUserId().equals(userId)) {
-                existing.deactivate();
-                deviceTokenRepository.save(existing);
+                // 현재 사용자의 다른 디바이스 비활성화
+                deviceTokenRepository.deactivateAllByUserId(userId);
+
+                // 토큰을 현재 사용자로 이전
+                existing.setUserId(userId);
+                existing.setDeviceId(request.deviceId());
+                existing.setDeviceName(request.deviceName());
+                existing.setAppVersion(request.appVersion());
+                existing.setDeviceType(request.deviceType());
+                existing.activate();
+                existing.resetBadgeCount();
+                DeviceToken saved = deviceTokenRepository.save(existing);
+                log.info("Device token transferred from another user to user: {}", userId);
+                return DeviceTokenResponse.from(saved);
             } else {
                 // 같은 사용자의 토큰이면 다른 디바이스 비활성화 후 현재 토큰 활성화
                 deviceTokenRepository.deactivateAllByUserId(userId);
