@@ -1,21 +1,14 @@
 package io.pinkspider.leveluptogethermvp.missionservice.application;
 
 import io.pinkspider.global.saga.SagaResult;
-import io.pinkspider.global.saga.SagaStatus;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MonthlyCalendarResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MonthlyCalendarResponse.DailyMission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionInterval;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantStatus;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.DailyMissionInstanceRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExecutionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
@@ -29,13 +22,6 @@ import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserSe
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import java.time.LocalDate;
-import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -50,7 +36,6 @@ public class MissionExecutionService {
 
     private final MissionExecutionRepository executionRepository;
     private final MissionParticipantRepository participantRepository;
-    private final DailyMissionInstanceRepository dailyMissionInstanceRepository;
     private final UserExperienceService userExperienceService;
     private final GuildExperienceService guildExperienceService;
     private final UserStatsService userStatsService;
@@ -68,7 +53,7 @@ public class MissionExecutionService {
      * - 고정 미션(isPinned=true): DailyMissionInstance를 사용하므로 여기서 생성하지 않음
      * - 일반 미션(isPinned=false): 오늘 하루치만 생성 (1회성 미션)
      */
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public void generateExecutionsForParticipant(MissionParticipant participant) {
         Mission mission = participant.getMission();
         LocalDate today = LocalDate.now();
@@ -157,7 +142,7 @@ public class MissionExecutionService {
      * @deprecated Saga 패턴 적용된 completeExecution 사용 권장
      */
     @Deprecated
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse completeExecutionLegacy(Long executionId, String userId, String note) {
         MissionExecution execution = findExecutionById(executionId);
         validateExecutionOwner(execution, userId);
@@ -218,7 +203,7 @@ public class MissionExecutionService {
         return MissionExecutionResponse.from(execution);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse completeExecutionByDate(Long missionId, String userId, LocalDate date, String note) {
         MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
@@ -234,7 +219,7 @@ public class MissionExecutionService {
      * 이미 진행 중인 미션이 있으면 예외 발생
      * 해당 날짜의 실행 레코드가 없으면 자동 생성
      */
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse startExecution(Long missionId, String userId, LocalDate executionDate) {
         // 고정 미션인 경우 DailyMissionInstanceService로 위임
         if (isPinnedMission(missionId, userId)) {
@@ -277,7 +262,7 @@ public class MissionExecutionService {
     /**
      * 진행 중인 미션 취소 (PENDING 상태로 되돌림)
      */
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse skipExecution(Long missionId, String userId, LocalDate executionDate) {
         // 고정 미션인 경우 DailyMissionInstanceService로 위임
         if (isPinnedMission(missionId, userId)) {
@@ -302,29 +287,20 @@ public class MissionExecutionService {
     /**
      * 진행 중인 미션 취소 (오늘 날짜 기준)
      */
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse skipExecutionToday(Long missionId, String userId) {
         return skipExecution(missionId, userId, LocalDate.now());
     }
 
     /**
-     * 사용자의 현재 진행 중인 미션 조회
-     */
-    public MissionExecutionResponse getInProgressExecution(String userId) {
-        return executionRepository.findInProgressByUserId(userId)
-            .map(MissionExecutionResponse::from)
-            .orElse(null);
-    }
-
-    /**
      * 미션 수행 시작 (오늘 날짜 기준)
      */
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse startExecutionToday(Long missionId, String userId) {
         return startExecution(missionId, userId, LocalDate.now());
     }
 
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public int markMissedExecutions() {
         LocalDate today = LocalDate.now();
         int count = executionRepository.markMissedExecutions(today);
@@ -332,125 +308,12 @@ public class MissionExecutionService {
         return count;
     }
 
-    public List<MissionExecutionResponse> getExecutionsByParticipant(Long participantId) {
-        return executionRepository.findByParticipantId(participantId).stream()
-            .map(MissionExecutionResponse::from)
-            .toList();
-    }
-
-    public List<MissionExecutionResponse> getExecutionsByMissionAndUser(Long missionId, String userId) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        return executionRepository.findByParticipantId(participant.getId()).stream()
-            .map(MissionExecutionResponse::from)
-            .toList();
-    }
-
-    /**
-     * 오늘 실행해야 할 미션 목록 조회
-     * 일반 미션(MissionExecution)과 고정 미션(DailyMissionInstance) 모두 포함
-     */
-    @Transactional
-    public List<MissionExecutionResponse> getTodayExecutions(String userId) {
-        LocalDate today = LocalDate.now();
-
-        // 고정 미션의 오늘 execution 자동 생성 (일반 MissionExecution용)
-        ensurePinnedMissionExecutionsForToday(userId, today);
-
-        List<MissionExecutionResponse> responses = new ArrayList<>();
-
-        // 일반 미션 Execution 조회
-        List<MissionExecutionResponse> regularExecutions = executionRepository
-            .findByUserIdAndExecutionDate(userId, today).stream()
-            .map(MissionExecutionResponse::from)
-            .toList();
-        responses.addAll(regularExecutions);
-
-        // 고정 미션 DailyMissionInstance 조회
-        List<DailyMissionInstance> dailyInstances = dailyMissionInstanceRepository
-            .findByUserIdAndInstanceDateWithMission(userId, today);
-        List<MissionExecutionResponse> instanceResponses = dailyInstances.stream()
-            .map(MissionExecutionResponse::fromDailyMissionInstance)
-            .toList();
-        responses.addAll(instanceResponses);
-
-        log.info("getTodayExecutions: userId={}, regularCount={}, instanceCount={}",
-            userId, regularExecutions.size(), instanceResponses.size());
-
-        return responses;
-    }
-
-    /**
-     * 오늘 완료된 고정 미션 인스턴스 조회 (오늘 수행 기록용)
-     *
-     * 고정 미션은 하루에 여러 번 수행 가능하므로, 완료된 인스턴스를 별도로 반환합니다.
-     * 프론트엔드에서 '오늘 수행 기록' 섹션에 표시하는 데 사용됩니다.
-     *
-     * @param userId 사용자 ID
-     * @return 완료된 고정 미션 인스턴스 목록
-     */
-    public List<MissionExecutionResponse> getCompletedPinnedInstancesForToday(String userId) {
-        LocalDate today = LocalDate.now();
-
-        List<DailyMissionInstance> completedInstances = dailyMissionInstanceRepository
-            .findCompletedByUserIdAndInstanceDate(userId, today);
-
-        List<MissionExecutionResponse> responses = completedInstances.stream()
-            .map(MissionExecutionResponse::fromDailyMissionInstance)
-            .toList();
-
-        log.info("getCompletedPinnedInstancesForToday: userId={}, count={}", userId, responses.size());
-
-        return responses;
-    }
-
-    /**
-     * 고정 미션(isPinned=true)에 대해 오늘 날짜의 DailyMissionInstance가 없으면 자동 생성
-     * 스케줄러가 매일 자동 생성하지만, 스케줄러 실행 전 접근 시를 대비
-     */
-    private void ensurePinnedMissionExecutionsForToday(String userId, LocalDate today) {
-        List<MissionParticipant> pinnedParticipants = participantRepository.findPinnedMissionParticipants(userId);
-
-        for (MissionParticipant participant : pinnedParticipants) {
-            // 오늘 날짜의 DailyMissionInstance가 있는지 확인
-            boolean hasInstance = dailyMissionInstanceRepository
-                .existsByParticipantIdAndInstanceDate(participant.getId(), today);
-
-            if (!hasInstance) {
-                // 고정 미션의 오늘 DailyMissionInstance 자동 생성
-                DailyMissionInstance instance = DailyMissionInstance.createFrom(participant, today);
-                dailyMissionInstanceRepository.saveAndFlush(instance);
-
-                log.info("고정 미션 오늘 인스턴스 자동 생성: missionId={}, userId={}, date={}",
-                    participant.getMission().getId(), userId, today);
-            }
-        }
-    }
-
-    public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 조회 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.getInstanceByMission(missionId, userId, date);
-            return toMissionExecutionResponse(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), date)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + date));
-
-        return MissionExecutionResponse.from(execution);
-    }
-
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse completeExecution(Long missionId, String userId, LocalDate executionDate, String note) {
         return completeExecution(missionId, userId, executionDate, note, false);
     }
 
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse completeExecution(Long missionId, String userId, LocalDate executionDate, String note, boolean shareToFeed) {
         // 고정 미션인 경우 DailyMissionInstanceService로 위임
         if (isPinnedMission(missionId, userId)) {
@@ -468,192 +331,10 @@ public class MissionExecutionService {
         return completeExecution(execution.getId(), userId, note, shareToFeed);
     }
 
-    public List<MissionExecutionResponse> getExecutionsForMission(Long missionId, String userId) {
-        return getExecutionsByMissionAndUser(missionId, userId);
-    }
-
-    public List<MissionExecutionResponse> getExecutionsByDateRange(Long missionId, String userId,
-                                                                    LocalDate startDate, LocalDate endDate) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        return executionRepository.findByParticipantIdAndExecutionDateBetween(
-                participant.getId(), startDate, endDate).stream()
-            .map(MissionExecutionResponse::from)
-            .toList();
-    }
-
-    public double getCompletionRate(Long missionId, String userId) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
-        if (totalExecutions == 0) {
-            return 0.0;
-        }
-
-        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
-            participant.getId(), ExecutionStatus.COMPLETED);
-
-        return (double) completedExecutions / totalExecutions * 100;
-    }
-
-    /**
-     * 월별 캘린더 데이터 조회
-     * 해당 월의 완료된 미션 실행 내역과 총 획득 경험치 반환
-     * 일반 미션(MissionExecution)과 고정 미션(DailyMissionInstance) 모두 포함
-     */
-    public MonthlyCalendarResponse getMonthlyCalendarData(String userId, int year, int month) {
-        YearMonth yearMonth = YearMonth.of(year, month);
-        LocalDate startDate = yearMonth.atDay(1);
-        LocalDate endDate = yearMonth.atEndOfMonth();
-
-        // 1. 일반 미션 - 완료된 미션 실행 내역 조회
-        List<MissionExecution> completedExecutions = executionRepository
-            .findCompletedByUserIdAndDateRange(userId, startDate, endDate);
-
-        // 2. 고정 미션 - 완료된 인스턴스 조회
-        List<DailyMissionInstance> completedInstances = dailyMissionInstanceRepository
-            .findCompletedByUserIdAndDateRange(userId, startDate, endDate);
-
-        // 3. 월별 총 획득 경험치 조회 (일반 미션 + 고정 미션)
-        int regularMissionExp = executionRepository.sumExpEarnedByUserIdAndDateRange(userId, startDate, endDate);
-        int pinnedMissionExp = dailyMissionInstanceRepository.sumExpEarnedByUserIdAndDateRange(userId, startDate, endDate);
-        int totalExp = regularMissionExp + pinnedMissionExp;
-
-        // 4. 날짜별 미션 그룹화
-        Map<String, List<DailyMission>> dailyMissions = new HashMap<>();
-
-        // 4-1. 일반 미션 추가
-        for (MissionExecution execution : completedExecutions) {
-            String dateKey = execution.getExecutionDate().toString();
-
-            Integer durationMinutes = null;
-            if (execution.getStartedAt() != null && execution.getCompletedAt() != null) {
-                durationMinutes = (int) java.time.Duration.between(
-                    execution.getStartedAt(), execution.getCompletedAt()).toMinutes();
-            }
-
-            DailyMission dailyMission = DailyMission.builder()
-                .missionId(execution.getParticipant().getMission().getId())
-                .missionTitle(execution.getParticipant().getMission().getTitle())
-                .expEarned(execution.getExpEarned())
-                .durationMinutes(durationMinutes)
-                .build();
-
-            dailyMissions.computeIfAbsent(dateKey, k -> new ArrayList<>()).add(dailyMission);
-        }
-
-        // 4-2. 고정 미션 추가
-        for (DailyMissionInstance instance : completedInstances) {
-            String dateKey = instance.getInstanceDate().toString();
-
-            Integer durationMinutes = null;
-            if (instance.getStartedAt() != null && instance.getCompletedAt() != null) {
-                durationMinutes = (int) java.time.Duration.between(
-                    instance.getStartedAt(), instance.getCompletedAt()).toMinutes();
-            }
-
-            DailyMission dailyMission = DailyMission.builder()
-                .missionId(instance.getParticipant().getMission().getId())
-                .missionTitle(instance.getMissionTitle())
-                .expEarned(instance.getExpEarned())
-                .durationMinutes(durationMinutes)
-                .build();
-
-            dailyMissions.computeIfAbsent(dateKey, k -> new ArrayList<>()).add(dailyMission);
-        }
-
-        // 5. 완료된 미션이 있는 날짜 목록
-        List<String> completedDates = new ArrayList<>(dailyMissions.keySet());
-        completedDates.sort(String::compareTo);
-
-        log.info("월별 캘린더 데이터 조회: userId={}, year={}, month={}, totalExp={}, completedDays={}, regularMissions={}, pinnedMissions={}",
-            userId, year, month, totalExp, completedDates.size(), completedExecutions.size(), completedInstances.size());
-
-        return MonthlyCalendarResponse.builder()
-            .year(year)
-            .month(month)
-            .totalExp(totalExp)
-            .dailyMissions(dailyMissions)
-            .completedDates(completedDates)
-            .build();
-    }
-
-    private void updateParticipantProgress(MissionParticipant participant) {
-        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
-        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
-            participant.getId(), ExecutionStatus.COMPLETED);
-
-        int progress = totalExecutions > 0
-            ? (int) ((completedExecutions * 100) / totalExecutions)
-            : 0;
-        participant.updateProgress(progress);
-    }
-
-    private void checkAndGrantFullCompletionBonus(MissionParticipant participant) {
-        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
-        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
-            participant.getId(), ExecutionStatus.COMPLETED);
-
-        if (totalExecutions > 0 && completedExecutions == totalExecutions) {
-            Mission mission = participant.getMission();
-            int bonusExp = mission.getBonusExpOnFullCompletion() != null
-                ? mission.getBonusExpOnFullCompletion() : 50;
-
-            Long bonusCategoryId = mission.getCategory() != null ? mission.getCategory().getId() : null;
-            userExperienceService.addExperience(
-                participant.getUserId(),
-                bonusExp,
-                ExpSourceType.MISSION_FULL_COMPLETION,
-                mission.getId(),
-                "미션 전체 완료 보너스: " + mission.getTitle(),
-                bonusCategoryId,
-                mission.getCategoryName()
-            );
-
-            // 길드 미션인 경우 길드 보너스 경험치 지급
-            if (mission.isGuildMission() && mission.getGuildId() != null) {
-                int guildBonusExp = mission.getGuildBonusExpOnFullCompletion() != null
-                    ? mission.getGuildBonusExpOnFullCompletion() : 20;
-                try {
-                    guildExperienceService.addExperience(
-                        Long.parseLong(mission.getGuildId()),
-                        guildBonusExp,
-                        GuildExpSourceType.GUILD_MISSION_FULL_COMPLETION,
-                        mission.getId(),
-                        participant.getUserId(),
-                        "길드 미션 전체 완료 보너스: " + mission.getTitle()
-                    );
-                    log.info("길드 전체 완료 보너스 지급: guildId={}, userId={}, exp={}",
-                        mission.getGuildId(), participant.getUserId(), guildBonusExp);
-                } catch (Exception e) {
-                    log.warn("길드 보너스 경험치 지급 실패: guildId={}, error={}", mission.getGuildId(), e.getMessage());
-                }
-            }
-
-            participant.complete();
-
-            // 미션 전체 완료 업적 체크
-            try {
-                // 미션 기간 계산: totalExecutions가 실제 완주한 일수
-                int durationDays = (int) totalExecutions;
-                userStatsService.recordMissionFullCompletion(participant.getUserId(), durationDays);
-                // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
-                achievementService.checkAchievementsByDataSource(participant.getUserId(), "USER_STATS");
-            } catch (Exception e) {
-                log.warn("미션 전체 완료 업적 업데이트 실패: userId={}, error={}", participant.getUserId(), e.getMessage());
-            }
-
-            log.info("미션 전체 완료 보너스 지급: userId={}, missionId={}, bonusExp={}",
-                participant.getUserId(), mission.getId(), bonusExp);
-        }
-    }
-
     /**
      * 완료된 미션 실행의 노트(기록) 업데이트
      */
-    @Transactional
+    @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate, String note) {
         MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
@@ -878,6 +559,76 @@ public class MissionExecutionService {
     private void validateExecutionOwner(MissionExecution execution, String userId) {
         if (!execution.getParticipant().getUserId().equals(userId)) {
             throw new IllegalStateException("본인의 수행 기록만 완료할 수 있습니다.");
+        }
+    }
+
+    private void updateParticipantProgress(MissionParticipant participant) {
+        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
+        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
+            participant.getId(), ExecutionStatus.COMPLETED);
+
+        int progress = totalExecutions > 0
+            ? (int) ((completedExecutions * 100) / totalExecutions)
+            : 0;
+        participant.updateProgress(progress);
+    }
+
+    private void checkAndGrantFullCompletionBonus(MissionParticipant participant) {
+        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
+        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
+            participant.getId(), ExecutionStatus.COMPLETED);
+
+        if (totalExecutions > 0 && completedExecutions == totalExecutions) {
+            Mission mission = participant.getMission();
+            int bonusExp = mission.getBonusExpOnFullCompletion() != null
+                ? mission.getBonusExpOnFullCompletion() : 50;
+
+            Long bonusCategoryId = mission.getCategory() != null ? mission.getCategory().getId() : null;
+            userExperienceService.addExperience(
+                participant.getUserId(),
+                bonusExp,
+                ExpSourceType.MISSION_FULL_COMPLETION,
+                mission.getId(),
+                "미션 전체 완료 보너스: " + mission.getTitle(),
+                bonusCategoryId,
+                mission.getCategoryName()
+            );
+
+            // 길드 미션인 경우 길드 보너스 경험치 지급
+            if (mission.isGuildMission() && mission.getGuildId() != null) {
+                int guildBonusExp = mission.getGuildBonusExpOnFullCompletion() != null
+                    ? mission.getGuildBonusExpOnFullCompletion() : 20;
+                try {
+                    guildExperienceService.addExperience(
+                        Long.parseLong(mission.getGuildId()),
+                        guildBonusExp,
+                        GuildExpSourceType.GUILD_MISSION_FULL_COMPLETION,
+                        mission.getId(),
+                        participant.getUserId(),
+                        "길드 미션 전체 완료 보너스: " + mission.getTitle()
+                    );
+                    log.info("길드 전체 완료 보너스 지급: guildId={}, userId={}, exp={}",
+                        mission.getGuildId(), participant.getUserId(), guildBonusExp);
+                } catch (Exception e) {
+                    log.warn("길드 보너스 경험치 지급 실패: guildId={}, error={}", mission.getGuildId(), e.getMessage());
+                }
+            }
+
+            participant.complete();
+
+            // 미션 전체 완료 업적 체크
+            try {
+                // 미션 기간 계산: totalExecutions가 실제 완주한 일수
+                int durationDays = (int) totalExecutions;
+                userStatsService.recordMissionFullCompletion(participant.getUserId(), durationDays);
+                // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
+                achievementService.checkAchievementsByDataSource(participant.getUserId(), "USER_STATS");
+            } catch (Exception e) {
+                log.warn("미션 전체 완료 업적 업데이트 실패: userId={}, error={}", participant.getUserId(), e.getMessage());
+            }
+
+            log.info("미션 전체 완료 보너스 지급: userId={}, missionId={}, bonusExp={}",
+                participant.getUserId(), mission.getId(), bonusExp);
         }
     }
 
