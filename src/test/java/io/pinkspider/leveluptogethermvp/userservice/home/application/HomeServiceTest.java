@@ -1,15 +1,18 @@
 package io.pinkspider.leveluptogethermvp.userservice.home.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedPlayer;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.BannerType;
+import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.LinkType;
 import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedPlayerRepository;
 import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
@@ -686,6 +689,309 @@ class HomeServiceTest {
 
             // then
             assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("비활성 길드는 제외된다")
+        void getMvpGuilds_skipInactiveGuilds() {
+            // given
+            Long guildId = 1L;
+            Object[] row1 = {guildId, 500L};
+            List<Object[]> topGuilds = new ArrayList<>();
+            topGuilds.add(row1);
+
+            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
+                .thenReturn(topGuilds);
+            when(guildRepository.findByIdInAndIsActiveTrue(List.of(guildId)))
+                .thenReturn(Collections.emptyList()); // 비활성 길드
+
+            // when
+            List<MvpGuildResponse> result = homeService.getMvpGuilds();
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("배너 관리 테스트")
+    class BannerManagementTest {
+
+        private HomeBanner createTestBanner(String title, BannerType type) {
+            return HomeBanner.builder()
+                .title(title)
+                .description("테스트 설명")
+                .imageUrl("https://example.com/banner.jpg")
+                .bannerType(type)
+                .linkType(LinkType.EXTERNAL)
+                .linkUrl("https://example.com")
+                .sortOrder(1)
+                .isActive(true)
+                .startAt(LocalDateTime.now())
+                .endAt(LocalDateTime.now().plusDays(7))
+                .build();
+        }
+
+        private void setBannerId(HomeBanner banner, Long id) {
+            try {
+                java.lang.reflect.Field idField = HomeBanner.class.getDeclaredField("id");
+                idField.setAccessible(true);
+                idField.set(banner, id);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Test
+        @DisplayName("배너를 생성한다")
+        void createBanner_success() {
+            // given
+            HomeBanner banner = createTestBanner("신규 배너", BannerType.EVENT);
+            HomeBanner savedBanner = createTestBanner("신규 배너", BannerType.EVENT);
+            setBannerId(savedBanner, 1L);
+
+            when(homeBannerRepository.save(any(HomeBanner.class))).thenReturn(savedBanner);
+
+            // when
+            HomeBannerResponse result = homeService.createBanner(banner);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getTitle()).isEqualTo("신규 배너");
+            verify(homeBannerRepository).save(banner);
+        }
+
+        @Test
+        @DisplayName("배너를 수정한다")
+        void updateBanner_success() {
+            // given
+            Long bannerId = 1L;
+            HomeBanner existingBanner = createTestBanner("기존 배너", BannerType.NOTICE);
+            setBannerId(existingBanner, bannerId);
+
+            HomeBanner updateData = HomeBanner.builder()
+                .title("수정된 배너")
+                .description("수정된 설명")
+                .imageUrl("https://example.com/new-banner.jpg")
+                .linkType(LinkType.INTERNAL)
+                .linkUrl("/new-page")
+                .sortOrder(2)
+                .isActive(false)
+                .startAt(LocalDateTime.now().plusDays(1))
+                .endAt(LocalDateTime.now().plusDays(10))
+                .build();
+
+            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.of(existingBanner));
+            when(homeBannerRepository.save(any(HomeBanner.class))).thenReturn(existingBanner);
+
+            // when
+            HomeBannerResponse result = homeService.updateBanner(bannerId, updateData);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(existingBanner.getTitle()).isEqualTo("수정된 배너");
+            assertThat(existingBanner.getDescription()).isEqualTo("수정된 설명");
+            assertThat(existingBanner.getImageUrl()).isEqualTo("https://example.com/new-banner.jpg");
+            assertThat(existingBanner.getLinkType()).isEqualTo(LinkType.INTERNAL);
+            assertThat(existingBanner.getLinkUrl()).isEqualTo("/new-page");
+            assertThat(existingBanner.getSortOrder()).isEqualTo(2);
+            assertThat(existingBanner.getIsActive()).isFalse();
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 배너 수정 시 예외 발생")
+        void updateBanner_notFound_throwsException() {
+            // given
+            Long bannerId = 999L;
+            HomeBanner updateData = HomeBanner.builder().title("수정").build();
+
+            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> homeService.updateBanner(bannerId, updateData))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("배너를 찾을 수 없습니다");
+        }
+
+        @Test
+        @DisplayName("배너를 삭제한다")
+        void deleteBanner_success() {
+            // given
+            Long bannerId = 1L;
+
+            // when
+            homeService.deleteBanner(bannerId);
+
+            // then
+            verify(homeBannerRepository).deleteById(bannerId);
+        }
+
+        @Test
+        @DisplayName("배너를 비활성화한다")
+        void deactivateBanner_success() {
+            // given
+            Long bannerId = 1L;
+            HomeBanner banner = createTestBanner("활성 배너", BannerType.EVENT);
+            setBannerId(banner, bannerId);
+
+            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.of(banner));
+            when(homeBannerRepository.save(any(HomeBanner.class))).thenReturn(banner);
+
+            // when
+            HomeBannerResponse result = homeService.deactivateBanner(bannerId);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(banner.getIsActive()).isFalse();
+            verify(homeBannerRepository).save(banner);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 배너 비활성화 시 예외 발생")
+        void deactivateBanner_notFound_throwsException() {
+            // given
+            Long bannerId = 999L;
+
+            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> homeService.deactivateBanner(bannerId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("배너를 찾을 수 없습니다");
+        }
+    }
+
+    @Nested
+    @DisplayName("다국어 지원 테스트")
+    class MultilingualTest {
+
+        @Test
+        @DisplayName("영어로 오늘의 플레이어를 조회한다")
+        void getTodayPlayers_withEnglishLocale() {
+            // given
+            Object[] row1 = {testUserId, 100L};
+            List<Object[]> topGainers = new ArrayList<>();
+            topGainers.add(row1);
+
+            Title leftTitle = Title.builder()
+                .name("용감한")
+                .nameEn("Brave")
+                .nameAr("شجاع")
+                .rarity(TitleRarity.RARE)
+                .positionType(TitlePosition.LEFT)
+                .build();
+            setTitleId(leftTitle, 1L);
+
+            UserTitle leftUserTitle = UserTitle.builder()
+                .userId(testUserId)
+                .title(leftTitle)
+                .isEquipped(true)
+                .equippedPosition(TitlePosition.LEFT)
+                .build();
+
+            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+                .thenReturn(topGainers);
+            when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
+            when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
+                .thenReturn(List.of(testUserExperience));
+            when(userTitleRepository.findEquippedTitlesByUserIdIn(List.of(testUserId)))
+                .thenReturn(List.of(leftUserTitle));
+
+            // when
+            List<TodayPlayerResponse> result = homeService.getTodayPlayers("en");
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getLeftTitle()).isEqualTo("Brave");
+        }
+
+        @Test
+        @DisplayName("아랍어로 카테고리별 플레이어를 조회한다")
+        void getTodayPlayersByCategory_withArabicLocale() {
+            // given
+            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
+                .thenReturn(Collections.emptyList());
+            when(missionCategoryRepository.findById(testCategoryId))
+                .thenReturn(Optional.of(testCategory));
+
+            Object[] row1 = {testUserId, 100L};
+            List<Object[]> autoGainers = new ArrayList<>();
+            autoGainers.add(row1);
+
+            Title rightTitle = Title.builder()
+                .name("전사")
+                .nameEn("Warrior")
+                .nameAr("محارب")
+                .rarity(TitleRarity.LEGENDARY)
+                .positionType(TitlePosition.RIGHT)
+                .build();
+            setTitleId(rightTitle, 2L);
+
+            UserTitle rightUserTitle = UserTitle.builder()
+                .userId(testUserId)
+                .title(rightTitle)
+                .isEquipped(true)
+                .equippedPosition(TitlePosition.RIGHT)
+                .build();
+
+            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+                eq("운동"), any(), any(), any()))
+                .thenReturn(autoGainers);
+            when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+            when(userExperienceRepository.findByUserId(testUserId))
+                .thenReturn(Optional.of(testUserExperience));
+            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+                .thenReturn(List.of(rightUserTitle));
+
+            // when
+            List<TodayPlayerResponse> result = homeService.getTodayPlayersByCategory(testCategoryId, "ar");
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getRightTitle()).isEqualTo("محارب");
+        }
+    }
+
+    @Nested
+    @DisplayName("사용자 조회 실패 시 처리 테스트")
+    class UserNotFoundTest {
+
+        @Test
+        @DisplayName("사용자를 찾을 수 없으면 해당 플레이어를 스킵한다")
+        void getTodayPlayersByCategory_userNotFound_skip() {
+            // given
+            String missingUserId = "missing-user-id";
+            FeaturedPlayer featuredPlayer = FeaturedPlayer.builder()
+                .categoryId(testCategoryId)
+                .userId(missingUserId)
+                .displayOrder(1)
+                .isActive(true)
+                .build();
+
+            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
+                .thenReturn(List.of(featuredPlayer));
+            when(userRepository.findById(missingUserId)).thenReturn(Optional.empty());
+            when(missionCategoryRepository.findById(testCategoryId))
+                .thenReturn(Optional.of(testCategory));
+
+            Object[] row1 = {testUserId, 100L};
+            List<Object[]> autoGainers = new ArrayList<>();
+            autoGainers.add(row1);
+            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+                eq("운동"), any(), any(), any()))
+                .thenReturn(autoGainers);
+            when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
+            when(userExperienceRepository.findByUserId(testUserId))
+                .thenReturn(Optional.of(testUserExperience));
+            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+                .thenReturn(Collections.emptyList());
+
+            // when
+            List<TodayPlayerResponse> result = homeService.getTodayPlayersByCategory(testCategoryId);
+
+            // then
+            assertThat(result).hasSize(1);  // missing user는 스킵됨
+            assertThat(result.get(0).getUserId()).isEqualTo(testUserId);
         }
     }
 }

@@ -38,7 +38,10 @@ public enum NotificationType {
     // 업적/칭호 관련
     ACHIEVEMENT("업적", "ACHIEVEMENT"),
     ACHIEVEMENT_COMPLETED("업적 달성", "ACHIEVEMENT"),
-    TITLE_ACQUIRED("칭호 획득", "ACHIEVEMENT");
+    TITLE_ACQUIRED("칭호 획득", "ACHIEVEMENT"),
+
+    // 신고 관련
+    CONTENT_REPORTED("콘텐츠 신고", "SYSTEM");
 
     private final String displayName;
     private final String category;

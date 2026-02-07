@@ -2,6 +2,7 @@ package io.pinkspider.leveluptogethermvp.missionservice.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -1769,6 +1770,215 @@ class MissionExecutionServiceTest {
             // when & then
             org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
                 executionService.unshareExecutionFromFeed(testMission.getId(), testUserId, executionDate);
+            });
+        }
+    }
+
+    @Nested
+    @DisplayName("완료된 고정 미션 인스턴스 조회 테스트")
+    class GetCompletedPinnedInstancesForTodayTest {
+
+        @Test
+        @DisplayName("오늘 완료된 고정 미션 인스턴스 목록을 조회한다")
+        void getCompletedPinnedInstancesForToday_success() {
+            // given
+            LocalDate today = LocalDate.now();
+
+            // 고정 미션 설정
+            Mission pinnedMission = Mission.builder()
+                .title("고정 미션")
+                .description("매일 반복")
+                .status(MissionStatus.IN_PROGRESS)
+                .visibility(MissionVisibility.PRIVATE)
+                .type(MissionType.PERSONAL)
+                .creatorId(testUserId)
+                .missionInterval(MissionInterval.DAILY)
+                .isPinned(true)
+                .expPerCompletion(10)
+                .build();
+            setMissionId(pinnedMission, 100L);
+
+            MissionParticipant pinnedParticipant = MissionParticipant.builder()
+                .mission(pinnedMission)
+                .userId(testUserId)
+                .status(ParticipantStatus.ACCEPTED)
+                .build();
+            setParticipantId(pinnedParticipant, 100L);
+
+            DailyMissionInstance completedInstance1 = DailyMissionInstance.createFrom(pinnedParticipant, today);
+            setInstanceId(completedInstance1, 200L);
+            try {
+                java.lang.reflect.Field statusField = DailyMissionInstance.class.getDeclaredField("status");
+                statusField.setAccessible(true);
+                statusField.set(completedInstance1, ExecutionStatus.COMPLETED);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            DailyMissionInstance completedInstance2 = DailyMissionInstance.createFrom(pinnedParticipant, today);
+            setInstanceId(completedInstance2, 201L);
+            try {
+                java.lang.reflect.Field statusField = DailyMissionInstance.class.getDeclaredField("status");
+                statusField.setAccessible(true);
+                statusField.set(completedInstance2, ExecutionStatus.COMPLETED);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            when(dailyMissionInstanceRepository.findCompletedByUserIdAndInstanceDate(testUserId, today))
+                .thenReturn(List.of(completedInstance1, completedInstance2));
+
+            // when
+            List<MissionExecutionResponse> responses = executionService.getCompletedPinnedInstancesForToday(testUserId);
+
+            // then
+            assertThat(responses).hasSize(2);
+            verify(dailyMissionInstanceRepository).findCompletedByUserIdAndInstanceDate(testUserId, today);
+        }
+
+        @Test
+        @DisplayName("오늘 완료된 고정 미션이 없으면 빈 목록을 반환한다")
+        void getCompletedPinnedInstancesForToday_empty() {
+            // given
+            LocalDate today = LocalDate.now();
+
+            when(dailyMissionInstanceRepository.findCompletedByUserIdAndInstanceDate(testUserId, today))
+                .thenReturn(List.of());
+
+            // when
+            List<MissionExecutionResponse> responses = executionService.getCompletedPinnedInstancesForToday(testUserId);
+
+            // then
+            assertThat(responses).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("레거시 미션 완료 테스트")
+    class CompleteExecutionLegacyTest {
+
+        @Test
+        @DisplayName("레거시 방식으로 미션 수행을 완료한다 (길드 미션 아님)")
+        void completeExecutionLegacy_regularMission_success() {
+            // given
+            LocalDate executionDate = LocalDate.now();
+            MissionExecution execution = MissionExecution.builder()
+                .participant(testParticipant)
+                .executionDate(executionDate)
+                .status(ExecutionStatus.IN_PROGRESS)
+                .build();
+            setExecutionId(execution, 1L);
+            try {
+                java.lang.reflect.Field startedAtField = MissionExecution.class.getDeclaredField("startedAt");
+                startedAtField.setAccessible(true);
+                startedAtField.set(execution, LocalDateTime.now().minusMinutes(5));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            when(executionRepository.findById(1L))
+                .thenReturn(Optional.of(execution));
+            when(executionRepository.findByParticipantId(testParticipant.getId()))
+                .thenReturn(List.of(execution));
+            when(executionRepository.countByParticipantIdAndStatus(testParticipant.getId(), ExecutionStatus.COMPLETED))
+                .thenReturn(0L);
+
+            // when
+            MissionExecutionResponse response = executionService.completeExecutionLegacy(1L, testUserId, "완료");
+
+            // then
+            assertThat(response).isNotNull();
+            verify(userExperienceService).addExperience(eq(testUserId), anyInt(), any(), any(), any(), any(), any());
+            verify(userStatsService).recordMissionCompletion(testUserId, false);
+            verify(achievementService).checkAchievementsByDataSource(testUserId, "USER_STATS");
+        }
+
+        @Test
+        @DisplayName("레거시 방식으로 길드 미션을 완료한다")
+        void completeExecutionLegacy_guildMission_success() {
+            // given
+            Mission guildMission = Mission.builder()
+                .title("길드 미션")
+                .description("길드 함께 하기")
+                .status(MissionStatus.IN_PROGRESS)
+                .visibility(MissionVisibility.PUBLIC)
+                .type(MissionType.GUILD)
+                .creatorId(testUserId)
+                .guildId("123")
+                .missionInterval(MissionInterval.DAILY)
+                .expPerCompletion(50)
+                .guildExpPerCompletion(30)
+                .build();
+            setMissionId(guildMission, 2L);
+
+            MissionParticipant guildParticipant = MissionParticipant.builder()
+                .mission(guildMission)
+                .userId(testUserId)
+                .status(ParticipantStatus.IN_PROGRESS)
+                .build();
+            setParticipantId(guildParticipant, 2L);
+
+            LocalDate executionDate = LocalDate.now();
+            MissionExecution execution = MissionExecution.builder()
+                .participant(guildParticipant)
+                .executionDate(executionDate)
+                .status(ExecutionStatus.IN_PROGRESS)
+                .build();
+            setExecutionId(execution, 2L);
+            try {
+                java.lang.reflect.Field startedAtField = MissionExecution.class.getDeclaredField("startedAt");
+                startedAtField.setAccessible(true);
+                startedAtField.set(execution, LocalDateTime.now().minusMinutes(5));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            when(executionRepository.findById(2L))
+                .thenReturn(Optional.of(execution));
+            when(executionRepository.findByParticipantId(guildParticipant.getId()))
+                .thenReturn(List.of(execution));
+            when(executionRepository.countByParticipantIdAndStatus(guildParticipant.getId(), ExecutionStatus.COMPLETED))
+                .thenReturn(0L);
+
+            // when
+            MissionExecutionResponse response = executionService.completeExecutionLegacy(2L, testUserId, "완료");
+
+            // then
+            assertThat(response).isNotNull();
+            verify(guildExperienceService).addExperience(eq(123L), anyInt(), any(), any(), eq(testUserId), any());
+            verify(userStatsService).recordMissionCompletion(testUserId, true);
+        }
+
+        @Test
+        @DisplayName("본인의 수행 기록이 아니면 예외가 발생한다")
+        void completeExecutionLegacy_notOwner_throwsException() {
+            // given
+            MissionExecution execution = MissionExecution.builder()
+                .participant(testParticipant)
+                .executionDate(LocalDate.now())
+                .status(ExecutionStatus.IN_PROGRESS)
+                .build();
+            setExecutionId(execution, 1L);
+
+            when(executionRepository.findById(1L))
+                .thenReturn(Optional.of(execution));
+
+            // when & then
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
+                executionService.completeExecutionLegacy(1L, "other-user-456", "완료");
+            });
+        }
+
+        @Test
+        @DisplayName("수행 기록을 찾을 수 없으면 예외가 발생한다")
+        void completeExecutionLegacy_notFound_throwsException() {
+            // given
+            when(executionRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+            // when & then
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+                executionService.completeExecutionLegacy(999L, testUserId, "완료");
             });
         }
     }

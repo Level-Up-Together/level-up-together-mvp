@@ -36,6 +36,9 @@ class ReportServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private ReportService reportService;
 
@@ -187,6 +190,140 @@ class ReportServiceTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getTargetType()).isEqualTo(ReportTargetType.FEED);
+        }
+
+        @Test
+        @DisplayName("신고 생성 시 ContentReportedEvent를 발행한다")
+        void createReport_publishesEvent() {
+            // given
+            Users reporter = createTestUser(TEST_USER_ID, "신고자");
+            Users targetUser = createTestUser(TARGET_USER_ID, "대상자");
+
+            ReportCreateRequest request = new ReportCreateRequest(
+                ReportTargetType.FEED,
+                "feed-123",
+                TARGET_USER_ID,
+                ReportType.SPAM,
+                "스팸 신고"
+            );
+
+            AdminReportApiResponse apiResponse = createSuccessResponse(1L, "FEED", "feed-123");
+
+            when(userService.findByUserId(TEST_USER_ID)).thenReturn(reporter);
+            when(userService.findByUserId(TARGET_USER_ID)).thenReturn(targetUser);
+            when(adminReportFeignClient.createReport(any(AdminReportCreateRequest.class))).thenReturn(apiResponse);
+
+            // when
+            reportService.createReport(TEST_USER_ID, request);
+
+            // then
+            verify(eventPublisher).publishEvent(any(io.pinkspider.global.event.ContentReportedEvent.class));
+        }
+
+        @Test
+        @DisplayName("신고 생성 시 올바른 이벤트 정보를 발행한다")
+        void createReport_publishesCorrectEvent() {
+            // given
+            Users reporter = createTestUser(TEST_USER_ID, "신고자");
+            Users targetUser = createTestUser(TARGET_USER_ID, "대상자");
+
+            ReportCreateRequest request = new ReportCreateRequest(
+                ReportTargetType.GUILD,
+                "100",
+                TARGET_USER_ID,
+                ReportType.HARASSMENT,
+                "괴롭힘 신고"
+            );
+
+            AdminReportApiResponse apiResponse = createSuccessResponse(1L, "GUILD", "100");
+
+            when(userService.findByUserId(TEST_USER_ID)).thenReturn(reporter);
+            when(userService.findByUserId(TARGET_USER_ID)).thenReturn(targetUser);
+            when(adminReportFeignClient.createReport(any(AdminReportCreateRequest.class))).thenReturn(apiResponse);
+
+            // when
+            reportService.createReport(TEST_USER_ID, request);
+
+            // then
+            org.mockito.ArgumentCaptor<Object> eventCaptor = org.mockito.ArgumentCaptor.forClass(Object.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            Object capturedEvent = eventCaptor.getValue();
+            assertThat(capturedEvent).isInstanceOf(io.pinkspider.global.event.ContentReportedEvent.class);
+
+            io.pinkspider.global.event.ContentReportedEvent reportedEvent =
+                (io.pinkspider.global.event.ContentReportedEvent) capturedEvent;
+            assertThat(reportedEvent.userId()).isEqualTo(TEST_USER_ID);
+            assertThat(reportedEvent.targetType()).isEqualTo("GUILD");
+            assertThat(reportedEvent.targetId()).isEqualTo("100");
+            assertThat(reportedEvent.targetUserId()).isEqualTo(TARGET_USER_ID);
+            assertThat(reportedEvent.targetTypeDescription()).isEqualTo("길드");
+        }
+
+        @Test
+        @DisplayName("이벤트 발행 실패 시에도 신고 생성은 성공한다")
+        void createReport_eventPublishFails_stillSucceeds() {
+            // given
+            Users reporter = createTestUser(TEST_USER_ID, "신고자");
+            Users targetUser = createTestUser(TARGET_USER_ID, "대상자");
+
+            ReportCreateRequest request = new ReportCreateRequest(
+                ReportTargetType.FEED,
+                "feed-123",
+                TARGET_USER_ID,
+                ReportType.SPAM,
+                "스팸 신고"
+            );
+
+            AdminReportApiResponse apiResponse = createSuccessResponse(1L, "FEED", "feed-123");
+
+            when(userService.findByUserId(TEST_USER_ID)).thenReturn(reporter);
+            when(userService.findByUserId(TARGET_USER_ID)).thenReturn(targetUser);
+            when(adminReportFeignClient.createReport(any(AdminReportCreateRequest.class))).thenReturn(apiResponse);
+            org.mockito.Mockito.doThrow(new RuntimeException("이벤트 발행 실패"))
+                .when(eventPublisher).publishEvent(any());
+
+            // when
+            ReportResponse result = reportService.createReport(TEST_USER_ID, request);
+
+            // then - 이벤트 발행 실패해도 신고는 성공
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("targetUserId가 null일 때도 이벤트를 발행한다")
+        void createReport_nullTargetUserId_stillPublishesEvent() {
+            // given
+            Users reporter = createTestUser(TEST_USER_ID, "신고자");
+
+            ReportCreateRequest request = new ReportCreateRequest(
+                ReportTargetType.MISSION,
+                "mission-456",
+                null,  // targetUserId가 null
+                ReportType.SPAM,
+                "스팸 신고"
+            );
+
+            AdminReportApiResponse apiResponse = createSuccessResponse(1L, "MISSION", "mission-456");
+
+            when(userService.findByUserId(TEST_USER_ID)).thenReturn(reporter);
+            when(adminReportFeignClient.createReport(any(AdminReportCreateRequest.class))).thenReturn(apiResponse);
+
+            // when
+            reportService.createReport(TEST_USER_ID, request);
+
+            // then
+            org.mockito.ArgumentCaptor<Object> eventCaptor = org.mockito.ArgumentCaptor.forClass(Object.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+            Object capturedEvent = eventCaptor.getValue();
+            assertThat(capturedEvent).isInstanceOf(io.pinkspider.global.event.ContentReportedEvent.class);
+
+            io.pinkspider.global.event.ContentReportedEvent reportedEvent =
+                (io.pinkspider.global.event.ContentReportedEvent) capturedEvent;
+            assertThat(reportedEvent.targetUserId()).isNull();
+            assertThat(reportedEvent.targetType()).isEqualTo("MISSION");
         }
     }
 

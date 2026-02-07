@@ -1037,6 +1037,499 @@ class ActivityFeedServiceTest {
     }
 
     @Nested
+    @DisplayName("updateFeedImageUrl 테스트")
+    class UpdateFeedImageUrlTest {
+
+        @Test
+        @DisplayName("피드 이미지 URL을 업데이트한다")
+        void updateFeedImageUrl_success() {
+            // given
+            Long feedId = 1L;
+            String newImageUrl = "https://example.com/new-image.jpg";
+            ActivityFeed feed = createTestFeed(feedId, TEST_USER_ID);
+
+            when(activityFeedRepository.findById(feedId)).thenReturn(Optional.of(feed));
+            when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(feed);
+
+            // when
+            activityFeedService.updateFeedImageUrl(feedId, newImageUrl);
+
+            // then
+            assertThat(feed.getImageUrl()).isEqualTo(newImageUrl);
+            verify(activityFeedRepository).save(feed);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 피드는 업데이트하지 않는다")
+        void updateFeedImageUrl_feedNotFound_doesNothing() {
+            // given
+            Long feedId = 999L;
+            String newImageUrl = "https://example.com/new-image.jpg";
+
+            when(activityFeedRepository.findById(feedId)).thenReturn(Optional.empty());
+
+            // when
+            activityFeedService.updateFeedImageUrl(feedId, newImageUrl);
+
+            // then
+            verify(activityFeedRepository, never()).save(any(ActivityFeed.class));
+        }
+    }
+
+    @Nested
+    @DisplayName("다국어 지원 조회 테스트")
+    class MultilingualFeedTest {
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 공개 피드를 조회한다")
+        void getPublicFeeds_withAcceptLanguage() {
+            // given
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "en-US,en;q=0.9";
+
+            when(activityFeedRepository.findPublicFeedsInTimeRange(any(), any(), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getPublicFeeds(TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 타임라인 피드를 조회한다")
+        void getTimelineFeeds_withAcceptLanguage() {
+            // given
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "ar";
+
+            when(friendCacheService.getFriendIds(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(activityFeedRepository.findByUserId(eq(TEST_USER_ID), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getTimelineFeeds(TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 사용자 피드를 조회한다")
+        void getUserFeeds_withAcceptLanguage() {
+            // given
+            ActivityFeed feed = createTestFeed(1L, OTHER_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "ja";
+
+            when(activityFeedRepository.findByUserId(eq(OTHER_USER_ID), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getUserFeeds(OTHER_USER_ID, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 길드 피드를 조회한다")
+        void getGuildFeeds_withAcceptLanguage() {
+            // given
+            Long guildId = 1L;
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "ko";
+
+            when(activityFeedRepository.findGuildFeeds(eq(guildId), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getGuildFeeds(guildId, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 카테고리별 피드를 조회한다")
+        void getFeedsByCategory_withAcceptLanguage() {
+            // given
+            String category = "MISSION";
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "zh";
+
+            when(activityFeedRepository.findByCategoryTypes(anyList(), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getFeedsByCategory(category, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 피드를 검색한다")
+        void searchFeeds_withAcceptLanguage() {
+            // given
+            String keyword = "테스트";
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "en";
+
+            when(activityFeedRepository.searchByKeyword(eq(keyword), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.searchFeeds(keyword, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 카테고리별 피드를 검색한다")
+        void searchFeedsByCategory_withAcceptLanguage() {
+            // given
+            String keyword = "테스트";
+            String category = "MISSION";
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "fr";
+
+            when(activityFeedRepository.searchByKeywordAndCategory(eq(keyword), anyList(), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.searchFeedsByCategory(keyword, category, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 피드 상세를 조회한다")
+        void getFeed_withAcceptLanguage() {
+            // given
+            Long feedId = 1L;
+            ActivityFeed feed = createTestFeed(feedId, TEST_USER_ID);
+            String acceptLanguage = "de";
+
+            when(activityFeedRepository.findById(feedId)).thenReturn(Optional.of(feed));
+            when(feedLikeRepository.existsByFeedIdAndUserId(feedId, TEST_USER_ID)).thenReturn(false);
+            when(reportService.isUnderReview(any(), anyString())).thenReturn(false);
+
+            // when
+            ActivityFeedResponse result = activityFeedService.getFeed(feedId, TEST_USER_ID, acceptLanguage);
+
+            // then
+            assertThat(result).isNotNull();
+        }
+
+        @Test
+        @DisplayName("Accept-Language 헤더와 함께 댓글 목록을 조회한다")
+        void getComments_withAcceptLanguage() {
+            // given
+            Long feedId = 1L;
+            ActivityFeed feed = createTestFeed(feedId, OTHER_USER_ID);
+            FeedComment comment = FeedComment.builder()
+                .feed(feed)
+                .userId(TEST_USER_ID)
+                .userNickname("테스트유저")
+                .content("테스트 댓글")
+                .isDeleted(false)
+                .build();
+            setCommentId(comment, 1L);
+            Page<FeedComment> commentPage = new PageImpl<>(List.of(comment));
+            String acceptLanguage = "es";
+
+            when(feedCommentRepository.findByFeedId(eq(feedId), any(Pageable.class))).thenReturn(commentPage);
+            when(userProfileCacheService.getUserProfile(TEST_USER_ID))
+                .thenReturn(new UserProfileCache(TEST_USER_ID, "테스트유저", null, 5, null, null, null));
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<FeedCommentResponse> result = activityFeedService.getComments(feedId, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("카테고리별 공개 피드 조회 하이브리드 테스트")
+    class GetPublicFeedsByCategoryTest {
+
+        @Test
+        @DisplayName("카테고리별 공개 피드를 조회한다")
+        void getPublicFeedsByCategory_success() {
+            // given
+            Long categoryId = 1L;
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+
+            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any())).thenReturn(Collections.emptyList());
+            when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getPublicFeedsByCategory(categoryId, TEST_USER_ID, 0, 10);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("Featured Feed가 있는 경우 먼저 표시된다")
+        void getPublicFeedsByCategory_withFeaturedFeeds() {
+            // given
+            Long categoryId = 1L;
+            ActivityFeed featuredFeed = createTestFeed(1L, TEST_USER_ID);
+            ActivityFeed normalFeed = createTestFeed(2L, OTHER_USER_ID);
+
+            FeaturedFeed featured = FeaturedFeed.builder()
+                .categoryId(categoryId)
+                .feedId(1L)
+                .displayOrder(1)
+                .build();
+
+            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any()))
+                .thenReturn(List.of(featured));
+            when(activityFeedRepository.findByIdIn(List.of(1L)))
+                .thenReturn(List.of(featuredFeed));
+            when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(normalFeed)));
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getPublicFeedsByCategory(categoryId, TEST_USER_ID, 0, 10);
+
+            // then
+            assertThat(result.getContent()).hasSize(2);
+        }
+
+        @Test
+        @DisplayName("중복된 피드는 제거된다")
+        void getPublicFeedsByCategory_removeDuplicates() {
+            // given
+            Long categoryId = 1L;
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+
+            FeaturedFeed featured = FeaturedFeed.builder()
+                .categoryId(categoryId)
+                .feedId(1L)
+                .displayOrder(1)
+                .build();
+
+            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any()))
+                .thenReturn(List.of(featured));
+            when(activityFeedRepository.findByIdIn(List.of(1L)))
+                .thenReturn(List.of(feed));
+            when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(feed))); // 동일한 피드
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getPublicFeedsByCategory(categoryId, TEST_USER_ID, 0, 10);
+
+            // then
+            assertThat(result.getContent()).hasSize(1); // 중복 제거됨
+        }
+
+        @Test
+        @DisplayName("Accept-Language와 함께 카테고리별 공개 피드를 조회한다")
+        void getPublicFeedsByCategory_withAcceptLanguage() {
+            // given
+            Long categoryId = 1L;
+            ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
+            String acceptLanguage = "en";
+
+            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any())).thenReturn(Collections.emptyList());
+            when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getPublicFeedsByCategory(categoryId, TEST_USER_ID, 0, 10, acceptLanguage);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+    }
+
+    @Nested
+    @DisplayName("사용자 피드 가시성 테스트")
+    class UserFeedVisibilityTest {
+
+        @Test
+        @DisplayName("본인 피드는 모든 가시성 설정을 볼 수 있다")
+        void getUserFeeds_selfAllVisible() {
+            // given
+            ActivityFeed privateFeed = ActivityFeed.builder()
+                .userId(TEST_USER_ID)
+                .userNickname("테스트유저")
+                .activityType(ActivityType.MISSION_COMPLETED)
+                .title("비공개 피드")
+                .visibility(FeedVisibility.PRIVATE)
+                .likeCount(0)
+                .commentCount(0)
+                .build();
+            setFeedId(privateFeed, 1L);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(privateFeed));
+
+            when(activityFeedRepository.findByUserId(eq(TEST_USER_ID), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(friendshipRepository.areFriends(TEST_USER_ID, TEST_USER_ID)).thenReturn(false);
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getUserFeeds(TEST_USER_ID, TEST_USER_ID, 0, 10);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("친구는 FRIENDS 가시성 피드를 볼 수 있다")
+        void getUserFeeds_friendCanSeeFriendsVisibility() {
+            // given
+            ActivityFeed friendsFeed = ActivityFeed.builder()
+                .userId(OTHER_USER_ID)
+                .userNickname("다른유저")
+                .activityType(ActivityType.MISSION_COMPLETED)
+                .title("친구공개 피드")
+                .visibility(FeedVisibility.FRIENDS)
+                .likeCount(0)
+                .commentCount(0)
+                .build();
+            setFeedId(friendsFeed, 1L);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(friendsFeed));
+
+            when(activityFeedRepository.findByUserId(eq(OTHER_USER_ID), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(true);
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getUserFeeds(OTHER_USER_ID, TEST_USER_ID, 0, 10);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("비친구는 PUBLIC 가시성 피드만 볼 수 있다")
+        void getUserFeeds_nonFriendSeesPublicOnly() {
+            // given
+            ActivityFeed friendsFeed = ActivityFeed.builder()
+                .userId(OTHER_USER_ID)
+                .userNickname("다른유저")
+                .activityType(ActivityType.MISSION_COMPLETED)
+                .title("친구공개 피드")
+                .visibility(FeedVisibility.FRIENDS)
+                .likeCount(0)
+                .commentCount(0)
+                .build();
+            setFeedId(friendsFeed, 1L);
+            Page<ActivityFeed> feedPage = new PageImpl<>(List.of(friendsFeed));
+
+            when(activityFeedRepository.findByUserId(eq(OTHER_USER_ID), any(Pageable.class)))
+                .thenReturn(feedPage);
+            when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
+                .thenReturn(Collections.emptyList());
+            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
+            when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
+
+            // when
+            Page<ActivityFeedResponse> result = activityFeedService.getUserFeeds(OTHER_USER_ID, TEST_USER_ID, 0, 10);
+
+            // then
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0)).isNull(); // FRIENDS 가시성이므로 null
+        }
+    }
+
+    @Nested
+    @DisplayName("자신의 피드 댓글 이벤트 테스트")
+    class CommentEventTest {
+
+        @Test
+        @DisplayName("자신의 글에 자신이 댓글을 달면 이벤트가 발행되지 않는다")
+        void addComment_selfComment_noEvent() {
+            // given
+            Long feedId = 1L;
+            ActivityFeed feed = createTestFeed(feedId, TEST_USER_ID); // 작성자가 본인
+            UserProfileCache userProfile = new UserProfileCache(
+                TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg",
+                5, null, null, null
+            );
+            FeedCommentRequest request = createTestCommentRequest("테스트 댓글");
+
+            FeedComment savedComment = FeedComment.builder()
+                .feed(feed)
+                .userId(TEST_USER_ID)
+                .userNickname(userProfile.nickname())
+                .userLevel(userProfile.level())
+                .content("테스트 댓글")
+                .isDeleted(false)
+                .build();
+            setCommentId(savedComment, 1L);
+
+            when(activityFeedRepository.findById(feedId)).thenReturn(Optional.of(feed));
+            when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(userProfile);
+            when(feedCommentRepository.save(any(FeedComment.class))).thenReturn(savedComment);
+            when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(feed);
+
+            // when
+            activityFeedService.addComment(feedId, TEST_USER_ID, request);
+
+            // then
+            verify(eventPublisher, never()).publishEvent(any());
+        }
+    }
+
+    @Nested
     @DisplayName("신고 처리중 상태 통합 테스트")
     class IsUnderReviewIntegrationTest {
 

@@ -438,4 +438,22 @@ public class NotificationService {
             nickname + "님, 함께 성장하는 여정을 시작해보세요.",
             null, null, "/home");
     }
+
+    // 콘텐츠 신고 알림 (신고 당한 유저에게)
+    @Transactional(transactionManager = "notificationTransactionManager")
+    public void notifyContentReported(String userId, String targetTypeDescription) {
+        createNotification(userId, NotificationType.CONTENT_REPORTED,
+            "콘텐츠 신고 알림",
+            "회원님의 " + targetTypeDescription + "이(가) 다른 사용자로부터 신고되었습니다.",
+            null, null, "/mypage");
+    }
+
+    // 길드 콘텐츠 신고 알림 (길드 마스터에게)
+    @Transactional(transactionManager = "notificationTransactionManager")
+    public void notifyGuildContentReported(String guildMasterId, String targetTypeDescription, Long guildId) {
+        createNotification(guildMasterId, NotificationType.CONTENT_REPORTED,
+            "길드 콘텐츠 신고 알림",
+            "길드 내 " + targetTypeDescription + "이(가) 신고되었습니다. 길드 관리에 참고해주세요.",
+            "GUILD", guildId, "/guild/" + guildId);
+    }
 }
