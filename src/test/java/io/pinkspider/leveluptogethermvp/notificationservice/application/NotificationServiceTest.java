@@ -780,5 +780,40 @@ class NotificationServiceTest {
             // then
             verify(notificationRepository).saveAndFlush(any(Notification.class));
         }
+
+        @Test
+        @DisplayName("콘텐츠 신고 알림을 생성한다")
+        void notifyContentReported_success() {
+            // given
+            NotificationPreference preference = createTestPreference(1L, TEST_USER_ID);
+            Notification savedNotification = createTestNotification(1L, TEST_USER_ID, NotificationType.CONTENT_REPORTED);
+
+            when(preferenceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(preference));
+            when(notificationRepository.save(any(Notification.class))).thenReturn(savedNotification);
+
+            // when
+            notificationService.notifyContentReported(TEST_USER_ID, "피드");
+
+            // then
+            verify(notificationRepository).save(any(Notification.class));
+        }
+
+        @Test
+        @DisplayName("길드 콘텐츠 신고 알림을 생성한다")
+        void notifyGuildContentReported_success() {
+            // given
+            Long guildId = 100L;
+            NotificationPreference preference = createTestPreference(1L, TEST_USER_ID);
+            Notification savedNotification = createTestNotification(1L, TEST_USER_ID, NotificationType.CONTENT_REPORTED);
+
+            when(preferenceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(preference));
+            when(notificationRepository.save(any(Notification.class))).thenReturn(savedNotification);
+
+            // when
+            notificationService.notifyGuildContentReported(TEST_USER_ID, "길드 공지", guildId);
+
+            // then
+            verify(notificationRepository).save(any(Notification.class));
+        }
     }
 }

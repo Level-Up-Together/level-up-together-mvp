@@ -3,6 +3,7 @@ package io.pinkspider.global.event.listener;
 import static io.pinkspider.global.config.AsyncConfig.EVENT_EXECUTOR;
 
 import io.pinkspider.global.event.AchievementCompletedEvent;
+import io.pinkspider.global.event.ContentReportedEvent;
 import io.pinkspider.global.event.FeedCommentEvent;
 import io.pinkspider.global.event.FriendRequestAcceptedEvent;
 import io.pinkspider.global.event.FriendRequestEvent;
@@ -15,6 +16,10 @@ import io.pinkspider.global.event.GuildInvitationEvent;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.MissionCommentEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildPost;
+import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +38,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
+    private final GuildRepository guildRepository;
+    private final GuildPostRepository guildPostRepository;
 
     /**
      * 칭호 획득 이벤트 처리
@@ -298,6 +305,70 @@ public class NotificationEventListener {
             );
         } catch (Exception e) {
             log.error("길드 초대 알림 생성 실패: inviteeId={}, error={}", event.inviteeId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 콘텐츠 신고 이벤트 처리
+     * 신고 당한 유저에게 알림, 길드 관련 신고 시 길드 마스터에게도 알림
+     */
+    @Async(EVENT_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void handleContentReported(ContentReportedEvent event) {
+        try {
+            log.debug("콘텐츠 신고 이벤트 처리: targetType={}, targetId={}, targetUserId={}",
+                event.targetType(), event.targetId(), event.targetUserId());
+
+            String targetUserId = event.targetUserId();
+            String targetTypeDescription = event.targetTypeDescription();
+
+            // 1. 신고 당한 유저에게 알림
+            if (targetUserId != null && !targetUserId.isBlank()) {
+                try {
+                    notificationService.notifyContentReported(targetUserId, targetTypeDescription);
+                } catch (Exception e) {
+                    log.warn("신고 대상 유저 알림 생성 실패: targetUserId={}, error={}", targetUserId, e.getMessage());
+                }
+            }
+
+            // 2. 길드 관련 신고 시 길드 마스터에게도 알림
+            notifyGuildMasterIfApplicable(event, targetUserId);
+
+        } catch (Exception e) {
+            log.error("콘텐츠 신고 알림 처리 실패: error={}", e.getMessage(), e);
+        }
+    }
+
+    private void notifyGuildMasterIfApplicable(ContentReportedEvent event, String targetUserId) {
+        String targetType = event.targetType();
+        String guildMasterId = null;
+        Long guildId = null;
+
+        try {
+            if ("GUILD".equals(targetType)) {
+                guildId = Long.parseLong(event.targetId());
+                Guild guild = guildRepository.findByIdAndIsActiveTrue(guildId).orElse(null);
+                if (guild != null) {
+                    guildMasterId = guild.getMasterId();
+                }
+            } else if ("GUILD_NOTICE".equals(targetType)) {
+                Long postId = Long.parseLong(event.targetId());
+                GuildPost post = guildPostRepository.findByIdAndIsDeletedFalse(postId).orElse(null);
+                if (post != null && post.getGuild() != null) {
+                    guildId = post.getGuild().getId();
+                    guildMasterId = post.getGuild().getMasterId();
+                }
+            }
+
+            // 길드 마스터에게 알림 (신고 당한 유저와 다른 경우에만)
+            if (guildMasterId != null && !guildMasterId.equals(targetUserId)) {
+                notificationService.notifyGuildContentReported(
+                    guildMasterId, event.targetTypeDescription(), guildId);
+            }
+        } catch (NumberFormatException e) {
+            log.warn("길드 관련 신고 처리 중 ID 파싱 실패: targetType={}, targetId={}", targetType, event.targetId());
+        } catch (Exception e) {
+            log.warn("길드 마스터 알림 생성 실패: targetType={}, error={}", targetType, e.getMessage());
         }
     }
 }
