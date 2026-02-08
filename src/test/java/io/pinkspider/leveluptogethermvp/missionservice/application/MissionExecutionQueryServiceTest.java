@@ -51,7 +51,7 @@ class MissionExecutionQueryServiceTest {
     private DailyMissionInstanceRepository dailyMissionInstanceRepository;
 
     @Mock
-    private DailyMissionInstanceService dailyMissionInstanceService;
+    private io.pinkspider.leveluptogethermvp.missionservice.application.strategy.MissionExecutionStrategyResolver strategyResolver;
 
     @InjectMocks
     private MissionExecutionQueryService executionService;
@@ -655,16 +655,19 @@ class MissionExecutionQueryServiceTest {
     class GetExecutionByDateTest {
 
         @Test
-        @DisplayName("특정 날짜의 수행 기록을 조회한다")
+        @DisplayName("특정 날짜의 수행 기록을 조회한다 (Strategy 위임)")
         void getExecutionByDate_success() {
             // given
             LocalDate executionDate = LocalDate.now();
             MissionExecution execution = createCompletedExecution(1L, executionDate, 50, 30);
+            MissionExecutionResponse expectedResponse = MissionExecutionResponse.from(execution);
 
-            when(participantRepository.findByMissionIdAndUserId(testMission.getId(), testUserId))
-                .thenReturn(Optional.of(testParticipant));
-            when(executionRepository.findByParticipantIdAndExecutionDate(testParticipant.getId(), executionDate))
-                .thenReturn(Optional.of(execution));
+            io.pinkspider.leveluptogethermvp.missionservice.application.strategy.MissionExecutionStrategy mockStrategy =
+                org.mockito.Mockito.mock(io.pinkspider.leveluptogethermvp.missionservice.application.strategy.MissionExecutionStrategy.class);
+
+            when(strategyResolver.resolve(testMission.getId(), testUserId)).thenReturn(mockStrategy);
+            when(mockStrategy.getExecutionByDate(testMission.getId(), testUserId, executionDate))
+                .thenReturn(expectedResponse);
 
             // when
             MissionExecutionResponse response = executionService.getExecutionByDate(
@@ -672,23 +675,8 @@ class MissionExecutionQueryServiceTest {
 
             // then
             assertThat(response).isNotNull();
-        }
-
-        @Test
-        @DisplayName("해당 날짜의 수행 기록이 없으면 예외가 발생한다")
-        void getExecutionByDate_noExecution_throwsException() {
-            // given
-            LocalDate executionDate = LocalDate.now();
-
-            when(participantRepository.findByMissionIdAndUserId(testMission.getId(), testUserId))
-                .thenReturn(Optional.of(testParticipant));
-            when(executionRepository.findByParticipantIdAndExecutionDate(testParticipant.getId(), executionDate))
-                .thenReturn(Optional.empty());
-
-            // when & then
-            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
-                executionService.getExecutionByDate(testMission.getId(), testUserId, executionDate);
-            });
+            verify(strategyResolver).resolve(testMission.getId(), testUserId);
+            verify(mockStrategy).getExecutionByDate(testMission.getId(), testUserId, executionDate);
         }
     }
 
