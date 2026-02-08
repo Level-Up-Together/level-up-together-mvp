@@ -1,6 +1,6 @@
 package io.pinkspider.leveluptogethermvp.missionservice.application;
 
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
+import io.pinkspider.leveluptogethermvp.missionservice.application.strategy.MissionExecutionStrategyResolver;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MonthlyCalendarResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MonthlyCalendarResponse.DailyMission;
@@ -31,7 +31,7 @@ public class MissionExecutionQueryService {
     private final MissionExecutionRepository executionRepository;
     private final MissionParticipantRepository participantRepository;
     private final DailyMissionInstanceRepository dailyMissionInstanceRepository;
-    private final DailyMissionInstanceService dailyMissionInstanceService;
+    private final MissionExecutionStrategyResolver strategyResolver;
 
     public List<MissionExecutionResponse> getExecutionsByParticipant(Long participantId) {
         return executionRepository.findByParticipantId(participantId).stream()
@@ -53,20 +53,7 @@ public class MissionExecutionQueryService {
     }
 
     public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 조회 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.getInstanceByMission(missionId, userId, date);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), date)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + date));
-
-        return MissionExecutionResponse.from(execution);
+        return strategyResolver.resolve(missionId, userId).getExecutionByDate(missionId, userId, date);
     }
 
     public List<MissionExecutionResponse> getExecutionsByDateRange(Long missionId, String userId,
@@ -265,17 +252,6 @@ public class MissionExecutionQueryService {
                     participant.getMission().getId(), userId, today);
             }
         }
-    }
-
-    // ============ 고정 미션 헬퍼 메서드 ============
-
-    /**
-     * 미션이 고정 미션(pinned mission)인지 확인
-     */
-    private boolean isPinnedMission(Long missionId, String userId) {
-        return participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .map(participant -> Boolean.TRUE.equals(participant.getMission().getIsPinned()))
-            .orElse(false);
     }
 
 }

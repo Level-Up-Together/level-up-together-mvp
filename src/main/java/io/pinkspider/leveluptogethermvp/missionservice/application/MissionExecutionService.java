@@ -3,7 +3,7 @@ package io.pinkspider.leveluptogethermvp.missionservice.application;
 import io.pinkspider.global.saga.SagaResult;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
+import io.pinkspider.leveluptogethermvp.missionservice.application.strategy.MissionExecutionStrategyResolver;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
@@ -14,13 +14,10 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionPar
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.UserStatsService;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +38,8 @@ public class MissionExecutionService {
     private final UserStatsService userStatsService;
     private final AchievementService achievementService;
     private final MissionCompletionSaga missionCompletionSaga;
-    private final MissionImageStorageService missionImageStorageService;
     private final ActivityFeedService activityFeedService;
-    private final UserService userService;
-    private final TitleService titleService;
-    private final DailyMissionInstanceService dailyMissionInstanceService;
+    private final MissionExecutionStrategyResolver strategyResolver;
 
     /**
      * 미션 참여 시 실행 일정 생성
@@ -84,6 +78,65 @@ public class MissionExecutionService {
         executionRepository.save(execution);
         log.info("일반 미션 수행 일정 생성: participantId={}, missionId={}, date={}",
             participant.getId(), mission.getId(), today);
+    }
+
+    // ============ Strategy 패턴으로 위임하는 메서드들 ============
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse startExecution(Long missionId, String userId, LocalDate executionDate) {
+        return strategyResolver.resolve(missionId, userId).startExecution(missionId, userId, executionDate);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse skipExecution(Long missionId, String userId, LocalDate executionDate) {
+        return strategyResolver.resolve(missionId, userId).skipExecution(missionId, userId, executionDate);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse completeExecution(Long missionId, String userId, LocalDate executionDate, String note) {
+        return completeExecution(missionId, userId, executionDate, note, false);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse completeExecution(Long missionId, String userId, LocalDate executionDate, String note, boolean shareToFeed) {
+        return strategyResolver.resolve(missionId, userId).completeExecution(missionId, userId, executionDate, note, shareToFeed);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse uploadExecutionImage(Long missionId, String userId, LocalDate executionDate, MultipartFile image) {
+        return strategyResolver.resolve(missionId, userId).uploadExecutionImage(missionId, userId, executionDate, image);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate) {
+        return strategyResolver.resolve(missionId, userId).deleteExecutionImage(missionId, userId, executionDate);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate) {
+        return strategyResolver.resolve(missionId, userId).shareExecutionToFeed(missionId, userId, executionDate);
+    }
+
+    // ============ 오늘 날짜 기준 편의 메서드 ============
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse skipExecutionToday(Long missionId, String userId) {
+        return skipExecution(missionId, userId, LocalDate.now());
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse startExecutionToday(Long missionId, String userId) {
+        return startExecution(missionId, userId, LocalDate.now());
+    }
+
+    // ============ executionId 기반 메서드 (Saga, 일반 미션 전용) ============
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public int markMissedExecutions() {
+        LocalDate today = LocalDate.now();
+        int count = executionRepository.markMissedExecutions(today);
+        log.info("미실행 처리된 수행 기록: {}개", count);
+        return count;
     }
 
     /**
@@ -215,123 +268,6 @@ public class MissionExecutionService {
     }
 
     /**
-     * 미션 수행 시작
-     * 이미 진행 중인 미션이 있으면 예외 발생
-     * 해당 날짜의 실행 레코드가 없으면 자동 생성
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse startExecution(Long missionId, String userId, LocalDate executionDate) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 시작 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.startInstanceByMission(missionId, userId, executionDate);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        // 이미 진행 중인 미션이 있는지 확인
-        executionRepository.findInProgressByUserId(userId).ifPresent(inProgressExecution -> {
-            String inProgressMissionTitle = inProgressExecution.getParticipant().getMission().getTitle();
-            throw new IllegalStateException(
-                String.format("이미 진행 중인 미션이 있습니다: %s (ID: %d). 해당 미션을 완료하거나 취소한 후 시작해주세요.",
-                    inProgressMissionTitle, inProgressExecution.getParticipant().getMission().getId())
-            );
-        });
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        // 해당 날짜의 실행 레코드가 없으면 자동 생성
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
-            .orElseGet(() -> {
-                log.info("실행 레코드 자동 생성: missionId={}, userId={}, executionDate={}", missionId, userId, executionDate);
-                MissionExecution newExecution = MissionExecution.builder()
-                    .participant(participant)
-                    .executionDate(executionDate)
-                    .status(ExecutionStatus.PENDING)
-                    .build();
-                return executionRepository.save(newExecution);
-            });
-
-        execution.start();
-        executionRepository.save(execution);
-
-        log.info("미션 수행 시작: missionId={}, userId={}, executionDate={}", missionId, userId, executionDate);
-        return MissionExecutionResponse.from(execution);
-    }
-
-    /**
-     * 진행 중인 미션 취소 (PENDING 상태로 되돌림)
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse skipExecution(Long missionId, String userId, LocalDate executionDate) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 취소 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.skipInstanceByMission(missionId, userId, executionDate);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + executionDate));
-
-        execution.skip();
-        executionRepository.save(execution);
-
-        log.info("미션 수행 취소: missionId={}, userId={}, executionDate={}", missionId, userId, executionDate);
-        return MissionExecutionResponse.from(execution);
-    }
-
-    /**
-     * 진행 중인 미션 취소 (오늘 날짜 기준)
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse skipExecutionToday(Long missionId, String userId) {
-        return skipExecution(missionId, userId, LocalDate.now());
-    }
-
-    /**
-     * 미션 수행 시작 (오늘 날짜 기준)
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse startExecutionToday(Long missionId, String userId) {
-        return startExecution(missionId, userId, LocalDate.now());
-    }
-
-    @Transactional(transactionManager = "missionTransactionManager")
-    public int markMissedExecutions() {
-        LocalDate today = LocalDate.now();
-        int count = executionRepository.markMissedExecutions(today);
-        log.info("미실행 처리된 수행 기록: {}개", count);
-        return count;
-    }
-
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse completeExecution(Long missionId, String userId, LocalDate executionDate, String note) {
-        return completeExecution(missionId, userId, executionDate, note, false);
-    }
-
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse completeExecution(Long missionId, String userId, LocalDate executionDate, String note, boolean shareToFeed) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 완료 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.completeInstanceByMission(missionId, userId, executionDate, note, shareToFeed);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + executionDate));
-
-        return completeExecution(execution.getId(), userId, note, shareToFeed);
-    }
-
-    /**
      * 완료된 미션 실행의 노트(기록) 업데이트
      */
     @Transactional(transactionManager = "missionTransactionManager")
@@ -350,168 +286,6 @@ public class MissionExecutionService {
         executionRepository.save(execution);
 
         log.info("미션 기록 업데이트: missionId={}, userId={}, executionDate={}", missionId, userId, executionDate);
-        return MissionExecutionResponse.from(execution);
-    }
-
-    /**
-     * 완료된 미션 실행에 이미지 업로드
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse uploadExecutionImage(Long missionId, String userId, LocalDate executionDate, MultipartFile image) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 이미지 업로드 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.uploadImageByMission(missionId, userId, executionDate, image);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + executionDate));
-
-        if (execution.getStatus() != ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 미션만 이미지를 추가할 수 있습니다.");
-        }
-
-        // 기존 이미지가 있으면 삭제
-        if (execution.getImageUrl() != null) {
-            missionImageStorageService.delete(execution.getImageUrl());
-        }
-
-        // 새 이미지 저장
-        String imageUrl = missionImageStorageService.store(image, userId, missionId, executionDate.toString());
-        execution.setImageUrl(imageUrl);
-        executionRepository.save(execution);
-
-        // 이미 공유된 피드가 있으면 피드의 이미지 URL도 업데이트
-        if (execution.getFeedId() != null) {
-            activityFeedService.updateFeedImageUrl(execution.getFeedId(), imageUrl);
-        }
-
-        log.info("미션 이미지 업로드: missionId={}, userId={}, executionDate={}", missionId, userId, executionDate);
-        return MissionExecutionResponse.from(execution);
-    }
-
-    /**
-     * 완료된 미션 실행의 이미지 삭제
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 이미지 삭제 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.deleteImageByMission(missionId, userId, executionDate);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + executionDate));
-
-        if (execution.getStatus() != ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 미션만 이미지를 삭제할 수 있습니다.");
-        }
-
-        // 이미지가 있으면 삭제
-        if (execution.getImageUrl() != null) {
-            missionImageStorageService.delete(execution.getImageUrl());
-            execution.setImageUrl(null);
-            executionRepository.save(execution);
-
-            // 이미 공유된 피드가 있으면 피드의 이미지 URL도 삭제
-            if (execution.getFeedId() != null) {
-                activityFeedService.updateFeedImageUrl(execution.getFeedId(), null);
-            }
-
-            log.info("미션 이미지 삭제: missionId={}, userId={}, executionDate={}", missionId, userId, executionDate);
-        }
-
-        return MissionExecutionResponse.from(execution);
-    }
-
-    /**
-     * 이미 완료된 미션 실행을 피드에 공유
-     * - 완료된 미션만 공유 가능
-     * - 미션 기록(note, imageUrl, duration, expEarned) 포함하여 공개 피드 생성
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate) {
-        // 고정 미션인 경우 DailyMissionInstanceService로 위임
-        if (isPinnedMission(missionId, userId)) {
-            log.info("고정 미션 피드 공유 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-            var response = dailyMissionInstanceService.shareToFeedByMission(missionId, userId, executionDate);
-            return MissionExecutionResponse.fromDailyInstance(response);
-        }
-
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
-            .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + executionDate));
-
-        if (execution.getStatus() != ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 미션만 피드에 공유할 수 있습니다.");
-        }
-
-        // 이미 공유된 경우 확인
-        if (execution.getFeedId() != null) {
-            throw new IllegalStateException("이미 피드에 공유된 미션입니다.");
-        }
-
-        Mission mission = participant.getMission();
-
-        try {
-            // 사용자 정보 조회
-            Users user = userService.findByUserId(userId);
-
-            // 사용자 레벨 조회
-            Integer userLevel = userExperienceService.getOrCreateUserExperience(userId).getCurrentLevel();
-
-            // 사용자 칭호 조회 (이름과 등급)
-            TitleService.TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);
-
-            // 수행 시간 계산
-            Integer durationMinutes = execution.calculateExpByDuration();
-
-            // 카테고리 ID 추출
-            Long categoryId = (mission.getCategory() != null) ? mission.getCategory().getId() : null;
-
-            // 피드 생성 및 feedId 저장
-            var createdFeed = activityFeedService.createMissionSharedFeed(
-                userId,
-                user.getNickname(),
-                user.getPicture(),
-                userLevel,
-                titleInfo.name(),
-                titleInfo.rarity(),
-                titleInfo.colorCode(),
-                execution.getId(),
-                mission.getId(),
-                mission.getTitle(),
-                mission.getDescription(),
-                categoryId,
-                execution.getNote(),
-                execution.getImageUrl(),
-                durationMinutes,
-                execution.getExpEarned()
-            );
-
-            // feedId를 execution에 저장
-            execution.setFeedId(createdFeed.getId());
-            executionRepository.save(execution);
-
-            log.info("미션 피드 공유 완료: userId={}, missionId={}, executionDate={}, feedId={}",
-                userId, missionId, executionDate, createdFeed.getId());
-
-        } catch (Exception e) {
-            log.error("피드 공유 실패: userId={}, missionId={}, error={}", userId, missionId, e.getMessage());
-            throw new IllegalStateException("피드 공유에 실패했습니다: " + e.getMessage(), e);
-        }
-
         return MissionExecutionResponse.from(execution);
     }
 
@@ -631,16 +405,4 @@ public class MissionExecutionService {
                 participant.getUserId(), mission.getId(), bonusExp);
         }
     }
-
-    // ============ 고정 미션 헬퍼 메서드 ============
-
-    /**
-     * 미션이 고정 미션(pinned mission)인지 확인
-     */
-    private boolean isPinnedMission(Long missionId, String userId) {
-        return participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .map(participant -> Boolean.TRUE.equals(participant.getMission().getIsPinned()))
-            .orElse(false);
-    }
-
 }
