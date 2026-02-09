@@ -69,7 +69,6 @@ public interface MissionExecutionRepository extends JpaRepository<MissionExecuti
     @Query("SELECT me FROM MissionExecution me " +
            "JOIN FETCH me.participant p " +
            "JOIN FETCH p.mission m " +
-           "LEFT JOIN FETCH m.category c " +
            "WHERE me.id = :id")
     Optional<MissionExecution> findByIdWithParticipantAndMission(@Param("id") Long id);
 
@@ -110,7 +109,7 @@ public interface MissionExecutionRepository extends JpaRepository<MissionExecuti
            "JOIN me.participant p " +
            "JOIN p.mission m " +
            "WHERE p.userId = :userId " +
-           "AND m.category.id = :categoryId " +
+           "AND m.categoryId = :categoryId " +
            "AND me.status = 'COMPLETED'")
     long countCompletedByUserIdAndCategoryId(
         @Param("userId") String userId,

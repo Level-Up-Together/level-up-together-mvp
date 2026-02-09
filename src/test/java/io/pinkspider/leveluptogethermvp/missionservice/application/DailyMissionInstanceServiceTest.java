@@ -25,7 +25,6 @@ import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSag
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionStatus;
@@ -103,7 +102,6 @@ class DailyMissionInstanceServiceTest {
     private static final Long PARTICIPANT_ID = 100L;
     private static final Long FEED_ID = 500L;
 
-    private MissionCategory category;
     private Mission mission;
     private MissionParticipant participant;
     private DailyMissionInstance instance;
@@ -112,12 +110,6 @@ class DailyMissionInstanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        category = MissionCategory.builder()
-            .name("운동")
-            .description("운동 관련 미션")
-            .build();
-        setId(category, 1L);
-
         mission = Mission.builder()
             .title("매일 30분 운동")
             .description("매일 30분씩 운동하기")
@@ -125,7 +117,8 @@ class DailyMissionInstanceServiceTest {
             .status(MissionStatus.IN_PROGRESS)
             .visibility(MissionVisibility.PRIVATE)
             .type(MissionType.PERSONAL)
-            .category(category)
+            .categoryId(1L)
+            .categoryName("운동")
             .expPerCompletion(50)
             .isPinned(true)
             .build();

@@ -85,7 +85,6 @@ public interface DailyMissionInstanceRepository extends JpaRepository<DailyMissi
     @Query("SELECT dmi FROM DailyMissionInstance dmi " +
            "JOIN FETCH dmi.participant p " +
            "JOIN FETCH p.mission m " +
-           "LEFT JOIN FETCH m.category c " +
            "WHERE dmi.id = :id")
     Optional<DailyMissionInstance> findByIdWithParticipantAndMission(@Param("id") Long id);
 

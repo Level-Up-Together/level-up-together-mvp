@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.missionservice.domain.entity;
+package io.pinkspider.leveluptogethermvp.metaservice.domain.entity;
 
 import io.pinkspider.global.domain.auditentity.LocalDateTimeBaseEntity;
 import io.pinkspider.global.translation.LocaleUtils;

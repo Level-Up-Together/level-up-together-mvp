@@ -7,7 +7,6 @@ import static org.mockito.Mockito.when;
 
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
@@ -52,18 +51,11 @@ class MissionAutoCompleteSchedulerTest {
 
     private static final String USER_ID = "user-1";
 
-    private MissionCategory category;
     private Mission mission;
     private MissionParticipant participant;
 
     @BeforeEach
     void setUp() {
-        category = MissionCategory.builder()
-            .name("운동")
-            .description("운동 관련 미션")
-            .build();
-        setId(category, 1L);
-
         mission = Mission.builder()
             .title("매일 30분 운동")
             .description("매일 30분씩 운동하기")
@@ -71,7 +63,8 @@ class MissionAutoCompleteSchedulerTest {
             .status(MissionStatus.IN_PROGRESS)
             .visibility(MissionVisibility.PRIVATE)
             .type(MissionType.PERSONAL)
-            .category(category)
+            .categoryId(1L)
+            .categoryName("운동")
             .expPerCompletion(50)
             .isPinned(true)
             .build();
@@ -164,8 +157,8 @@ class MissionAutoCompleteSchedulerTest {
                 .sequenceNumber(1)
                 .missionTitle(mission.getTitle())
                 .missionDescription(mission.getDescription())
-                .categoryName(category.getName())
-                .categoryId(category.getId())
+                .categoryName("운동")
+                .categoryId(1L)
                 .expPerCompletion(mission.getExpPerCompletion())
                 .status(ExecutionStatus.IN_PROGRESS)
                 .startedAt(LocalDateTime.now().minusHours(3)) // 3시간 전 시작

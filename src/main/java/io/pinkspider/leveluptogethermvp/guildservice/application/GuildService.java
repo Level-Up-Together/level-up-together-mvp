@@ -14,8 +14,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildMasterAssignedEvent;
-import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;

@@ -1,6 +1,6 @@
-package io.pinkspider.leveluptogethermvp.missionservice.infrastructure;
+package io.pinkspider.leveluptogethermvp.metaservice.infrastructure;
 
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

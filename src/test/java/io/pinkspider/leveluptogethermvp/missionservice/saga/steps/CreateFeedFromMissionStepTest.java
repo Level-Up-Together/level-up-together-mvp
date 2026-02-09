@@ -17,7 +17,6 @@ import static org.mockito.Mockito.when;
 import io.pinkspider.global.saga.SagaStepResult;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
@@ -68,7 +67,6 @@ class CreateFeedFromMissionStepTest {
     private static final Long EXECUTION_ID = 1L;
     private static final Long FEED_ID = 500L;
 
-    private MissionCategory category;
     private Mission mission;
     private MissionParticipant participant;
     private MissionExecution execution;
@@ -87,12 +85,6 @@ class CreateFeedFromMissionStepTest {
             selfMock
         );
 
-        category = MissionCategory.builder()
-            .name("운동")
-            .description("운동 관련 미션")
-            .build();
-        setId(category, 1L);
-
         mission = Mission.builder()
             .title("30일 운동 챌린지")
             .description("매일 운동하기")
@@ -100,7 +92,8 @@ class CreateFeedFromMissionStepTest {
             .status(MissionStatus.IN_PROGRESS)
             .visibility(MissionVisibility.PUBLIC)
             .type(MissionType.PERSONAL)
-            .category(category)
+            .categoryId(1L)
+            .categoryName("운동")
             .expPerCompletion(50)
             .build();
         setId(mission, 1L);

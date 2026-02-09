@@ -10,8 +10,8 @@ import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse.Feed
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse.GuildPageData;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.noticeservice.api.dto.NoticeResponse;
 import io.pinkspider.leveluptogethermvp.noticeservice.application.NoticeService;
 import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;

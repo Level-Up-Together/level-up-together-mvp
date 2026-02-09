@@ -8,8 +8,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.entity
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructure.SeasonRepository;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.SeasonMyRankingResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
@@ -55,7 +54,7 @@ public class SeasonRankingService {
     private final UserTitleRepository userTitleRepository;
     private final GuildRepository guildRepository;
     private final GuildMemberRepository guildMemberRepository;
-    private final MissionCategoryRepository missionCategoryRepository;
+    private final MissionCategoryService missionCategoryService;
     private final RedisTemplate<String, Object> redisTemplate;
 
     /**

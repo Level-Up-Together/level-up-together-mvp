@@ -9,8 +9,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
@@ -52,7 +52,7 @@ public class HomeService {
     private final UserExperienceRepository userExperienceRepository;
     private final UserTitleRepository userTitleRepository;
     private final FeaturedPlayerRepository featuredPlayerRepository;
-    private final MissionCategoryRepository missionCategoryRepository;
+    private final MissionCategoryService missionCategoryService;
     private final GuildExperienceHistoryRepository guildExperienceHistoryRepository;
     private final GuildRepository guildRepository;
     private final GuildMemberRepository guildMemberRepository;
@@ -211,9 +211,13 @@ public class HomeService {
         // 2. 자동 선정: 해당 카테고리에서 어제 가장 경험치 많이 획득한 사람
         if (result.size() < maxPlayers) {
             // 카테고리명 조회
-            String categoryName = missionCategoryRepository.findById(categoryId)
-                .map(MissionCategory::getName)
-                .orElse(null);
+            String categoryName;
+            try {
+                MissionCategoryResponse categoryResponse = missionCategoryService.getCategory(categoryId);
+                categoryName = categoryResponse.getName();
+            } catch (Exception e) {
+                categoryName = null;
+            }
 
             if (categoryName != null) {
                 int remaining = maxPlayers - result.size();

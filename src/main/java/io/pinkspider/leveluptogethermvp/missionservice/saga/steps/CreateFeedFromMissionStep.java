@@ -83,7 +83,7 @@ public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionCont
             UserProfileCache profile = userProfileCacheService.getUserProfile(userId);
 
             Integer durationMinutes = execution.calculateExpByDuration();
-            Long categoryId = (mission.getCategory() != null) ? mission.getCategory().getId() : null;
+            Long categoryId = mission.getCategoryId();
 
             ActivityFeed feed = activityFeedService.createMissionSharedFeed(
                 userId,

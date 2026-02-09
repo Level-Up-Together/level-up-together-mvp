@@ -1,6 +1,6 @@
 package io.pinkspider.leveluptogethermvp.userservice.attendance.application;
 
-import static io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
+import static io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AttendanceRecord;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AttendanceRewardConfig;

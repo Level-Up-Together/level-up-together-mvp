@@ -209,7 +209,7 @@ public class MissionExecutionService {
         int expEarned = mission.getExpPerCompletion() != null ? mission.getExpPerCompletion() : 10;
         execution.setExpEarned(expEarned);
 
-        Long categoryId = mission.getCategory() != null ? mission.getCategory().getId() : null;
+        Long categoryId = mission.getCategoryId();
         userExperienceService.addExperience(
             userId,
             expEarned,
@@ -357,7 +357,7 @@ public class MissionExecutionService {
             int bonusExp = mission.getBonusExpOnFullCompletion() != null
                 ? mission.getBonusExpOnFullCompletion() : 50;
 
-            Long bonusCategoryId = mission.getCategory() != null ? mission.getCategory().getId() : null;
+            Long bonusCategoryId = mission.getCategoryId();
             userExperienceService.addExperience(
                 participant.getUserId(),
                 bonusExp,

@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
@@ -52,19 +51,12 @@ class DailyMissionInstanceSchedulerTest {
     private static final String USER_ID_1 = "user-1";
     private static final String USER_ID_2 = "user-2";
 
-    private MissionCategory category;
     private Mission mission;
     private MissionParticipant participant1;
     private MissionParticipant participant2;
 
     @BeforeEach
     void setUp() {
-        category = MissionCategory.builder()
-            .name("운동")
-            .description("운동 관련 미션")
-            .build();
-        setId(category, 1L);
-
         mission = Mission.builder()
             .title("매일 30분 운동")
             .description("매일 30분씩 운동하기")
@@ -72,7 +64,8 @@ class DailyMissionInstanceSchedulerTest {
             .status(MissionStatus.IN_PROGRESS)
             .visibility(MissionVisibility.PRIVATE)
             .type(MissionType.PERSONAL)
-            .category(category)
+            .categoryId(1L)
+            .categoryName("운동")
             .expPerCompletion(50)
             .isPinned(true)
             .build();

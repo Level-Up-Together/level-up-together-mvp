@@ -12,12 +12,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
@@ -190,10 +187,14 @@ public class Mission extends LocalDateTimeBaseEntity {
     @Builder.Default
     private Integer guildBonusExpOnFullCompletion = 20;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    @Comment("카테고리 ID (기존 카테고리 선택 시)")
-    private MissionCategory category;
+    @Column(name = "category_id")
+    @Comment("카테고리 ID (스냅샷)")
+    private Long categoryId;
+
+    @Size(max = 100)
+    @Column(name = "category_name", length = 100)
+    @Comment("카테고리 이름 (스냅샷)")
+    private String categoryName;
 
     @Size(max = 50)
     @Column(name = "custom_category", length = 50)
@@ -205,11 +206,12 @@ public class Mission extends LocalDateTimeBaseEntity {
     private List<MissionParticipant> participants = new ArrayList<>();
 
     /**
-     * 카테고리 이름 반환 (기존 카테고리 또는 사용자 정의)
+     * 카테고리 이름 반환 (스냅샷 카테고리 또는 사용자 정의)
+     * Lombok @Getter보다 우선하여 customCategory 폴백 로직 유지
      */
     public String getCategoryName() {
-        if (category != null) {
-            return category.getName();
+        if (categoryName != null) {
+            return categoryName;
         }
         return customCategory;
     }

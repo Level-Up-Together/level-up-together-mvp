@@ -15,8 +15,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildHeadquar
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildHeadquartersConfigRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;

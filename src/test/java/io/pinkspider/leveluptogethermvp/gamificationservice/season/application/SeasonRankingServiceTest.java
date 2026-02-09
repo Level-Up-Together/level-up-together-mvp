@@ -23,7 +23,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructur
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.time.LocalDateTime;
@@ -62,7 +62,7 @@ class SeasonRankingServiceTest {
     private GuildMemberRepository guildMemberRepository;
 
     @Mock
-    private MissionCategoryRepository missionCategoryRepository;
+    private MissionCategoryService missionCategoryService;
 
     @Mock
     private UserExperienceRepository userExperienceRepository;

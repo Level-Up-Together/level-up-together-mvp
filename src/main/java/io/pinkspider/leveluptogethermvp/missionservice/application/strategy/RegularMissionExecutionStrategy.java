@@ -198,7 +198,7 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
             Integer userLevel = userExperienceService.getOrCreateUserExperience(userId).getCurrentLevel();
             TitleService.TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);
             Integer durationMinutes = execution.calculateExpByDuration();
-            Long categoryId = (mission.getCategory() != null) ? mission.getCategory().getId() : null;
+            Long categoryId = mission.getCategoryId();
 
             var createdFeed = activityFeedService.createMissionSharedFeed(
                 userId,

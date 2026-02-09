@@ -10,7 +10,6 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
@@ -57,15 +56,9 @@ class BffSearchServiceTest {
     private Mission testMission;
     private Users testUser;
     private Guild testGuild;
-    private MissionCategory testCategory;
 
     @BeforeEach
     void setUp() {
-        testCategory = MissionCategory.builder()
-            .id(1L)
-            .name("자기계발")
-            .build();
-
         testFeed = ActivityFeed.builder()
             .id(1L)
             .userId("test-user-id")
@@ -84,7 +77,8 @@ class BffSearchServiceTest {
             .status(MissionStatus.OPEN)
             .visibility(MissionVisibility.PUBLIC)
             .type(MissionType.PERSONAL)
-            .category(testCategory)
+            .categoryId(1L)
+            .categoryName("자기계발")
             .build();
 
         testUser = Users.builder()

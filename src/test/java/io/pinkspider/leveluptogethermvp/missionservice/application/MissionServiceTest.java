@@ -23,8 +23,9 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildReposit
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCreateRequest;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionTemplateResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionTemplate;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionInterval;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionSource;
@@ -32,7 +33,6 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionStatu
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionTemplateRepository;
@@ -63,7 +63,7 @@ class MissionServiceTest {
     private MissionParticipantRepository participantRepository;
 
     @Mock
-    private MissionCategoryRepository missionCategoryRepository;
+    private MissionCategoryService missionCategoryService;
 
     @Mock
     private MissionParticipantService missionParticipantService;
@@ -480,13 +480,12 @@ class MissionServiceTest {
     @DisplayName("미션 생성 테스트")
     class CreateMissionTest {
 
-        private MissionCategory createTestCategory(Long id) {
-            MissionCategory category = MissionCategory.builder()
+        private MissionCategoryResponse createTestCategoryResponse(Long id) {
+            return MissionCategoryResponse.builder()
+                .id(id)
                 .name("테스트 카테고리")
                 .isActive(true)
                 .build();
-            setId(category, id);
-            return category;
         }
 
         @Test
@@ -530,7 +529,7 @@ class MissionServiceTest {
         void createMission_withCategory_success() {
             // given
             Long categoryId = 1L;
-            MissionCategory category = createTestCategory(categoryId);
+            MissionCategoryResponse categoryResponse = createTestCategoryResponse(categoryId);
 
             MissionCreateRequest request = MissionCreateRequest.builder()
                 .title("카테고리 미션")
@@ -549,11 +548,12 @@ class MissionServiceTest {
                 .type(request.getType())
                 .source(MissionSource.USER)
                 .creatorId(TEST_USER_ID)
-                .category(category)
+                .categoryId(categoryId)
+                .categoryName("테스트 카테고리")
                 .build();
             setId(savedMission, 1L);
 
-            when(missionCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+            when(missionCategoryService.getCategory(categoryId)).thenReturn(categoryResponse);
             when(missionRepository.save(any(Mission.class))).thenReturn(savedMission);
 
             // when
@@ -561,7 +561,7 @@ class MissionServiceTest {
 
             // then
             assertThat(response).isNotNull();
-            verify(missionCategoryRepository).findById(categoryId);
+            verify(missionCategoryService).getCategory(categoryId);
         }
 
         @Test
@@ -595,7 +595,7 @@ class MissionServiceTest {
                 .categoryId(invalidCategoryId)
                 .build();
 
-            when(missionCategoryRepository.findById(invalidCategoryId)).thenReturn(Optional.empty());
+            when(missionCategoryService.getCategory(invalidCategoryId)).thenThrow(new IllegalArgumentException("존재하지 않는 카테고리입니다."));
 
             // when & then
             assertThatThrownBy(() -> missionService.createMission(TEST_USER_ID, request))
@@ -608,11 +608,11 @@ class MissionServiceTest {
         void createMission_inactiveCategory_throwsException() {
             // given
             Long categoryId = 1L;
-            MissionCategory inactiveCategory = MissionCategory.builder()
+            MissionCategoryResponse inactiveCategory = MissionCategoryResponse.builder()
+                .id(categoryId)
                 .name("비활성 카테고리")
                 .isActive(false)
                 .build();
-            setId(inactiveCategory, categoryId);
 
             MissionCreateRequest request = MissionCreateRequest.builder()
                 .title("미션")
@@ -622,7 +622,7 @@ class MissionServiceTest {
                 .categoryId(categoryId)
                 .build();
 
-            when(missionCategoryRepository.findById(categoryId)).thenReturn(Optional.of(inactiveCategory));
+            when(missionCategoryService.getCategory(categoryId)).thenReturn(inactiveCategory);
 
             // when & then
             assertThatThrownBy(() -> missionService.createMission(TEST_USER_ID, request))
@@ -1079,11 +1079,11 @@ class MissionServiceTest {
             setId(mission, missionId);
             TestReflectionUtils.setField(mission, "source", MissionSource.USER);
 
-            MissionCategory category = MissionCategory.builder()
+            MissionCategoryResponse categoryResponse = MissionCategoryResponse.builder()
+                .id(categoryId)
                 .name("새 카테고리")
                 .isActive(true)
                 .build();
-            setId(category, categoryId);
 
             io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionUpdateRequest request =
                 io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionUpdateRequest.builder()
@@ -1091,14 +1091,14 @@ class MissionServiceTest {
                     .build();
 
             when(missionRepository.findById(missionId)).thenReturn(Optional.of(mission));
-            when(missionCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+            when(missionCategoryService.getCategory(categoryId)).thenReturn(categoryResponse);
 
             // when
             MissionResponse response = missionService.updateMission(missionId, TEST_USER_ID, request);
 
             // then
             assertThat(response).isNotNull();
-            verify(missionCategoryRepository).findById(categoryId);
+            verify(missionCategoryService).getCategory(categoryId);
         }
 
         @Test
@@ -1106,10 +1106,6 @@ class MissionServiceTest {
         void updateMission_clearCategory_success() {
             // given
             Long missionId = 1L;
-            MissionCategory existingCategory = MissionCategory.builder()
-                .name("기존 카테고리")
-                .isActive(true)
-                .build();
 
             Mission mission = Mission.builder()
                 .title("원래 제목")
@@ -1118,7 +1114,8 @@ class MissionServiceTest {
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
                 .creatorId(TEST_USER_ID)
-                .category(existingCategory)
+                .categoryId(1L)
+                .categoryName("기존 카테고리")
                 .build();
             setId(mission, missionId);
             TestReflectionUtils.setField(mission, "source", MissionSource.USER);
@@ -1135,7 +1132,8 @@ class MissionServiceTest {
 
             // then
             assertThat(response).isNotNull();
-            assertThat(mission.getCategory()).isNull();
+            assertThat(mission.getCategoryId()).isNull();
+            assertThat(mission.getCategoryName()).isNull();
         }
     }
 

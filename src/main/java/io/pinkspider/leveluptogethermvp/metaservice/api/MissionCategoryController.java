@@ -1,10 +1,10 @@
-package io.pinkspider.leveluptogethermvp.missionservice.api;
+package io.pinkspider.leveluptogethermvp.metaservice.api;
 
 import io.pinkspider.global.api.ApiResult;
-import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryCreateRequest;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryUpdateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryCreateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryUpdateRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -93,5 +93,17 @@ public class MissionCategoryController {
     public ResponseEntity<ApiResult<MissionCategoryResponse>> deactivateCategory(@PathVariable Long categoryId) {
         MissionCategoryResponse category = missionCategoryService.deactivateCategory(categoryId);
         return ResponseEntity.ok(ApiResult.<MissionCategoryResponse>builder().value(category).build());
+    }
+
+    /**
+     * Redis 캐시 수동 재로드 (Admin용)
+     * 전체 캐시를 비우고 다시 로드
+     */
+    @PostMapping("/admin/reload-cache")
+    public ResponseEntity<ApiResult<String>> reloadCache() {
+        missionCategoryService.evictAllCaches();
+        List<MissionCategoryResponse> categories = missionCategoryService.getActiveCategories();
+        String message = String.format("Cache reloaded successfully. %d categories loaded.", categories.size());
+        return ResponseEntity.ok(ApiResult.<String>builder().value(message).build());
     }
 }

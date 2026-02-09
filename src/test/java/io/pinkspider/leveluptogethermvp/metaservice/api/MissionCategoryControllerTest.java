@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.missionservice.api;
+package io.pinkspider.leveluptogethermvp.metaservice.api;
 
 import static com.epages.restdocs.apispec.ResourceDocumentation.parameterWithName;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -15,10 +15,10 @@ import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
-import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryCreateRequest;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryUpdateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryCreateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryUpdateRequest;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -71,7 +71,7 @@ class MissionCategoryControllerTest {
                 .id(1L)
                 .name("운동")
                 .description("건강과 체력을 위한 운동 관련 미션")
-                .icon("🏃")
+                .icon("\uD83C\uDFC3")
                 .displayOrder(1)
                 .isActive(true)
                 .createdAt(LocalDateTime.now())
@@ -81,7 +81,7 @@ class MissionCategoryControllerTest {
                 .id(2L)
                 .name("공부")
                 .description("학습과 자기계발을 위한 미션")
-                .icon("📚")
+                .icon("\uD83D\uDCDA")
                 .displayOrder(2)
                 .isActive(true)
                 .createdAt(LocalDateTime.now())
@@ -137,7 +137,7 @@ class MissionCategoryControllerTest {
             .id(1L)
             .name("운동")
             .description("건강과 체력을 위한 운동 관련 미션")
-            .icon("🏃")
+            .icon("\uD83C\uDFC3")
             .displayOrder(1)
             .isActive(true)
             .createdAt(LocalDateTime.now())
@@ -196,7 +196,7 @@ class MissionCategoryControllerTest {
                 .id(1L)
                 .name("운동")
                 .description("건강과 체력을 위한 운동 관련 미션")
-                .icon("🏃")
+                .icon("\uD83C\uDFC3")
                 .displayOrder(1)
                 .isActive(true)
                 .createdAt(LocalDateTime.now())
@@ -206,7 +206,7 @@ class MissionCategoryControllerTest {
                 .id(2L)
                 .name("비활성카테고리")
                 .description("비활성화된 카테고리")
-                .icon("❌")
+                .icon("\u274C")
                 .displayOrder(99)
                 .isActive(false)
                 .createdAt(LocalDateTime.now())
@@ -261,7 +261,7 @@ class MissionCategoryControllerTest {
         MissionCategoryCreateRequest request = MissionCategoryCreateRequest.builder()
             .name("새 카테고리")
             .description("새로운 카테고리 설명")
-            .icon("🆕")
+            .icon("\uD83C\uDD95")
             .displayOrder(10)
             .build();
 
@@ -269,7 +269,7 @@ class MissionCategoryControllerTest {
             .id(10L)
             .name("새 카테고리")
             .description("새로운 카테고리 설명")
-            .icon("🆕")
+            .icon("\uD83C\uDD95")
             .displayOrder(10)
             .isActive(true)
             .createdAt(LocalDateTime.now())
@@ -330,7 +330,7 @@ class MissionCategoryControllerTest {
         MissionCategoryUpdateRequest request = MissionCategoryUpdateRequest.builder()
             .name("수정된 카테고리")
             .description("수정된 설명")
-            .icon("✏️")
+            .icon("\u270F\uFE0F")
             .displayOrder(5)
             .isActive(true)
             .build();
@@ -339,7 +339,7 @@ class MissionCategoryControllerTest {
             .id(1L)
             .name("수정된 카테고리")
             .description("수정된 설명")
-            .icon("✏️")
+            .icon("\u270F\uFE0F")
             .displayOrder(5)
             .isActive(true)
             .createdAt(LocalDateTime.now())
@@ -439,7 +439,7 @@ class MissionCategoryControllerTest {
             .id(1L)
             .name("운동")
             .description("건강과 체력을 위한 운동 관련 미션")
-            .icon("🏃")
+            .icon("\uD83C\uDFC3")
             .displayOrder(1)
             .isActive(false)
             .createdAt(LocalDateTime.now())

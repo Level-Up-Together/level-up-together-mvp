@@ -23,18 +23,11 @@ class DailyMissionInstanceTest {
 
     private static final String TEST_USER_ID = "test-user-123";
 
-    private MissionCategory category;
     private Mission mission;
     private MissionParticipant participant;
 
     @BeforeEach
     void setUp() {
-        category = MissionCategory.builder()
-            .name("운동")
-            .description("운동 관련 미션")
-            .build();
-        setId(category, 1L);
-
         mission = Mission.builder()
             .title("매일 30분 운동")
             .description("매일 30분씩 운동하기")
@@ -42,7 +35,8 @@ class DailyMissionInstanceTest {
             .status(MissionStatus.IN_PROGRESS)
             .visibility(MissionVisibility.PRIVATE)
             .type(MissionType.PERSONAL)
-            .category(category)
+            .categoryId(1L)
+            .categoryName("운동")
             .expPerCompletion(50)
             .isPinned(true)
             .build();
@@ -97,7 +91,8 @@ class DailyMissionInstanceTest {
                 .status(MissionStatus.IN_PROGRESS)
                 .visibility(MissionVisibility.PRIVATE)
                 .type(MissionType.PERSONAL)
-                .category(null)
+                .categoryId(null)
+                .categoryName(null)
                 .customCategory("나만의 카테고리")
                 .expPerCompletion(30)
                 .isPinned(true)

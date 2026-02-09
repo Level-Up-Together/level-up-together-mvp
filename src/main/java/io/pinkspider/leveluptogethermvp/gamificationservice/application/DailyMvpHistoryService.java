@@ -11,7 +11,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.Daily
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class DailyMvpHistoryService {
     private final UserRepository userRepository;
     private final UserExperienceRepository userExperienceRepository;
     private final UserTitleRepository userTitleRepository;
-    private final MissionCategoryRepository missionCategoryRepository;
+    private final MissionCategoryService missionCategoryService;
 
     private static final int MVP_COUNT = 5;
 
@@ -103,10 +104,10 @@ public class DailyMvpHistoryService {
         }
 
         // 7. 카테고리 이름 -> ID 매핑 조회
-        Map<String, Long> categoryNameToIdMap = missionCategoryRepository.findAll().stream()
+        Map<String, Long> categoryNameToIdMap = missionCategoryService.getActiveCategories().stream()
             .collect(Collectors.toMap(
-                cat -> cat.getName(),
-                cat -> cat.getId(),
+                MissionCategoryResponse::getName,
+                MissionCategoryResponse::getId,
                 (existing, replacement) -> existing
             ));
 
@@ -199,10 +200,10 @@ public class DailyMvpHistoryService {
             categoryStatsMap.put(userId, categoryStats);
         }
 
-        Map<String, Long> categoryNameToIdMap = missionCategoryRepository.findAll().stream()
+        Map<String, Long> categoryNameToIdMap = missionCategoryService.getActiveCategories().stream()
             .collect(Collectors.toMap(
-                cat -> cat.getName(),
-                cat -> cat.getId(),
+                MissionCategoryResponse::getName,
+                MissionCategoryResponse::getId,
                 (existing, replacement) -> existing
             ));
 

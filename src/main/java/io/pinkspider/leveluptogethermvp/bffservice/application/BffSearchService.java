@@ -144,7 +144,7 @@ public class BffSearchService {
     }
 
     private MissionSearchItem toMissionSearchItem(Mission mission) {
-        Long categoryId = mission.getCategory() != null ? mission.getCategory().getId() : null;
+        Long categoryId = mission.getCategoryId();
         String categoryName = mission.getCategoryName();
         return MissionSearchItem.builder()
             .id(mission.getId())

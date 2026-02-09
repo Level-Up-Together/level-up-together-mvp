@@ -18,7 +18,6 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ExecutionStatus;
@@ -56,7 +55,6 @@ class GrantGuildExperienceStepTest {
     private static final Long GUILD_ID = 100L;
     private static final int GUILD_EXP = 30;
 
-    private MissionCategory category;
     private Mission mission;
     private MissionParticipant participant;
     private MissionExecution execution;
@@ -65,12 +63,6 @@ class GrantGuildExperienceStepTest {
 
     @BeforeEach
     void setUp() {
-        category = MissionCategory.builder()
-            .name("운동")
-            .description("운동 관련 미션")
-            .build();
-        setId(category, 1L);
-
         mission = Mission.builder()
             .title("길드 운동 챌린지")
             .description("길드원들과 함께 운동하기")
@@ -78,7 +70,8 @@ class GrantGuildExperienceStepTest {
             .status(MissionStatus.IN_PROGRESS)
             .visibility(MissionVisibility.GUILD_ONLY)
             .type(MissionType.GUILD)
-            .category(category)
+            .categoryId(1L)
+            .categoryName("운동")
             .guildId(GUILD_ID.toString())
             .expPerCompletion(50)
             .build();
@@ -163,7 +156,8 @@ class GrantGuildExperienceStepTest {
                 .status(MissionStatus.IN_PROGRESS)
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
-                .category(category)
+                .categoryId(1L)
+                .categoryName("운동")
                 .build();
             setId(personalMission, 2L);
             context.setMission(personalMission);
@@ -250,7 +244,8 @@ class GrantGuildExperienceStepTest {
                 .status(MissionStatus.IN_PROGRESS)
                 .visibility(MissionVisibility.PUBLIC)
                 .type(MissionType.PERSONAL)
-                .category(category)
+                .categoryId(1L)
+                .categoryName("운동")
                 .build();
             setId(personalMission, 2L);
             context.setMission(personalMission);

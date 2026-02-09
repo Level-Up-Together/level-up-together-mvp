@@ -66,8 +66,7 @@ public class GrantUserExperienceStep implements SagaStep<MissionCompletionContex
                 categoryName = context.getCategoryName();
                 description = "고정 미션 수행 완료: " + context.getMissionTitle();
             } else {
-                categoryId = context.getMission().getCategory() != null
-                    ? context.getMission().getCategory().getId() : null;
+                categoryId = context.getMission().getCategoryId();
                 categoryName = context.getMission().getCategoryName();
                 description = "미션 수행 완료: " + context.getMission().getTitle();
             }
@@ -116,8 +115,7 @@ public class GrantUserExperienceStep implements SagaStep<MissionCompletionContex
                 categoryName = context.getCategoryName();
                 description = "고정 미션 완료 보상 - 경험치 환수";
             } else {
-                categoryId = context.getMission().getCategory() != null
-                    ? context.getMission().getCategory().getId() : null;
+                categoryId = context.getMission().getCategoryId();
                 categoryName = context.getMission().getCategoryName();
                 description = "미션 완료 보상 - 경험치 환수";
             }

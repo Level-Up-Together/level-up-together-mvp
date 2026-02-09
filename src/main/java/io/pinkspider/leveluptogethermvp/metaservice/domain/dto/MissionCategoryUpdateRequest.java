@@ -1,8 +1,7 @@
-package io.pinkspider.leveluptogethermvp.missionservice.domain.dto;
+package io.pinkspider.leveluptogethermvp.metaservice.domain.dto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,9 +15,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class MissionCategoryCreateRequest {
+public class MissionCategoryUpdateRequest {
 
-    @NotBlank(message = "카테고리 이름은 필수입니다.")
     @Size(max = 50, message = "카테고리 이름은 50자 이하여야 합니다.")
     private String name;
 
@@ -29,4 +27,6 @@ public class MissionCategoryCreateRequest {
     private String icon;
 
     private Integer displayOrder;
+
+    private Boolean isActive;
 }

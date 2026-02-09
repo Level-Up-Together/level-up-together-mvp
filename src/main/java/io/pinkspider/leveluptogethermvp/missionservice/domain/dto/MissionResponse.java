@@ -101,7 +101,7 @@ public class MissionResponse {
             .bonusExpOnFullCompletion(mission.getBonusExpOnFullCompletion())
             .targetDurationMinutes(mission.getTargetDurationMinutes())
             .dailyExecutionLimit(mission.getDailyExecutionLimit())
-            .categoryId(mission.getCategory() != null ? mission.getCategory().getId() : null)
+            .categoryId(mission.getCategoryId())
             .categoryName(mission.getCategoryName())
             .createdAt(mission.getCreatedAt())
             .modifiedAt(mission.getModifiedAt())

@@ -1,6 +1,6 @@
 package io.pinkspider.leveluptogethermvp.userservice.achievement.application;
 
-import static io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
+import static io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
 
 import io.pinkspider.global.cache.AchievementCacheService;
 import io.pinkspider.global.event.AchievementCompletedEvent;

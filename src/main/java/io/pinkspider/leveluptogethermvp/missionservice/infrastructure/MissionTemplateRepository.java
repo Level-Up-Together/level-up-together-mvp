@@ -18,7 +18,7 @@ public interface MissionTemplateRepository extends JpaRepository<MissionTemplate
      */
     @Query("SELECT t FROM MissionTemplate t " +
            "WHERE t.source = :source AND t.visibility = :visibility " +
-           "ORDER BY t.category.displayOrder ASC, t.createdAt DESC")
+           "ORDER BY t.categoryId ASC, t.createdAt DESC")
     Page<MissionTemplate> findPublicTemplates(
         @Param("source") MissionSource source,
         @Param("visibility") MissionVisibility visibility,
@@ -29,7 +29,7 @@ public interface MissionTemplateRepository extends JpaRepository<MissionTemplate
      */
     @Query("SELECT t FROM MissionTemplate t " +
            "WHERE t.source = :source AND t.visibility = :visibility " +
-           "AND t.category.id = :categoryId " +
+           "AND t.categoryId = :categoryId " +
            "ORDER BY t.createdAt DESC")
     Page<MissionTemplate> findPublicTemplatesByCategory(
         @Param("source") MissionSource source,

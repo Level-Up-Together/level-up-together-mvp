@@ -64,7 +64,7 @@ public class MissionTemplateResponse {
             .isPinned(template.getIsPinned())
             .targetDurationMinutes(template.getTargetDurationMinutes())
             .dailyExecutionLimit(template.getDailyExecutionLimit())
-            .categoryId(template.getCategory() != null ? template.getCategory().getId() : null)
+            .categoryId(template.getCategoryId())
             .categoryName(template.getCategoryName())
             .createdAt(template.getCreatedAt())
             .modifiedAt(template.getModifiedAt())

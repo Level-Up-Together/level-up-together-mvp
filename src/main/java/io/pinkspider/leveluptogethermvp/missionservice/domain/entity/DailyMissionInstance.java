@@ -381,8 +381,8 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
      */
     public static DailyMissionInstance createFrom(MissionParticipant participant, LocalDate date, int sequenceNumber) {
         Mission mission = participant.getMission();
-        String categoryName = (mission.getCategory() != null) ? mission.getCategory().getName() : mission.getCustomCategory();
-        Long categoryId = (mission.getCategory() != null) ? mission.getCategory().getId() : null;
+        String categoryName = mission.getCategoryName();
+        Long categoryId = mission.getCategoryId();
 
         return DailyMissionInstance.builder()
             .participant(participant)

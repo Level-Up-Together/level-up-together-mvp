@@ -22,8 +22,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
@@ -72,7 +72,7 @@ class HomeServiceTest {
     private FeaturedPlayerRepository featuredPlayerRepository;
 
     @Mock
-    private MissionCategoryRepository missionCategoryRepository;
+    private MissionCategoryService missionCategoryService;
 
     @Mock
     private GuildExperienceHistoryRepository guildExperienceHistoryRepository;
@@ -90,7 +90,7 @@ class HomeServiceTest {
     private Users testUser;
     private UserExperience testUserExperience;
     private Long testCategoryId;
-    private MissionCategory testCategory;
+    private MissionCategoryResponse testCategoryResponse;
 
     @BeforeEach
     void setUp() {
@@ -110,12 +110,12 @@ class HomeServiceTest {
             .totalExp(4500)
             .build();
 
-        testCategory = MissionCategory.builder()
+        testCategoryResponse = MissionCategoryResponse.builder()
+            .id(testCategoryId)
             .name("운동")
             .icon("💪")
             .isActive(true)
             .build();
-        setId(testCategory, testCategoryId);
     }
 
 
@@ -380,8 +380,8 @@ class HomeServiceTest {
                 .thenReturn(Optional.of(featuredUserExp));
             when(userTitleRepository.findEquippedTitlesByUserId(featuredUserId))
                 .thenReturn(Collections.emptyList());
-            when(missionCategoryRepository.findById(testCategoryId))
-                .thenReturn(Optional.of(testCategory));
+            when(missionCategoryService.getCategory(testCategoryId))
+                .thenReturn(testCategoryResponse);
 
             // 자동 선정용 (Featured Player로 이미 5명 미만)
             Object[] row1 = {testUserId, 100L};
@@ -415,8 +415,8 @@ class HomeServiceTest {
             // given
             when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
-            when(missionCategoryRepository.findById(testCategoryId))
-                .thenReturn(Optional.of(testCategory));
+            when(missionCategoryService.getCategory(testCategoryId))
+                .thenReturn(testCategoryResponse);
 
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();
@@ -456,8 +456,8 @@ class HomeServiceTest {
                 .thenReturn(Optional.of(testUserExperience));
             when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
-            when(missionCategoryRepository.findById(testCategoryId))
-                .thenReturn(Optional.of(testCategory));
+            when(missionCategoryService.getCategory(testCategoryId))
+                .thenReturn(testCategoryResponse);
 
             // 자동 선정에도 동일한 사용자
             Object[] row1 = {testUserId, 100L};
@@ -481,8 +481,8 @@ class HomeServiceTest {
             // given
             when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
-            when(missionCategoryRepository.findById(testCategoryId))
-                .thenReturn(Optional.empty());
+            when(missionCategoryService.getCategory(testCategoryId))
+                .thenThrow(new io.pinkspider.global.exception.CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayersByCategory(testCategoryId);
@@ -854,8 +854,8 @@ class HomeServiceTest {
             // given
             when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
-            when(missionCategoryRepository.findById(testCategoryId))
-                .thenReturn(Optional.of(testCategory));
+            when(missionCategoryService.getCategory(testCategoryId))
+                .thenReturn(testCategoryResponse);
 
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();
@@ -914,8 +914,8 @@ class HomeServiceTest {
             when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
                 .thenReturn(List.of(featuredPlayer));
             when(userRepository.findById(missingUserId)).thenReturn(Optional.empty());
-            when(missionCategoryRepository.findById(testCategoryId))
-                .thenReturn(Optional.of(testCategory));
+            when(missionCategoryService.getCategory(testCategoryId))
+                .thenReturn(testCategoryResponse);
 
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();

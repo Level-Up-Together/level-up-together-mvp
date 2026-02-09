@@ -11,13 +11,13 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionRespons
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionTemplateResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionUpdateRequest;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionTemplate;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionSource;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionTemplateRepository;
@@ -43,7 +43,7 @@ public class MissionService {
     private final MissionRepository missionRepository;
     private final MissionTemplateRepository missionTemplateRepository;
     private final MissionParticipantRepository participantRepository;
-    private final MissionCategoryRepository missionCategoryRepository;
+    private final MissionCategoryService missionCategoryService;
     private final MissionParticipantService missionParticipantService;
     private final GuildMemberRepository guildMemberRepository;
     private final GuildRepository guildRepository;
@@ -57,17 +57,20 @@ public class MissionService {
             throw new IllegalArgumentException("길드 미션은 길드 ID가 필요합니다.");
         }
 
-        // 카테고리 처리: categoryId 또는 customCategory 중 하나만 사용
-        MissionCategory category = null;
+        // 카테고리 처리: categoryId 또는 customCategory 중 하나만 사용 (스냅샷 패턴)
+        Long categoryId = null;
+        String categoryName = null;
         String customCategory = null;
 
         if (request.getCategoryId() != null) {
-            category = missionCategoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 카테고리입니다: " + request.getCategoryId()));
+            MissionCategoryResponse categoryResponse = missionCategoryService.getCategory(request.getCategoryId());
 
-            if (!category.getIsActive()) {
+            if (!categoryResponse.getIsActive()) {
                 throw new IllegalArgumentException("비활성화된 카테고리입니다.");
             }
+
+            categoryId = categoryResponse.getId();
+            categoryName = categoryResponse.getName();
         } else if (request.getCustomCategory() != null && !request.getCustomCategory().isBlank()) {
             customCategory = request.getCustomCategory().trim();
         }
@@ -104,7 +107,8 @@ public class MissionService {
             .durationMinutes(request.getDurationMinutes())
             .expPerCompletion(request.getExpPerCompletion())
             .bonusExpOnFullCompletion(request.getBonusExpOnFullCompletion())
-            .category(category)
+            .categoryId(categoryId)
+            .categoryName(categoryName)
             .customCategory(customCategory)
             .isPinned(Boolean.TRUE.equals(request.getIsPinned()))
             .targetDurationMinutes(request.getTargetDurationMinutes())
@@ -257,25 +261,27 @@ public class MissionService {
             mission.setDailyExecutionLimit(request.getDailyExecutionLimit());
         }
 
-        // 카테고리 수정 처리
+        // 카테고리 수정 처리 (스냅샷 패턴)
         if (Boolean.TRUE.equals(request.getClearCategory())) {
             // 카테고리 제거
-            mission.setCategory(null);
+            mission.setCategoryId(null);
+            mission.setCategoryName(null);
             mission.setCustomCategory(null);
         } else if (request.getCategoryId() != null) {
             // 기존 카테고리 선택
-            MissionCategory category = missionCategoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 카테고리입니다: " + request.getCategoryId()));
+            MissionCategoryResponse categoryResponse = missionCategoryService.getCategory(request.getCategoryId());
 
-            if (!category.getIsActive()) {
+            if (!categoryResponse.getIsActive()) {
                 throw new IllegalArgumentException("비활성화된 카테고리입니다.");
             }
 
-            mission.setCategory(category);
+            mission.setCategoryId(categoryResponse.getId());
+            mission.setCategoryName(categoryResponse.getName());
             mission.setCustomCategory(null);
         } else if (request.getCustomCategory() != null && !request.getCustomCategory().isBlank()) {
             // 사용자 정의 카테고리
-            mission.setCategory(null);
+            mission.setCategoryId(null);
+            mission.setCategoryName(null);
             mission.setCustomCategory(request.getCustomCategory().trim());
         }
 

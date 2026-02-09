@@ -1,11 +1,11 @@
-package io.pinkspider.leveluptogethermvp.missionservice.application;
+package io.pinkspider.leveluptogethermvp.metaservice.application;
 
 import io.pinkspider.global.exception.CustomException;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryCreateRequest;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryUpdateRequest;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionCategory;
-import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCategoryRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryCreateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryUpdateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory;
+import io.pinkspider.leveluptogethermvp.metaservice.infrastructure.MissionCategoryRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(transactionManager = "missionTransactionManager")
+@Transactional(transactionManager = "metaTransactionManager")
 public class MissionCategoryService {
 
     private final MissionCategoryRepository missionCategoryRepository;
@@ -123,7 +123,7 @@ public class MissionCategoryService {
     /**
      * 모든 카테고리 조회 (Admin용 - 비활성화 포함)
      */
-    @Transactional(readOnly = true, transactionManager = "missionTransactionManager")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
     public List<MissionCategoryResponse> getAllCategories() {
         return missionCategoryRepository.findAllOrderByDisplayOrder().stream()
             .map(MissionCategoryResponse::from)
@@ -135,7 +135,7 @@ public class MissionCategoryService {
      * 1시간 TTL로 캐싱됨 (홈 화면 로딩 속도 최적화)
      */
     @Cacheable(value = "activeMissionCategories", key = "'all'")
-    @Transactional(readOnly = true, transactionManager = "missionTransactionManager")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
     public List<MissionCategoryResponse> getActiveCategories() {
         return missionCategoryRepository.findAllActiveCategories().stream()
             .map(MissionCategoryResponse::from)
@@ -146,7 +146,7 @@ public class MissionCategoryService {
      * 카테고리 단건 조회
      */
     @Cacheable(value = "missionCategories", key = "#categoryId")
-    @Transactional(readOnly = true, transactionManager = "missionTransactionManager")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
     public MissionCategoryResponse getCategory(Long categoryId) {
         MissionCategory category = missionCategoryRepository.findById(categoryId)
             .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
@@ -157,7 +157,7 @@ public class MissionCategoryService {
     /**
      * 카테고리 이름으로 조회 (내부용)
      */
-    @Transactional(readOnly = true, transactionManager = "missionTransactionManager")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
     public MissionCategory findByName(String name) {
         return missionCategoryRepository.findByName(name).orElse(null);
     }
@@ -165,8 +165,19 @@ public class MissionCategoryService {
     /**
      * 카테고리 ID로 엔티티 조회 (내부용)
      */
-    @Transactional(readOnly = true, transactionManager = "missionTransactionManager")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
     public MissionCategory findById(Long categoryId) {
         return missionCategoryRepository.findById(categoryId).orElse(null);
+    }
+
+    /**
+     * 모든 캐시 무효화 (Admin 캐시 재로드용)
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", allEntries = true),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public void evictAllCaches() {
+        log.info("All mission category caches evicted");
     }
 }

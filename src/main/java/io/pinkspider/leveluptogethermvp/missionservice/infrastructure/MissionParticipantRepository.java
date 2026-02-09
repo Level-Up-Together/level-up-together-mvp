@@ -53,7 +53,6 @@ public interface MissionParticipantRepository extends JpaRepository<MissionParti
      */
     @Query("SELECT mp FROM MissionParticipant mp " +
            "JOIN FETCH mp.mission m " +
-           "LEFT JOIN FETCH m.category c " +
            "WHERE mp.status = 'ACCEPTED' " +
            "AND m.isPinned = true")
     List<MissionParticipant> findAllActivePinnedMissionParticipants();

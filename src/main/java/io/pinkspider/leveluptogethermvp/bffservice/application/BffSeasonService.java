@@ -11,8 +11,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.entity
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructure.SeasonRankRewardRepository;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.SeasonDetailResponse;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.SeasonMyRankingResponse;
-import io.pinkspider.leveluptogethermvp.missionservice.application.MissionCategoryService;
-import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
