@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity;
+package io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity;
 
 import io.pinkspider.global.domain.auditentity.LocalDateTimeBaseEntity;
 import jakarta.persistence.Column;
@@ -23,14 +23,14 @@ import org.hibernate.annotations.Comment;
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Table(name = "level_config",
+@Table(name = "user_level_config",
     uniqueConstraints = @UniqueConstraint(
-        name = "uk_level_config_level",
+        name = "uk_user_level_config_level",
         columnNames = {"level"}
     )
 )
-@Comment("레벨 설정")
-public class LevelConfig extends LocalDateTimeBaseEntity {
+@Comment("사용자 레벨 설정")
+public class UserLevelConfig extends LocalDateTimeBaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

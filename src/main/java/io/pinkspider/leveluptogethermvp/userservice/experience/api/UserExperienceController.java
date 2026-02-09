@@ -1,7 +1,7 @@
 package io.pinkspider.leveluptogethermvp.userservice.experience.api;
 
 import io.pinkspider.global.api.ApiResult;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.userservice.core.annotation.CurrentUser;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
@@ -53,9 +53,9 @@ public class UserExperienceController {
      * 레벨별 필요 경험치 설정 조회
      */
     @GetMapping("/levels")
-    public ResponseEntity<ApiResult<List<LevelConfig>>> getLevelConfigs() {
-        List<LevelConfig> configs = userExperienceService.getAllLevelConfigs();
-        return ResponseEntity.ok(ApiResult.<List<LevelConfig>>builder().value(configs).build());
+    public ResponseEntity<ApiResult<List<UserLevelConfig>>> getLevelConfigs() {
+        List<UserLevelConfig> configs = userExperienceService.getAllLevelConfigs();
+        return ResponseEntity.ok(ApiResult.<List<UserLevelConfig>>builder().value(configs).build());
     }
 
     /**
@@ -63,15 +63,15 @@ public class UserExperienceController {
      */
     @PostMapping("/levels")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResult<LevelConfig>> createOrUpdateLevelConfig(
+    public ResponseEntity<ApiResult<UserLevelConfig>> createOrUpdateLevelConfig(
         @RequestParam Integer level,
         @RequestParam Integer requiredExp,
         @RequestParam(required = false) Integer cumulativeExp,
         @RequestParam(required = false) String title,
         @RequestParam(required = false) String description) {
 
-        LevelConfig config = userExperienceService.createOrUpdateLevelConfig(
+        UserLevelConfig config = userExperienceService.createOrUpdateLevelConfig(
             level, requiredExp, cumulativeExp, title, description);
-        return ResponseEntity.ok(ApiResult.<LevelConfig>builder().value(config).build());
+        return ResponseEntity.ok(ApiResult.<UserLevelConfig>builder().value(config).build());
     }
 }

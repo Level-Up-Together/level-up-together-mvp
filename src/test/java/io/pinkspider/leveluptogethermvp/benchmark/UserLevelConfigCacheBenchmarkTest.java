@@ -1,8 +1,8 @@
 package io.pinkspider.leveluptogethermvp.benchmark;
 
-import io.pinkspider.global.cache.LevelConfigCacheService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.infrastructure.LevelConfigRepository;
+import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.LongSummaryStatistics;
@@ -18,23 +18,23 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 /**
- * LevelConfig 조회 성능 벤치마크 테스트
+ * UserLevelConfig 조회 성능 벤치마크 테스트
  *
  * 실행 방법:
- * ./gradlew test --tests "*LevelConfigCacheBenchmarkTest" -Dspring.profiles.active=local
+ * ./gradlew test --tests "*UserLevelConfigCacheBenchmarkTest" -Dspring.profiles.active=local
  *
  * 주의: 실제 DB/Redis 연결이 필요합니다. @Disabled를 제거하고 실행하세요.
  */
 @SpringBootTest
 @ActiveProfiles("local")
 @Disabled("벤치마크 테스트는 수동으로 실행")
-class LevelConfigCacheBenchmarkTest {
+class UserLevelConfigCacheBenchmarkTest {
 
     @Autowired
-    private LevelConfigRepository levelConfigRepository;
+    private UserLevelConfigRepository userLevelConfigRepository;
 
     @Autowired
-    private LevelConfigCacheService levelConfigCacheService;
+    private UserLevelConfigCacheService userLevelConfigCacheService;
 
     private static final int WARMUP_ITERATIONS = 100;
     private static final int BENCHMARK_ITERATIONS = 1000;
@@ -50,8 +50,8 @@ class LevelConfigCacheBenchmarkTest {
         // Warmup
         System.out.println("워밍업 중...");
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            levelConfigRepository.findAllByOrderByLevelAsc();
-            levelConfigCacheService.getAllLevelConfigs();
+            userLevelConfigRepository.findAllByOrderByLevelAsc();
+            userLevelConfigCacheService.getAllLevelConfigs();
         }
 
         // DB 직접 조회 벤치마크
@@ -59,7 +59,7 @@ class LevelConfigCacheBenchmarkTest {
         List<Long> dbTimes = new ArrayList<>();
         for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
             long start = System.nanoTime();
-            List<LevelConfig> configs = levelConfigRepository.findAllByOrderByLevelAsc();
+            List<UserLevelConfig> configs = userLevelConfigRepository.findAllByOrderByLevelAsc();
             long end = System.nanoTime();
             dbTimes.add(end - start);
         }
@@ -70,7 +70,7 @@ class LevelConfigCacheBenchmarkTest {
         List<Long> cacheTimes = new ArrayList<>();
         for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
             long start = System.nanoTime();
-            List<LevelConfig> configs = levelConfigCacheService.getAllLevelConfigs();
+            List<UserLevelConfig> configs = userLevelConfigCacheService.getAllLevelConfigs();
             long end = System.nanoTime();
             cacheTimes.add(end - start);
         }
@@ -90,8 +90,8 @@ class LevelConfigCacheBenchmarkTest {
         // Warmup
         System.out.println("워밍업 중...");
         for (int i = 0; i < WARMUP_ITERATIONS; i++) {
-            levelConfigRepository.findByLevel(1);
-            levelConfigCacheService.getLevelConfigByLevel(1);
+            userLevelConfigRepository.findByLevel(1);
+            userLevelConfigCacheService.getLevelConfigByLevel(1);
         }
 
         // DB 직접 조회
@@ -100,7 +100,7 @@ class LevelConfigCacheBenchmarkTest {
         for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
             int level = (i % 10) + 1; // 1-10 레벨 순환
             long start = System.nanoTime();
-            levelConfigRepository.findByLevel(level);
+            userLevelConfigRepository.findByLevel(level);
             long end = System.nanoTime();
             dbTimes.add(end - start);
         }
@@ -112,7 +112,7 @@ class LevelConfigCacheBenchmarkTest {
         for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
             int level = (i % 10) + 1;
             long start = System.nanoTime();
-            levelConfigCacheService.getLevelConfigByLevel(level);
+            userLevelConfigCacheService.getLevelConfigByLevel(level);
             long end = System.nanoTime();
             cacheTimes.add(end - start);
         }
@@ -133,7 +133,7 @@ class LevelConfigCacheBenchmarkTest {
         // DB 직접 조회 - 동시 요청
         System.out.println("[1] DB 직접 조회 - 동시 요청");
         long dbTotalTime = runConcurrentBenchmark(requestsPerThread, () -> {
-            levelConfigRepository.findAllByOrderByLevelAsc();
+            userLevelConfigRepository.findAllByOrderByLevelAsc();
         });
         double dbAvgMs = dbTotalTime / 1_000_000.0 / BENCHMARK_ITERATIONS;
         System.out.printf("   총 시간: %.2f ms, 평균: %.4f ms/req, 처리량: %.0f req/s%n",
@@ -142,7 +142,7 @@ class LevelConfigCacheBenchmarkTest {
         // Redis 캐시 조회 - 동시 요청
         System.out.println("\n[2] Redis 캐시 조회 - 동시 요청");
         long cacheTotalTime = runConcurrentBenchmark(requestsPerThread, () -> {
-            levelConfigCacheService.getAllLevelConfigs();
+            userLevelConfigCacheService.getAllLevelConfigs();
         });
         double cacheAvgMs = cacheTotalTime / 1_000_000.0 / BENCHMARK_ITERATIONS;
         System.out.printf("   총 시간: %.2f ms, 평균: %.4f ms/req, 처리량: %.0f req/s%n",

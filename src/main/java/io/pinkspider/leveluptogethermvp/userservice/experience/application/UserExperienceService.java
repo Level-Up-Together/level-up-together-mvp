@@ -1,9 +1,9 @@
 package io.pinkspider.leveluptogethermvp.userservice.experience.application;
 
-import io.pinkspider.global.cache.LevelConfigCacheService;
+import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.global.event.GuildCreationEligibleEvent;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.infrastructure.LevelConfigRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.ExperienceHistory;
@@ -34,8 +34,8 @@ public class UserExperienceService {
     private final UserExperienceRepository userExperienceRepository;
     private final ExperienceHistoryRepository experienceHistoryRepository;
     private final UserCategoryExperienceRepository userCategoryExperienceRepository;
-    private final LevelConfigCacheService levelConfigCacheService;
-    private final LevelConfigRepository levelConfigRepository; // for write operations
+    private final UserLevelConfigCacheService userLevelConfigCacheService;
+    private final UserLevelConfigRepository userLevelConfigRepository; // for write operations
     private final ApplicationContext applicationContext;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -148,7 +148,7 @@ public class UserExperienceService {
     }
 
     private void processLevelUp(UserExperience userExp) {
-        List<LevelConfig> levelConfigs = levelConfigCacheService.getAllLevelConfigs();
+        List<UserLevelConfig> levelConfigs = userLevelConfigCacheService.getAllLevelConfigs();
         if (levelConfigs.isEmpty()) {
             processLevelUpWithDefaultFormula(userExp);
             return;
@@ -159,7 +159,7 @@ public class UserExperienceService {
             int nextLevel = currentLevel + 1;
 
             // 다음 레벨의 설정을 조회하여 필요 경험치 확인
-            LevelConfig nextLevelConfig = levelConfigs.stream()
+            UserLevelConfig nextLevelConfig = levelConfigs.stream()
                 .filter(lc -> lc.getLevel().equals(nextLevel))
                 .findFirst()
                 .orElse(null);
@@ -176,7 +176,7 @@ public class UserExperienceService {
                 break;
             }
 
-            Integer maxLevel = levelConfigCacheService.getMaxLevel();
+            Integer maxLevel = userLevelConfigCacheService.getMaxLevel();
             if (maxLevel != null && userExp.getCurrentLevel() >= maxLevel) {
                 break;
             }
@@ -199,12 +199,12 @@ public class UserExperienceService {
     }
 
     private Integer getNextLevelRequiredExp(int currentLevel) {
-        LevelConfig config = levelConfigCacheService.getLevelConfigByLevel(currentLevel);
+        UserLevelConfig config = userLevelConfigCacheService.getLevelConfigByLevel(currentLevel);
         return config != null ? config.getRequiredExp() : calculateDefaultRequiredExp(currentLevel);
     }
 
-    public List<LevelConfig> getAllLevelConfigs() {
-        return levelConfigCacheService.getAllLevelConfigs();
+    public List<UserLevelConfig> getAllLevelConfigs() {
+        return userLevelConfigCacheService.getAllLevelConfigs();
     }
 
     /**
@@ -292,7 +292,7 @@ public class UserExperienceService {
      * 레벨 다운 처리 (경험치 차감으로 인한)
      */
     private void processLevelDown(UserExperience userExp, int targetTotalExp) {
-        List<LevelConfig> levelConfigs = levelConfigCacheService.getAllLevelConfigs();
+        List<UserLevelConfig> levelConfigs = userLevelConfigCacheService.getAllLevelConfigs();
 
         if (targetTotalExp <= 0) {
             userExp.setCurrentLevel(1);
@@ -307,7 +307,7 @@ public class UserExperienceService {
         int newLevel = 1;
         int remainingExp = targetTotalExp;
 
-        for (LevelConfig config : levelConfigs) {
+        for (UserLevelConfig config : levelConfigs) {
             if (config.getCumulativeExp() != null && targetTotalExp >= config.getCumulativeExp()) {
                 newLevel = config.getLevel();
                 remainingExp = targetTotalExp - config.getCumulativeExp();
@@ -327,16 +327,16 @@ public class UserExperienceService {
     }
 
     @Transactional(transactionManager = "metaTransactionManager")
-    public LevelConfig createOrUpdateLevelConfig(Integer level, Integer requiredExp,
+    public UserLevelConfig createOrUpdateLevelConfig(Integer level, Integer requiredExp,
                                                   Integer cumulativeExp, String title, String description) {
-        LevelConfig config = levelConfigRepository.findByLevel(level)
-            .orElse(LevelConfig.builder().level(level).build());
+        UserLevelConfig config = userLevelConfigRepository.findByLevel(level)
+            .orElse(UserLevelConfig.builder().level(level).build());
 
         config.setRequiredExp(requiredExp);
         config.setCumulativeExp(cumulativeExp);
         config.setTitle(title);
         config.setDescription(description);
 
-        return levelConfigRepository.save(config);
+        return userLevelConfigRepository.save(config);
     }
 }

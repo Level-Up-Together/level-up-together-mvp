@@ -16,7 +16,7 @@ import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.epages.restdocs.apispec.SimpleType;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.ExperienceHistory;
@@ -224,10 +224,10 @@ class UserExperienceControllerTest {
     @DisplayName("GET /api/v1/users/experience/levels : 레벨별 필요 경험치 설정 조회")
     void getLevelConfigsTest() throws Exception {
         // given
-        List<LevelConfig> configs = List.of(
-            LevelConfig.builder().id(1L).level(1).requiredExp(100).cumulativeExp(0).title("새싹").build(),
-            LevelConfig.builder().id(2L).level(2).requiredExp(200).cumulativeExp(100).title("초보자").build(),
-            LevelConfig.builder().id(3L).level(3).requiredExp(300).cumulativeExp(300).title("중급자").build()
+        List<UserLevelConfig> configs = List.of(
+            UserLevelConfig.builder().id(1L).level(1).requiredExp(100).cumulativeExp(0).title("새싹").build(),
+            UserLevelConfig.builder().id(2L).level(2).requiredExp(200).cumulativeExp(100).title("초보자").build(),
+            UserLevelConfig.builder().id(3L).level(3).requiredExp(300).cumulativeExp(300).title("중급자").build()
         );
 
         when(userExperienceService.getAllLevelConfigs()).thenReturn(configs);
@@ -270,7 +270,7 @@ class UserExperienceControllerTest {
     @DisplayName("POST /api/v1/users/experience/levels : 레벨 설정 생성/수정")
     void createOrUpdateLevelConfigTest() throws Exception {
         // given
-        LevelConfig config = LevelConfig.builder()
+        UserLevelConfig config = UserLevelConfig.builder()
             .id(1L)
             .level(10)
             .requiredExp(1000)

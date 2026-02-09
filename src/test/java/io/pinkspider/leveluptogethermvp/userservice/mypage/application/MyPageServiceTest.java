@@ -22,9 +22,9 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRa
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserStatsRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.global.cache.LevelConfigCacheService;
+import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.enums.FriendshipStatus;
 import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.FriendshipRepository;
@@ -71,7 +71,7 @@ class MyPageServiceTest {
     private FriendshipRepository friendshipRepository;
 
     @Mock
-    private LevelConfigCacheService levelConfigCacheService;
+    private UserLevelConfigCacheService userLevelConfigCacheService;
 
     @Mock
     private ProfileImageStorageService profileImageStorageService;
@@ -101,7 +101,7 @@ class MyPageServiceTest {
             userTitleRepository,
             userStatsRepository,
             friendshipRepository,
-            levelConfigCacheService,
+            userLevelConfigCacheService,
             profileImageStorageService,
             imageModerationService,
             activityFeedRepository,
@@ -170,7 +170,7 @@ class MyPageServiceTest {
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
             when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
             when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(3L);
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(LevelConfig.builder().requiredExp(100).build());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(UserLevelConfig.builder().requiredExp(100).build());
             when(userStatsRepository.countTotalUsers()).thenReturn(100L);
             when(userStatsRepository.calculateRank(0L)).thenReturn(50L);
 

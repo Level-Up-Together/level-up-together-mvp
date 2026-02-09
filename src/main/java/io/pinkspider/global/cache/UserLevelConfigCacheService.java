@@ -1,7 +1,7 @@
 package io.pinkspider.global.cache;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.infrastructure.LevelConfigRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Optional;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * LevelConfig 캐시 서비스
+ * UserLevelConfig 캐시 서비스
  * - Redis 캐시 우선 조회, 캐시 미스 시 DB fallback
  * - Admin에서 변경 시 캐시 무효화됨
  */
@@ -20,28 +20,28 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Slf4j
 @Transactional(readOnly = true, transactionManager = "gamificationTransactionManager")
-public class LevelConfigCacheService {
+public class UserLevelConfigCacheService {
 
-    private final LevelConfigRepository levelConfigRepository;
+    private final UserLevelConfigRepository userLevelConfigRepository;
 
     /**
      * 모든 레벨 설정 조회 (레벨 오름차순)
-     * 캐시 키: levelConfigs::all
+     * 캐시 키: userLevelConfigs::all
      */
-    @Cacheable(value = "levelConfigs", key = "'all'", unless = "#result == null || #result.isEmpty()")
-    public List<LevelConfig> getAllLevelConfigs() {
-        log.info("[LevelConfigCacheService] DB에서 전체 LevelConfig 로드 (캐시 미스)");
-        return levelConfigRepository.findAllByOrderByLevelAsc();
+    @Cacheable(value = "userLevelConfigs", key = "'all'", unless = "#result == null || #result.isEmpty()")
+    public List<UserLevelConfig> getAllLevelConfigs() {
+        log.info("[UserLevelConfigCacheService] DB에서 전체 UserLevelConfig 로드 (캐시 미스)");
+        return userLevelConfigRepository.findAllByOrderByLevelAsc();
     }
 
     /**
      * 특정 레벨 설정 조회
-     * 캐시 키: levelConfigs::{level}
+     * 캐시 키: userLevelConfigs::{level}
      */
-    @Cacheable(value = "levelConfigs", key = "#level", unless = "#result == null")
-    public LevelConfig getLevelConfigByLevel(Integer level) {
-        log.info("[LevelConfigCacheService] DB에서 LevelConfig 로드 (레벨: {}, 캐시 미스)", level);
-        return levelConfigRepository.findByLevel(level).orElse(null);
+    @Cacheable(value = "userLevelConfigs", key = "#level", unless = "#result == null")
+    public UserLevelConfig getLevelConfigByLevel(Integer level) {
+        log.info("[UserLevelConfigCacheService] DB에서 UserLevelConfig 로드 (레벨: {}, 캐시 미스)", level);
+        return userLevelConfigRepository.findByLevel(level).orElse(null);
     }
 
     /**
@@ -49,8 +49,8 @@ public class LevelConfigCacheService {
      * - 이 메서드는 캐싱하지 않음 (경험치별로 다양한 값이 들어올 수 있어 캐시 효율 낮음)
      * - 대신 getAllLevelConfigs()를 캐시하고 메모리에서 계산
      */
-    public Optional<LevelConfig> getLevelByTotalExp(Integer totalExp) {
-        List<LevelConfig> configs = getAllLevelConfigs();
+    public Optional<UserLevelConfig> getLevelByTotalExp(Integer totalExp) {
+        List<UserLevelConfig> configs = getAllLevelConfigs();
         return configs.stream()
                 .filter(config -> config.getCumulativeExp() != null && config.getCumulativeExp() <= totalExp)
                 .reduce((first, second) -> second); // 마지막 (가장 높은 레벨) 반환
@@ -61,7 +61,7 @@ public class LevelConfigCacheService {
      * - 캐시된 전체 목록에서 계산
      */
     public Integer getMaxLevel() {
-        List<LevelConfig> configs = getAllLevelConfigs();
+        List<UserLevelConfig> configs = getAllLevelConfigs();
         return configs.isEmpty() ? 0 : configs.get(configs.size() - 1).getLevel();
     }
 
@@ -72,10 +72,10 @@ public class LevelConfigCacheService {
     @PostConstruct
     public void warmUpCache() {
         try {
-            List<LevelConfig> configs = getAllLevelConfigs();
-            log.info("[LevelConfigCacheService] 캐시 워밍업 완료: {} 개 레벨 설정 로드", configs.size());
+            List<UserLevelConfig> configs = getAllLevelConfigs();
+            log.info("[UserLevelConfigCacheService] 캐시 워밍업 완료: {} 개 레벨 설정 로드", configs.size());
         } catch (Exception e) {
-            log.warn("[LevelConfigCacheService] 캐시 워밍업 실패 (Admin 시작 시 로드됨): {}", e.getMessage());
+            log.warn("[UserLevelConfigCacheService] 캐시 워밍업 실패 (Admin 시작 시 로드됨): {}", e.getMessage());
         }
     }
 }

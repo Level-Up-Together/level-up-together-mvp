@@ -1,11 +1,11 @@
 package io.pinkspider.leveluptogethermvp.userservice.mypage.application;
 
-import io.pinkspider.global.cache.LevelConfigCacheService;
+import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
@@ -59,7 +59,7 @@ public class MyPageService {
     private final UserTitleRepository userTitleRepository;
     private final UserStatsRepository userStatsRepository;
     private final FriendshipRepository friendshipRepository;
-    private final LevelConfigCacheService levelConfigCacheService;
+    private final UserLevelConfigCacheService userLevelConfigCacheService;
     private final ProfileImageStorageService profileImageStorageService;
     private final ImageModerationService imageModerationService;
     private final ActivityFeedRepository activityFeedRepository;
@@ -73,7 +73,7 @@ public class MyPageService {
             UserTitleRepository userTitleRepository,
             UserStatsRepository userStatsRepository,
             FriendshipRepository friendshipRepository,
-            LevelConfigCacheService levelConfigCacheService,
+            UserLevelConfigCacheService userLevelConfigCacheService,
             ProfileImageStorageService profileImageStorageService,
             ImageModerationService imageModerationService,
             ActivityFeedRepository activityFeedRepository,
@@ -85,7 +85,7 @@ public class MyPageService {
         this.userTitleRepository = userTitleRepository;
         this.userStatsRepository = userStatsRepository;
         this.friendshipRepository = friendshipRepository;
-        this.levelConfigCacheService = levelConfigCacheService;
+        this.userLevelConfigCacheService = userLevelConfigCacheService;
         this.profileImageStorageService = profileImageStorageService;
         this.imageModerationService = imageModerationService;
         this.activityFeedRepository = activityFeedRepository;
@@ -668,7 +668,7 @@ public class MyPageService {
     }
 
     private Integer getNextLevelRequiredExp(int currentLevel) {
-        LevelConfig config = levelConfigCacheService.getLevelConfigByLevel(currentLevel);
+        UserLevelConfig config = userLevelConfigCacheService.getLevelConfigByLevel(currentLevel);
         return config != null ? config.getRequiredExp() : 100 + (currentLevel - 1) * 50;  // 기본 공식
     }
 

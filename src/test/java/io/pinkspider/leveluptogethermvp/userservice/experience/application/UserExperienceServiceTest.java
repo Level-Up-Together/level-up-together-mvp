@@ -12,12 +12,12 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Experi
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserCategoryExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
-import io.pinkspider.global.cache.LevelConfigCacheService;
+import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserCategoryExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.domain.entity.LevelConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.levelconfig.infrastructure.LevelConfigRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
 import java.util.Collections;
 import java.util.List;
@@ -48,10 +48,10 @@ class UserExperienceServiceTest {
     private UserCategoryExperienceRepository userCategoryExperienceRepository;
 
     @Mock
-    private LevelConfigCacheService levelConfigCacheService;
+    private UserLevelConfigCacheService userLevelConfigCacheService;
 
     @Mock
-    private LevelConfigRepository levelConfigRepository;
+    private UserLevelConfigRepository userLevelConfigRepository;
 
     @Mock
     private ApplicationContext applicationContext;
@@ -72,8 +72,8 @@ class UserExperienceServiceTest {
         return userExp;
     }
 
-    private LevelConfig createLevelConfig(int level, int requiredExp, Integer cumulativeExp) {
-        return LevelConfig.builder()
+    private UserLevelConfig createUserLevelConfig(int level, int requiredExp, Integer cumulativeExp) {
+        return UserLevelConfig.builder()
             .level(level)
             .requiredExp(requiredExp)
             .cumulativeExp(cumulativeExp)
@@ -93,8 +93,8 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 1, 50, 50);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
 
             // when
             UserExperienceResponse result = userExperienceService.addExperience(
@@ -115,8 +115,8 @@ class UserExperienceServiceTest {
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
             when(userExperienceRepository.save(any(UserExperience.class))).thenReturn(newUserExp);
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
 
             // when
             UserExperienceResponse result = userExperienceService.addExperience(
@@ -134,8 +134,8 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 1, 90, 90);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
-            when(levelConfigCacheService.getLevelConfigByLevel(2)).thenReturn(null);
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(2)).thenReturn(null);
 
             // when
             UserExperienceResponse result = userExperienceService.addExperience(
@@ -158,7 +158,7 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 5, 250, 750);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getLevelConfigByLevel(5)).thenReturn(createLevelConfig(5, 300, 700));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(5)).thenReturn(createUserLevelConfig(5, 300, 700));
 
             // when
             UserExperienceResponse result = userExperienceService.getUserExperience(TEST_USER_ID);
@@ -177,7 +177,7 @@ class UserExperienceServiceTest {
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
             when(userExperienceRepository.save(any(UserExperience.class))).thenReturn(newUserExp);
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
 
             // when
             UserExperienceResponse result = userExperienceService.getUserExperience(TEST_USER_ID);
@@ -200,7 +200,7 @@ class UserExperienceServiceTest {
                 setId(saved, 1L);
                 return saved;
             });
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
 
             // when
             UserExperienceResponse result = userExperienceService.getUserExperience(TEST_USER_ID);
@@ -213,13 +213,13 @@ class UserExperienceServiceTest {
         }
 
         @Test
-        @DisplayName("LevelConfig가 없어도 기본 공식으로 다음 레벨 경험치를 계산한다")
-        void getUserExperience_noLevelConfig_usesDefaultFormula() {
+        @DisplayName("UserLevelConfig가 없어도 기본 공식으로 다음 레벨 경험치를 계산한다")
+        void getUserExperience_noUserLevelConfig_usesDefaultFormula() {
             // given
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 3, 50, 300);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(null); // config 없음
+            when(userLevelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(null); // config 없음
 
             // when
             UserExperienceResponse result = userExperienceService.getUserExperience(TEST_USER_ID);
@@ -339,12 +339,12 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 3, 10, 260);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(
-                createLevelConfig(1, 100, 0),
-                createLevelConfig(2, 150, 100),
-                createLevelConfig(3, 200, 250)
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(
+                createUserLevelConfig(1, 100, 0),
+                createUserLevelConfig(2, 150, 100),
+                createUserLevelConfig(3, 200, 250)
             ));
-            when(levelConfigCacheService.getLevelConfigByLevel(2)).thenReturn(createLevelConfig(2, 150, 100));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(2)).thenReturn(createUserLevelConfig(2, 150, 100));
 
             // when
             UserExperienceResponse result = userExperienceService.subtractExperience(
@@ -362,11 +362,11 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 2, 50, 150);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(
-                createLevelConfig(1, 100, 0),
-                createLevelConfig(2, 150, 100)
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(
+                createUserLevelConfig(1, 100, 0),
+                createUserLevelConfig(2, 150, 100)
             ));
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
 
             // when
             UserExperienceResponse result = userExperienceService.subtractExperience(
@@ -387,16 +387,16 @@ class UserExperienceServiceTest {
         @DisplayName("모든 레벨 설정을 조회한다")
         void getAllLevelConfigs_success() {
             // given
-            List<LevelConfig> configs = List.of(
-                createLevelConfig(1, 100, 0),
-                createLevelConfig(2, 150, 100),
-                createLevelConfig(3, 200, 250)
+            List<UserLevelConfig> configs = List.of(
+                createUserLevelConfig(1, 100, 0),
+                createUserLevelConfig(2, 150, 100),
+                createUserLevelConfig(3, 200, 250)
             );
 
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
 
             // when
-            List<LevelConfig> result = userExperienceService.getAllLevelConfigs();
+            List<UserLevelConfig> result = userExperienceService.getAllLevelConfigs();
 
             // then
             assertThat(result).hasSize(3);
@@ -412,36 +412,36 @@ class UserExperienceServiceTest {
         @DisplayName("새 레벨 설정을 생성한다")
         void createOrUpdateLevelConfig_create() {
             // given
-            LevelConfig newConfig = createLevelConfig(10, 500, 2000);
+            UserLevelConfig newConfig = createUserLevelConfig(10, 500, 2000);
 
-            when(levelConfigRepository.findByLevel(10)).thenReturn(Optional.empty());
-            when(levelConfigRepository.save(any(LevelConfig.class))).thenReturn(newConfig);
+            when(userLevelConfigRepository.findByLevel(10)).thenReturn(Optional.empty());
+            when(userLevelConfigRepository.save(any(UserLevelConfig.class))).thenReturn(newConfig);
 
             // when
-            LevelConfig result = userExperienceService.createOrUpdateLevelConfig(
+            UserLevelConfig result = userExperienceService.createOrUpdateLevelConfig(
                 10, 500, 2000, "레벨 10", "상급 모험가");
 
             // then
             assertThat(result).isNotNull();
-            verify(levelConfigRepository).save(any(LevelConfig.class));
+            verify(userLevelConfigRepository).save(any(UserLevelConfig.class));
         }
 
         @Test
         @DisplayName("기존 레벨 설정을 업데이트한다")
         void createOrUpdateLevelConfig_update() {
             // given
-            LevelConfig existingConfig = createLevelConfig(5, 300, 700);
+            UserLevelConfig existingConfig = createUserLevelConfig(5, 300, 700);
 
-            when(levelConfigRepository.findByLevel(5)).thenReturn(Optional.of(existingConfig));
-            when(levelConfigRepository.save(any(LevelConfig.class))).thenReturn(existingConfig);
+            when(userLevelConfigRepository.findByLevel(5)).thenReturn(Optional.of(existingConfig));
+            when(userLevelConfigRepository.save(any(UserLevelConfig.class))).thenReturn(existingConfig);
 
             // when
-            LevelConfig result = userExperienceService.createOrUpdateLevelConfig(
+            UserLevelConfig result = userExperienceService.createOrUpdateLevelConfig(
                 5, 350, 750, "업데이트된 레벨 5", "업데이트된 설명");
 
             // then
             assertThat(result.getRequiredExp()).isEqualTo(350);
-            verify(levelConfigRepository).save(existingConfig);
+            verify(userLevelConfigRepository).save(existingConfig);
         }
     }
 
@@ -456,8 +456,8 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 1, 50, 50);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
 
             // when
             UserExperienceResponse result = userExperienceService.addExperience(
@@ -479,8 +479,8 @@ class UserExperienceServiceTest {
             UserCategoryExperience categoryExp = UserCategoryExperience.create(TEST_USER_ID, 1L, "건강", 100);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
             when(userCategoryExperienceRepository.findByUserIdAndCategoryId(TEST_USER_ID, 1L))
                 .thenReturn(Optional.of(categoryExp));
 
@@ -502,8 +502,8 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 1, 50, 50);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
-            when(levelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createLevelConfig(1, 100, 0));
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(Collections.emptyList());
+            when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(createUserLevelConfig(1, 100, 0));
             when(userCategoryExperienceRepository.findByUserIdAndCategoryId(TEST_USER_ID, 1L))
                 .thenReturn(Optional.empty());
 
@@ -528,7 +528,7 @@ class UserExperienceServiceTest {
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 3, 150, 350);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(createLevelConfig(3, 200, 250));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(createUserLevelConfig(3, 200, 250));
 
             // when
             UserExperienceResponse result = userExperienceService.subtractExperience(
@@ -549,7 +549,7 @@ class UserExperienceServiceTest {
             UserCategoryExperience categoryExp = UserCategoryExperience.create(TEST_USER_ID, 1L, "건강", 100);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(createLevelConfig(3, 200, 250));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(createUserLevelConfig(3, 200, 250));
             when(userCategoryExperienceRepository.findByUserIdAndCategoryId(TEST_USER_ID, 1L))
                 .thenReturn(Optional.of(categoryExp));
 
@@ -571,7 +571,7 @@ class UserExperienceServiceTest {
             UserCategoryExperience categoryExp = UserCategoryExperience.create(TEST_USER_ID, 1L, "건강", 30);
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(createLevelConfig(3, 200, 250));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(3)).thenReturn(createUserLevelConfig(3, 200, 250));
             when(userCategoryExperienceRepository.findByUserIdAndCategoryId(TEST_USER_ID, 1L))
                 .thenReturn(Optional.of(categoryExp));
 
@@ -586,26 +586,26 @@ class UserExperienceServiceTest {
     }
 
     @Nested
-    @DisplayName("processLevelUp 테스트 (LevelConfig 기반)")
+    @DisplayName("processLevelUp 테스트 (UserLevelConfig 기반)")
     class ProcessLevelUpWithConfigTest {
 
         @Test
-        @DisplayName("LevelConfig가 있을 때 레벨업한다")
+        @DisplayName("UserLevelConfig가 있을 때 레벨업한다")
         void addExperience_levelUpWithConfig() {
             // given
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 1, 90, 90);
             // 새 로직: 다음 레벨의 required_exp를 체크하므로, level 2의 required_exp가 100이어야 110 exp로 레벨업 가능
-            List<LevelConfig> configs = List.of(
-                createLevelConfig(1, 0, 0),       // level 1 (시작 레벨)
-                createLevelConfig(2, 100, 100),   // level 2 도달에 100 exp 필요
-                createLevelConfig(3, 150, 250)    // level 3 도달에 150 exp 추가 필요
+            List<UserLevelConfig> configs = List.of(
+                createUserLevelConfig(1, 0, 0),       // level 1 (시작 레벨)
+                createUserLevelConfig(2, 100, 100),   // level 2 도달에 100 exp 필요
+                createUserLevelConfig(3, 150, 250)    // level 3 도달에 150 exp 추가 필요
             );
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
-            when(levelConfigCacheService.getMaxLevel()).thenReturn(3);
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
+            when(userLevelConfigCacheService.getMaxLevel()).thenReturn(3);
             // getNextLevelRequiredExp에서 레벨업 후 현재 레벨(2)의 config를 조회함
-            when(levelConfigCacheService.getLevelConfigByLevel(anyInt())).thenAnswer(invocation -> {
+            when(userLevelConfigCacheService.getLevelConfigByLevel(anyInt())).thenAnswer(invocation -> {
                 int level = invocation.getArgument(0);
                 return configs.stream().filter(c -> c.getLevel().equals(level)).findFirst().orElse(null);
             });
@@ -626,15 +626,15 @@ class UserExperienceServiceTest {
             // given
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 4, 50, 300);
             // 레벨 4의 config가 없음 (레벨 1-3만 있음)
-            List<LevelConfig> configs = List.of(
-                createLevelConfig(1, 100, 0),
-                createLevelConfig(2, 150, 100),
-                createLevelConfig(3, 200, 250)
+            List<UserLevelConfig> configs = List.of(
+                createUserLevelConfig(1, 100, 0),
+                createUserLevelConfig(2, 150, 100),
+                createUserLevelConfig(3, 200, 250)
             );
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
-            when(levelConfigCacheService.getLevelConfigByLevel(4)).thenReturn(null);
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
+            when(userLevelConfigCacheService.getLevelConfigByLevel(4)).thenReturn(null);
 
             // when
             UserExperienceResponse result = userExperienceService.addExperience(
@@ -656,18 +656,18 @@ class UserExperienceServiceTest {
             // 300 exp 추가 시: 300 >= 100 (level up to 2, remaining=200)
             //                  200 >= 150 (level up to 3, remaining=50)
             //                  50 < 200 (stop)
-            List<LevelConfig> configs = List.of(
-                createLevelConfig(1, 0, 0),       // level 1 (시작 레벨)
-                createLevelConfig(2, 100, 100),   // level 2 도달에 100 exp 필요
-                createLevelConfig(3, 150, 250),   // level 3 도달에 150 exp 추가 필요
-                createLevelConfig(4, 200, 450)    // level 4 도달에 200 exp 추가 필요
+            List<UserLevelConfig> configs = List.of(
+                createUserLevelConfig(1, 0, 0),       // level 1 (시작 레벨)
+                createUserLevelConfig(2, 100, 100),   // level 2 도달에 100 exp 필요
+                createUserLevelConfig(3, 150, 250),   // level 3 도달에 150 exp 추가 필요
+                createUserLevelConfig(4, 200, 450)    // level 4 도달에 200 exp 추가 필요
             );
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
-            when(levelConfigCacheService.getMaxLevel()).thenReturn(10);
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(configs);
+            when(userLevelConfigCacheService.getMaxLevel()).thenReturn(10);
             // getNextLevelRequiredExp에서 최종 레벨의 config를 조회함
-            when(levelConfigCacheService.getLevelConfigByLevel(anyInt())).thenAnswer(invocation -> {
+            when(userLevelConfigCacheService.getLevelConfigByLevel(anyInt())).thenAnswer(invocation -> {
                 int level = invocation.getArgument(0);
                 return configs.stream().filter(c -> c.getLevel().equals(level)).findFirst().orElse(null);
             });
@@ -688,24 +688,24 @@ class UserExperienceServiceTest {
     class ProcessLevelDownExtraTest {
 
         @Test
-        @DisplayName("레벨 다운 시 누적 경험치가 없는 LevelConfig도 처리한다")
+        @DisplayName("레벨 다운 시 누적 경험치가 없는 UserLevelConfig도 처리한다")
         void subtractExperience_levelDownWithNullCumulativeExp() {
             // given
             UserExperience userExp = createTestUserExperience(1L, TEST_USER_ID, 3, 10, 260);
-            LevelConfig config1 = LevelConfig.builder()
+            UserLevelConfig config1 = UserLevelConfig.builder()
                 .level(1)
                 .requiredExp(100)
                 .cumulativeExp(null)  // 누적 경험치 없음
                 .build();
-            LevelConfig config2 = LevelConfig.builder()
+            UserLevelConfig config2 = UserLevelConfig.builder()
                 .level(2)
                 .requiredExp(150)
                 .cumulativeExp(null)  // 누적 경험치 없음
                 .build();
 
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(userExp));
-            when(levelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(config1, config2));
-            when(levelConfigCacheService.getLevelConfigByLevel(2)).thenReturn(config2);
+            when(userLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(config1, config2));
+            when(userLevelConfigCacheService.getLevelConfigByLevel(2)).thenReturn(config2);
 
             // when
             UserExperienceResponse result = userExperienceService.subtractExperience(
