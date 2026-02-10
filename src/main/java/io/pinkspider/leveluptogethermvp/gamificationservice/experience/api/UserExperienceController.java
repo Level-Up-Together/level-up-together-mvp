@@ -1,10 +1,10 @@
-package io.pinkspider.leveluptogethermvp.userservice.experience.api;
+package io.pinkspider.leveluptogethermvp.gamificationservice.experience.api;
 
 import io.pinkspider.global.api.ApiResult;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.userservice.core.annotation.CurrentUser;
-import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
-import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.ExperienceHistory;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

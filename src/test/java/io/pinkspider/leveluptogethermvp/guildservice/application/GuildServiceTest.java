@@ -67,7 +67,7 @@ class GuildServiceTest {
     private GuildImageStorageService guildImageStorageService;
 
     @Mock
-    private io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService userExperienceService;
+    private io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService userExperienceService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;

@@ -21,7 +21,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.Achie
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserAchievementRepository;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.AchievementResponse;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.UserAchievementResponse;
-import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;

@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.experience.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.experience.application;
 
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,7 +18,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserC
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
-import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;

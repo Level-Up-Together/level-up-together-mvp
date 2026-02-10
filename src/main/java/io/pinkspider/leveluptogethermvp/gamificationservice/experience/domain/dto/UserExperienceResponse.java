@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto;
+package io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;

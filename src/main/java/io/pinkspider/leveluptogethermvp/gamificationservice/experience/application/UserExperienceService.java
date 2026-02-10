@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.experience.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.experience.application;
 
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.global.event.GuildCreationEligibleEvent;
@@ -7,7 +7,7 @@ import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.userservice.experience.domain.dto.UserExperienceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.ExperienceHistory;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserCategoryExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;

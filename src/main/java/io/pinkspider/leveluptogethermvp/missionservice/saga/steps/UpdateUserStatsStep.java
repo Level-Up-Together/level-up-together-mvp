@@ -4,7 +4,7 @@ import io.pinkspider.global.saga.SagaStep;
 import io.pinkspider.global.saga.SagaStepResult;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.UserStatsService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -12,7 +12,7 @@ import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domai
 import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceCheckInResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.MonthlyAttendanceResponse;
-import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;

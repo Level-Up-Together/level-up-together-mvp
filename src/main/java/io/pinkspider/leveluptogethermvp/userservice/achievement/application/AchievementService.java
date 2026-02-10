@@ -12,7 +12,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achiev
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserAchievement;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.AchievementRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserAchievementRepository;
-import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
 import java.util.List;
 import java.util.Optional;
