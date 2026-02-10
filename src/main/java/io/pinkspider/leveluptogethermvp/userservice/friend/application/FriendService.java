@@ -5,19 +5,15 @@ import io.pinkspider.global.event.FriendRequestEvent;
 import io.pinkspider.global.event.FriendRequestProcessedEvent;
 import io.pinkspider.global.event.FriendRequestRejectedEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.dto.FriendRequestResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.dto.FriendResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.enums.FriendshipStatus;
 import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.FriendshipRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,8 +36,8 @@ public class FriendService {
     private final FriendCacheService friendCacheService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserRepository userRepository;
-    private final UserExperienceRepository userExperienceRepository;
-    private final UserTitleRepository userTitleRepository;
+    private final UserExperienceService userExperienceService;
+    private final TitleService titleService;
     private final AchievementService achievementService;
 
     // 친구 요청 보내기
@@ -285,28 +281,14 @@ public class FriendService {
             .collect(Collectors.toMap(Users::getId, u -> u));
     }
 
-    // 레벨 정보 조회 헬퍼 메서드
+    // 레벨 정보 조회 헬퍼 메서드 (배치 조회)
     private Map<String, Integer> getLevelMap(List<String> userIds) {
-        return userIds.stream()
-            .collect(Collectors.toMap(
-                id -> id,
-                id -> userExperienceRepository.findByUserId(id)
-                    .map(UserExperience::getCurrentLevel)
-                    .orElse(1)
-            ));
+        return userExperienceService.getUserLevelMap(userIds);
     }
 
-    // 칭호 정보 조회 헬퍼 메서드 (LEFT 포지션의 칭호를 대표 칭호로 사용)
+    // 칭호 정보 조회 헬퍼 메서드 (LEFT 포지션의 칭호를 대표 칭호로 사용, 배치 조회)
     private Map<String, String> getTitleMap(List<String> userIds) {
-        Map<String, String> result = new HashMap<>();
-        for (String id : userIds) {
-            String title = userTitleRepository.findEquippedByUserIdAndPosition(id, TitlePosition.LEFT)
-                .map(UserTitle::getTitle)
-                .map(t -> t.getDisplayName())
-                .orElse(null);
-            result.put(id, title);
-        }
-        return result;
+        return titleService.getEquippedLeftTitleNameMap(userIds);
     }
 
     // 받은 친구 요청 목록
@@ -322,14 +304,8 @@ public class FriendService {
         Map<String, Users> userMap = userRepository.findAllById(requesterIds).stream()
             .collect(Collectors.toMap(Users::getId, u -> u));
 
-        // 레벨 정보 조회
-        Map<String, Integer> levelMap = requesterIds.stream()
-            .collect(Collectors.toMap(
-                id -> id,
-                id -> userExperienceRepository.findByUserId(id)
-                    .map(UserExperience::getCurrentLevel)
-                    .orElse(1)
-            ));
+        // 레벨 정보 배치 조회
+        Map<String, Integer> levelMap = userExperienceService.getUserLevelMap(requesterIds);
 
         return friendships.stream()
             .map(friendship -> {

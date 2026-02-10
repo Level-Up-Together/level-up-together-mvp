@@ -13,7 +13,9 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.Title
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -167,6 +169,108 @@ public class TitleService {
         }
 
         return new DetailedTitleInfo(combinedTitle, highestRarity, leftTitle, leftRarity, rightTitle, rightRarity);
+    }
+
+    // ========== 배치 조회 메서드 (P5: userservice → gamification Repository 접근 제거) ==========
+
+    /**
+     * 여러 사용자의 장착된 LEFT 칭호 이름 배치 조회
+     */
+    public Map<String, String> getEquippedLeftTitleNameMap(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userTitleRepository.findEquippedTitlesByUserIdIn(userIds).stream()
+            .filter(ut -> ut.getEquippedPosition() == TitlePosition.LEFT)
+            .collect(Collectors.toMap(UserTitle::getUserId,
+                ut -> ut.getTitle().getDisplayName(), (a, b) -> a));
+    }
+
+    /**
+     * 여러 사용자의 장착된 칭호 엔티티 배치 조회
+     */
+    public Map<String, List<UserTitle>> getEquippedTitleEntitiesByUserIds(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userTitleRepository.findEquippedTitlesByUserIdIn(userIds).stream()
+            .collect(Collectors.groupingBy(UserTitle::getUserId));
+    }
+
+    /**
+     * 사용자의 장착된 칭호 엔티티 조회
+     */
+    public List<UserTitle> getEquippedTitleEntitiesByUserId(String userId) {
+        return userTitleRepository.findEquippedTitlesByUserId(userId);
+    }
+
+    /**
+     * 사용자의 모든 칭호 엔티티 조회 (Title JOIN FETCH)
+     */
+    public List<UserTitle> getUserTitleEntitiesWithTitle(String userId) {
+        return userTitleRepository.findByUserIdWithTitle(userId);
+    }
+
+    /**
+     * 사용자 보유 칭호 수 조회
+     */
+    public long countUserTitles(String userId) {
+        return userTitleRepository.countByUserId(userId);
+    }
+
+    /**
+     * 칭호 변경 (좌측/우측 동시 변경)
+     */
+    public record TitleChangeResult(UserTitle leftTitle, UserTitle rightTitle) {}
+
+    @Transactional(transactionManager = "gamificationTransactionManager")
+    @CacheEvict(value = {"userTitleInfo", "userDetailedTitleInfo"}, key = "#userId")
+    public TitleChangeResult changeTitles(String userId, Long leftUserTitleId, Long rightUserTitleId) {
+        // 좌측/우측 칭호가 같으면 에러
+        if (leftUserTitleId.equals(rightUserTitleId)) {
+            throw new io.pinkspider.global.exception.CustomException("TITLE_001", "좌측과 우측에 같은 칭호를 설정할 수 없습니다.");
+        }
+
+        // 칭호 존재 여부 사전 검증
+        if (!userTitleRepository.existsById(leftUserTitleId)) {
+            throw new io.pinkspider.global.exception.CustomException("TITLE_002", "좌측 칭호를 찾을 수 없습니다.");
+        }
+        if (!userTitleRepository.existsById(rightUserTitleId)) {
+            throw new io.pinkspider.global.exception.CustomException("TITLE_002", "우측 칭호를 찾을 수 없습니다.");
+        }
+
+        // 기존 장착 해제 (clearAutomatically=true로 영속성 컨텍스트 클리어됨)
+        userTitleRepository.unequipAllByUserId(userId);
+
+        // 영속성 컨텍스트가 클리어되었으므로 엔티티 다시 조회
+        UserTitle leftUserTitle = userTitleRepository.findById(leftUserTitleId)
+            .orElseThrow(() -> new io.pinkspider.global.exception.CustomException("TITLE_002", "좌측 칭호를 찾을 수 없습니다."));
+
+        if (!leftUserTitle.getUserId().equals(userId)) {
+            throw new io.pinkspider.global.exception.CustomException("TITLE_003", "본인의 칭호만 장착할 수 있습니다.");
+        }
+
+        UserTitle rightUserTitle = userTitleRepository.findById(rightUserTitleId)
+            .orElseThrow(() -> new io.pinkspider.global.exception.CustomException("TITLE_002", "우측 칭호를 찾을 수 없습니다."));
+
+        if (!rightUserTitle.getUserId().equals(userId)) {
+            throw new io.pinkspider.global.exception.CustomException("TITLE_003", "본인의 칭호만 장착할 수 있습니다.");
+        }
+
+        // 새로운 칭호 장착
+        leftUserTitle.equip(TitlePosition.LEFT);
+        rightUserTitle.equip(TitlePosition.RIGHT);
+
+        userTitleRepository.save(leftUserTitle);
+        userTitleRepository.save(rightUserTitle);
+
+        // TitleEquippedEvent 발행 → FeedProjectionEventListener가 피드 칭호 업데이트
+        publishTitleEquippedEvent(userId);
+
+        log.info("칭호 변경: userId={}, leftTitleId={}, rightTitleId={}",
+            userId, leftUserTitle.getTitle().getId(), rightUserTitle.getTitle().getId());
+
+        return new TitleChangeResult(leftUserTitle, rightUserTitle);
     }
 
     /**

@@ -15,12 +15,9 @@ import io.pinkspider.global.event.FriendRequestAcceptedEvent;
 import io.pinkspider.global.event.FriendRequestEvent;
 import io.pinkspider.global.event.FriendRequestProcessedEvent;
 import io.pinkspider.global.event.FriendRequestRejectedEvent;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.dto.FriendRequestResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.dto.FriendResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
@@ -29,6 +26,7 @@ import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.Friend
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -59,10 +57,10 @@ class FriendServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private UserExperienceRepository userExperienceRepository;
+    private UserExperienceService userExperienceService;
 
     @Mock
-    private UserTitleRepository userTitleRepository;
+    private TitleService titleService;
 
     @Mock
     private AchievementService achievementService;
@@ -90,25 +88,6 @@ class FriendServiceTest {
             .build();
         setId(user, userId);
         return user;
-    }
-
-    private Title createTestTitle(Long id, String name) {
-        Title title = Title.builder()
-            .name(name)
-            .description(name + " 설명")
-            .build();
-        setId(title, id);
-        return title;
-    }
-
-    private UserTitle createTestUserTitle(Long id, String userId, Title title) {
-        UserTitle userTitle = UserTitle.builder()
-            .userId(userId)
-            .title(title)
-            .isEquipped(true)
-            .build();
-        setId(userTitle, id);
-        return userTitle;
     }
 
     @Nested
@@ -414,14 +393,12 @@ class FriendServiceTest {
             Friendship friendship = createTestFriendship(1L, TEST_USER_ID, FRIEND_USER_ID, FriendshipStatus.ACCEPTED);
             Page<Friendship> page = new PageImpl<>(List.of(friendship), pageable, 1);
             Users friend = createTestUser(FRIEND_USER_ID, "친구");
-            Title title = createTestTitle(1L, "테스트 칭호");
-            UserTitle userTitle = createTestUserTitle(1L, FRIEND_USER_ID, title);
 
             when(friendshipRepository.findFriends(TEST_USER_ID, pageable)).thenReturn(page);
             when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(friend));
-            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedByUserIdAndPosition(FRIEND_USER_ID, TitlePosition.LEFT))
-                .thenReturn(Optional.of(userTitle));
+            when(userExperienceService.getUserLevelMap(List.of(FRIEND_USER_ID))).thenReturn(Map.of());
+            when(titleService.getEquippedLeftTitleNameMap(List.of(FRIEND_USER_ID)))
+                .thenReturn(Map.of(FRIEND_USER_ID, "테스트 칭호"));
 
             // when
             Page<FriendResponse> result = friendService.getFriends(TEST_USER_ID, pageable);
@@ -441,9 +418,9 @@ class FriendServiceTest {
 
             when(friendshipRepository.findFriends(TEST_USER_ID, pageable)).thenReturn(page);
             when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(friend));
-            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedByUserIdAndPosition(FRIEND_USER_ID, TitlePosition.LEFT))
-                .thenReturn(Optional.empty()); // 칭호 없음
+            when(userExperienceService.getUserLevelMap(List.of(FRIEND_USER_ID))).thenReturn(Map.of());
+            when(titleService.getEquippedLeftTitleNameMap(List.of(FRIEND_USER_ID)))
+                .thenReturn(Map.of()); // 칭호 없음
 
             // when
             Page<FriendResponse> result = friendService.getFriends(TEST_USER_ID, pageable);
@@ -559,14 +536,12 @@ class FriendServiceTest {
             // given
             Friendship friendship = createTestFriendship(1L, TEST_USER_ID, FRIEND_USER_ID, FriendshipStatus.ACCEPTED);
             Users friend = createTestUser(FRIEND_USER_ID, "친구");
-            Title title = createTestTitle(1L, "테스트 칭호");
-            UserTitle userTitle = createTestUserTitle(1L, FRIEND_USER_ID, title);
 
             when(friendshipRepository.findAllFriends(TEST_USER_ID)).thenReturn(List.of(friendship));
             when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(friend));
-            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedByUserIdAndPosition(FRIEND_USER_ID, TitlePosition.LEFT))
-                .thenReturn(Optional.of(userTitle));
+            when(userExperienceService.getUserLevelMap(List.of(FRIEND_USER_ID))).thenReturn(Map.of());
+            when(titleService.getEquippedLeftTitleNameMap(List.of(FRIEND_USER_ID)))
+                .thenReturn(Map.of(FRIEND_USER_ID, "테스트 칭호"));
 
             // when
             List<FriendResponse> result = friendService.getAllFriends(TEST_USER_ID);
@@ -584,9 +559,9 @@ class FriendServiceTest {
 
             when(friendshipRepository.findAllFriends(TEST_USER_ID)).thenReturn(List.of(friendship));
             when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(friend));
-            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedByUserIdAndPosition(FRIEND_USER_ID, TitlePosition.LEFT))
-                .thenReturn(Optional.empty()); // 칭호 없음
+            when(userExperienceService.getUserLevelMap(List.of(FRIEND_USER_ID))).thenReturn(Map.of());
+            when(titleService.getEquippedLeftTitleNameMap(List.of(FRIEND_USER_ID)))
+                .thenReturn(Map.of()); // 칭호 없음
 
             // when
             List<FriendResponse> result = friendService.getAllFriends(TEST_USER_ID);
@@ -609,18 +584,14 @@ class FriendServiceTest {
             Users friendWithTitle = createTestUser(friendWithTitleId, "칭호있는친구");
             Users friendWithoutTitle = createTestUser(friendWithoutTitleId, "칭호없는친구");
 
-            Title title = createTestTitle(1L, "테스트 칭호");
-            UserTitle userTitle = createTestUserTitle(1L, friendWithTitleId, title);
-
             when(friendshipRepository.findAllFriends(TEST_USER_ID))
                 .thenReturn(List.of(friendship1, friendship2));
             when(userRepository.findAllById(List.of(friendWithTitleId, friendWithoutTitleId)))
                 .thenReturn(List.of(friendWithTitle, friendWithoutTitle));
-            when(userExperienceRepository.findByUserId(anyString())).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedByUserIdAndPosition(friendWithTitleId, TitlePosition.LEFT))
-                .thenReturn(Optional.of(userTitle));
-            when(userTitleRepository.findEquippedByUserIdAndPosition(friendWithoutTitleId, TitlePosition.LEFT))
-                .thenReturn(Optional.empty()); // 칭호 없음
+            when(userExperienceService.getUserLevelMap(List.of(friendWithTitleId, friendWithoutTitleId)))
+                .thenReturn(Map.of());
+            when(titleService.getEquippedLeftTitleNameMap(List.of(friendWithTitleId, friendWithoutTitleId)))
+                .thenReturn(Map.of(friendWithTitleId, "테스트 칭호")); // friendWithoutTitleId has no title
 
             // when
             List<FriendResponse> result = friendService.getAllFriends(TEST_USER_ID);
@@ -643,7 +614,7 @@ class FriendServiceTest {
 
             when(friendshipRepository.findPendingRequestsReceived(TEST_USER_ID)).thenReturn(List.of(pendingRequest));
             when(userRepository.findAllById(List.of(FRIEND_USER_ID))).thenReturn(List.of(requester));
-            when(userExperienceRepository.findByUserId(FRIEND_USER_ID)).thenReturn(Optional.empty());
+            when(userExperienceService.getUserLevelMap(List.of(FRIEND_USER_ID))).thenReturn(Map.of());
 
             // when
             List<FriendRequestResponse> result = friendService.getPendingRequestsReceived(TEST_USER_ID);

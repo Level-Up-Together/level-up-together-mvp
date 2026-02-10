@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,16 +14,16 @@ import static org.mockito.Mockito.when;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.global.test.TestReflectionUtils;
-import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleChangeResult;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserStatsRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
@@ -62,13 +63,13 @@ class MyPageServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private UserExperienceRepository userExperienceRepository;
+    private UserExperienceService userExperienceService;
 
     @Mock
-    private UserTitleRepository userTitleRepository;
+    private TitleService titleService;
 
     @Mock
-    private UserStatsRepository userStatsRepository;
+    private UserStatsService userStatsService;
 
     @Mock
     private FriendshipRepository friendshipRepository;
@@ -83,13 +84,7 @@ class MyPageServiceTest {
     private ImageModerationService imageModerationService;
 
     @Mock
-    private ActivityFeedRepository activityFeedRepository;
-
-    @Mock
     private GuildMemberRepository guildMemberRepository;
-
-    @Mock
-    private org.springframework.transaction.PlatformTransactionManager feedTransactionManager;
 
     @Mock
     private ReportService reportService;
@@ -100,27 +95,8 @@ class MyPageServiceTest {
     @Mock
     private UserProfileCacheService userProfileCacheService;
 
+    @InjectMocks
     private MyPageService myPageService;
-
-    @org.junit.jupiter.api.BeforeEach
-    void setUp() {
-        myPageService = new MyPageService(
-            userRepository,
-            userExperienceRepository,
-            userTitleRepository,
-            userStatsRepository,
-            friendshipRepository,
-            userLevelConfigCacheService,
-            profileImageStorageService,
-            imageModerationService,
-            activityFeedRepository,
-            guildMemberRepository,
-            feedTransactionManager,
-            reportService,
-            eventPublisher,
-            userProfileCacheService
-        );
-    }
 
     private static final String TEST_USER_ID = "test-user-123";
 
@@ -165,6 +141,25 @@ class MyPageServiceTest {
         return userTitle;
     }
 
+    private UserStats createDefaultUserStats(String userId) {
+        return UserStats.builder()
+            .userId(userId)
+            .totalMissionCompletions(0)
+            .totalMissionFullCompletions(0)
+            .totalTitlesAcquired(0)
+            .rankingPoints(0L)
+            .build();
+    }
+
+    /** getPublicProfile 공통 스텁 설정 */
+    private void stubPublicProfileDefaults(String userId) {
+        when(titleService.getEquippedTitleEntitiesByUserId(userId)).thenReturn(Collections.emptyList());
+        when(userExperienceService.getUserLevel(userId)).thenReturn(1);
+        when(userStatsService.getOrCreateUserStats(userId)).thenReturn(createDefaultUserStats(userId));
+        when(titleService.countUserTitles(userId)).thenReturn(0L);
+        when(guildMemberRepository.findAllActiveGuildMemberships(userId)).thenReturn(Collections.emptyList());
+    }
+
     @Nested
     @DisplayName("getMyPage 테스트")
     class GetMyPageTest {
@@ -176,14 +171,14 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(5);
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(3L);
+            when(userExperienceService.getOrCreateUserExperience(TEST_USER_ID)).thenReturn(
+                UserExperience.builder().userId(TEST_USER_ID).currentLevel(1).currentExp(0).totalExp(0).build());
+            when(userStatsService.getOrCreateUserStats(TEST_USER_ID)).thenReturn(createDefaultUserStats(TEST_USER_ID));
+            when(titleService.countUserTitles(TEST_USER_ID)).thenReturn(3L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(UserLevelConfig.builder().requiredExp(100).build());
-            when(userStatsRepository.countTotalUsers()).thenReturn(100L);
-            when(userStatsRepository.calculateRank(0L)).thenReturn(50L);
+            when(userStatsService.calculateRankingPercentile(0L)).thenReturn(50.0);
 
             // when
             MyPageResponse result = myPageService.getMyPage(TEST_USER_ID);
@@ -219,11 +214,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
 
             // when
             PublicProfileResponse result = myPageService.getPublicProfile(TEST_USER_ID, null);
@@ -241,11 +232,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
 
             // when
             PublicProfileResponse result = myPageService.getPublicProfile(TEST_USER_ID, TEST_USER_ID);
@@ -269,11 +256,7 @@ class MyPageServiceTest {
             setId(rejectedFriendship, 1L);
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID)).thenReturn(Optional.of(rejectedFriendship));
 
             // when
@@ -302,11 +285,7 @@ class MyPageServiceTest {
             setId(blockedFriendship, 1L);
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID)).thenReturn(Optional.of(blockedFriendship));
 
             // when
@@ -325,11 +304,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID)).thenReturn(Optional.empty());
 
             // when
@@ -348,11 +323,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID))
                 .thenThrow(new RuntimeException("Database connection error"));
 
@@ -381,11 +352,7 @@ class MyPageServiceTest {
             setId(acceptedFriendship, 1L);
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID)).thenReturn(Optional.of(acceptedFriendship));
 
             // when
@@ -412,11 +379,7 @@ class MyPageServiceTest {
             setId(pendingFriendship, 1L);
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID)).thenReturn(Optional.of(pendingFriendship));
 
             // when
@@ -443,11 +406,7 @@ class MyPageServiceTest {
             setId(pendingFriendship, 99L);
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(friendshipRepository.findFriendship(currentUserId, TEST_USER_ID)).thenReturn(Optional.of(pendingFriendship));
 
             // when
@@ -473,7 +432,7 @@ class MyPageServiceTest {
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -514,9 +473,8 @@ class MyPageServiceTest {
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(
-                UserExperience.builder().currentLevel(3).build()));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevel(TEST_USER_ID)).thenReturn(3);
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -541,7 +499,7 @@ class MyPageServiceTest {
             Title title = createTestTitle(1L, "테스트 칭호", TitleRarity.COMMON, TitlePosition.LEFT);
             UserTitle userTitle = createTestUserTitle(1L, TEST_USER_ID, title, true, TitlePosition.LEFT);
 
-            when(userTitleRepository.findByUserIdWithTitle(TEST_USER_ID)).thenReturn(List.of(userTitle));
+            when(titleService.getUserTitleEntitiesWithTitle(TEST_USER_ID)).thenReturn(List.of(userTitle));
 
             // when
             UserTitleListResponse result = myPageService.getUserTitles(TEST_USER_ID);
@@ -556,7 +514,7 @@ class MyPageServiceTest {
         @DisplayName("칭호가 없으면 빈 목록을 반환한다")
         void getUserTitles_empty() {
             // given
-            when(userTitleRepository.findByUserIdWithTitle(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(titleService.getUserTitleEntitiesWithTitle(TEST_USER_ID)).thenReturn(Collections.emptyList());
 
             // when
             UserTitleListResponse result = myPageService.getUserTitles(TEST_USER_ID);
@@ -621,9 +579,8 @@ class MyPageServiceTest {
             when(userRepository.existsByNicknameAndIdNot(newNickname, TEST_USER_ID)).thenReturn(false);
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(
-                UserExperience.builder().currentLevel(5).build()));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevel(TEST_USER_ID)).thenReturn(5);
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -645,8 +602,8 @@ class MyPageServiceTest {
             when(userRepository.existsByNicknameAndIdNot(englishNickname, TEST_USER_ID)).thenReturn(false);
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevel(TEST_USER_ID)).thenReturn(1);
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -666,8 +623,8 @@ class MyPageServiceTest {
             when(userRepository.existsByNicknameAndIdNot(arabicNickname, TEST_USER_ID)).thenReturn(false);
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevel(TEST_USER_ID)).thenReturn(1);
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -687,8 +644,8 @@ class MyPageServiceTest {
             when(userRepository.existsByNicknameAndIdNot(mixedNickname, TEST_USER_ID)).thenReturn(false);
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevel(TEST_USER_ID)).thenReturn(1);
+            when(titleService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -770,23 +727,15 @@ class MyPageServiceTest {
             // given
             Title leftTitle = createTestTitle(1L, "좌측칭호", TitleRarity.COMMON, TitlePosition.LEFT);
             Title rightTitle = createTestTitle(2L, "우측칭호", TitleRarity.RARE, TitlePosition.RIGHT);
-            UserTitle leftUserTitle = createTestUserTitle(1L, TEST_USER_ID, leftTitle, false, null);
-            UserTitle rightUserTitle = createTestUserTitle(2L, TEST_USER_ID, rightTitle, false, null);
+            UserTitle leftUserTitle = createTestUserTitle(1L, TEST_USER_ID, leftTitle, true, TitlePosition.LEFT);
+            UserTitle rightUserTitle = createTestUserTitle(2L, TEST_USER_ID, rightTitle, true, TitlePosition.RIGHT);
 
             TitleChangeRequest request = new TitleChangeRequest();
             TestReflectionUtils.setField(request, "leftUserTitleId", 1L);
             TestReflectionUtils.setField(request, "rightUserTitleId", 2L);
 
-            when(userTitleRepository.existsById(1L)).thenReturn(true);
-            when(userTitleRepository.existsById(2L)).thenReturn(true);
-            when(userTitleRepository.findById(1L)).thenReturn(Optional.of(leftUserTitle));
-            when(userTitleRepository.findById(2L)).thenReturn(Optional.of(rightUserTitle));
-            when(userTitleRepository.save(any(UserTitle.class))).thenAnswer(i -> i.getArgument(0));
-            when(activityFeedRepository.updateUserTitleByUserId(anyString(), anyString(), any(TitleRarity.class), any())).thenReturn(1);
-
-            // feedTransactionManager mock 설정 (TransactionTemplate.execute()가 동작하도록)
-            org.springframework.transaction.TransactionStatus mockStatus = org.mockito.Mockito.mock(org.springframework.transaction.TransactionStatus.class);
-            when(feedTransactionManager.getTransaction(any())).thenReturn(mockStatus);
+            when(titleService.changeTitles(TEST_USER_ID, 1L, 2L))
+                .thenReturn(new TitleChangeResult(leftUserTitle, rightUserTitle));
 
             // when
             TitleChangeResponse result = myPageService.changeTitles(TEST_USER_ID, request);
@@ -794,7 +743,7 @@ class MyPageServiceTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getMessage()).isEqualTo("칭호가 변경되었습니다.");
-            verify(userTitleRepository).unequipAllByUserId(TEST_USER_ID);
+            verify(titleService).changeTitles(TEST_USER_ID, 1L, 2L);
         }
 
         @Test
@@ -804,6 +753,9 @@ class MyPageServiceTest {
             TitleChangeRequest request = new TitleChangeRequest();
             TestReflectionUtils.setField(request, "leftUserTitleId", 1L);
             TestReflectionUtils.setField(request, "rightUserTitleId", 1L);
+
+            when(titleService.changeTitles(TEST_USER_ID, 1L, 1L))
+                .thenThrow(new CustomException("TITLE_001", "좌측과 우측에 같은 칭호를 설정할 수 없습니다."));
 
             // when & then
             assertThatThrownBy(() -> myPageService.changeTitles(TEST_USER_ID, request))
@@ -815,18 +767,12 @@ class MyPageServiceTest {
         @DisplayName("다른 사용자의 칭호를 장착하려고 하면 예외가 발생한다")
         void changeTitles_notOwner_throwsException() {
             // given
-            Title leftTitle = createTestTitle(1L, "좌측칭호", TitleRarity.COMMON, TitlePosition.LEFT);
-            Title rightTitle = createTestTitle(2L, "우측칭호", TitleRarity.RARE, TitlePosition.RIGHT);
-            UserTitle leftUserTitle = createTestUserTitle(1L, "other-user", leftTitle, false, null);
-            UserTitle rightUserTitle = createTestUserTitle(2L, TEST_USER_ID, rightTitle, false, null);
-
             TitleChangeRequest request = new TitleChangeRequest();
             TestReflectionUtils.setField(request, "leftUserTitleId", 1L);
             TestReflectionUtils.setField(request, "rightUserTitleId", 2L);
 
-            when(userTitleRepository.existsById(1L)).thenReturn(true);
-            when(userTitleRepository.existsById(2L)).thenReturn(true);
-            when(userTitleRepository.findById(1L)).thenReturn(Optional.of(leftUserTitle));
+            when(titleService.changeTitles(TEST_USER_ID, 1L, 2L))
+                .thenThrow(new CustomException("TITLE_003", "본인의 칭호만 장착할 수 있습니다."));
 
             // when & then
             assertThatThrownBy(() -> myPageService.changeTitles(TEST_USER_ID, request))
@@ -846,11 +792,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(reportService.isUnderReview(ReportTargetType.USER_PROFILE, TEST_USER_ID)).thenReturn(true);
 
             // when
@@ -869,11 +811,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(reportService.isUnderReview(ReportTargetType.USER_PROFILE, TEST_USER_ID)).thenReturn(false);
 
             // when
@@ -891,11 +829,7 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(TEST_USER_ID)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(TEST_USER_ID);
             when(reportService.isUnderReview(ReportTargetType.USER_PROFILE, TEST_USER_ID)).thenReturn(true);
 
             // when
@@ -915,11 +849,7 @@ class MyPageServiceTest {
             Users user = createTestUser(otherUserId, "다른유저");
 
             when(userRepository.findById(otherUserId)).thenReturn(Optional.of(user));
-            when(userTitleRepository.findEquippedTitlesByUserId(otherUserId)).thenReturn(Collections.emptyList());
-            when(userExperienceRepository.findByUserId(otherUserId)).thenReturn(Optional.empty());
-            when(userStatsRepository.findByUserId(otherUserId)).thenReturn(Optional.empty());
-            when(userTitleRepository.countByUserId(otherUserId)).thenReturn(0L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(otherUserId)).thenReturn(Collections.emptyList());
+            stubPublicProfileDefaults(otherUserId);
             when(reportService.isUnderReview(ReportTargetType.USER_PROFILE, otherUserId)).thenReturn(true);
 
             // when

@@ -7,14 +7,15 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleChangeResult;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserStatsRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.enums.FriendshipStatus;
 import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.FriendshipRepository;
@@ -36,72 +37,37 @@ import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTarg
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MyPageService {
 
     private final UserRepository userRepository;
-    private final UserExperienceRepository userExperienceRepository;
-    private final UserTitleRepository userTitleRepository;
-    private final UserStatsRepository userStatsRepository;
+    private final UserExperienceService userExperienceService;
+    private final TitleService titleService;
+    private final UserStatsService userStatsService;
     private final FriendshipRepository friendshipRepository;
     private final UserLevelConfigCacheService userLevelConfigCacheService;
     private final ProfileImageStorageService profileImageStorageService;
     private final ImageModerationService imageModerationService;
-    private final ActivityFeedRepository activityFeedRepository;
     private final GuildMemberRepository guildMemberRepository;
-    private final TransactionTemplate feedTransactionTemplate;
     private final ReportService reportService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserProfileCacheService userProfileCacheService;
-
-    public MyPageService(
-            UserRepository userRepository,
-            UserExperienceRepository userExperienceRepository,
-            UserTitleRepository userTitleRepository,
-            UserStatsRepository userStatsRepository,
-            FriendshipRepository friendshipRepository,
-            UserLevelConfigCacheService userLevelConfigCacheService,
-            ProfileImageStorageService profileImageStorageService,
-            ImageModerationService imageModerationService,
-            ActivityFeedRepository activityFeedRepository,
-            GuildMemberRepository guildMemberRepository,
-            @Qualifier("feedTransactionManager") PlatformTransactionManager feedTransactionManager,
-            ReportService reportService,
-            ApplicationEventPublisher eventPublisher,
-            UserProfileCacheService userProfileCacheService) {
-        this.userRepository = userRepository;
-        this.userExperienceRepository = userExperienceRepository;
-        this.userTitleRepository = userTitleRepository;
-        this.userStatsRepository = userStatsRepository;
-        this.friendshipRepository = friendshipRepository;
-        this.userLevelConfigCacheService = userLevelConfigCacheService;
-        this.profileImageStorageService = profileImageStorageService;
-        this.imageModerationService = imageModerationService;
-        this.activityFeedRepository = activityFeedRepository;
-        this.guildMemberRepository = guildMemberRepository;
-        this.feedTransactionTemplate = new TransactionTemplate(feedTransactionManager);
-        this.reportService = reportService;
-        this.eventPublisher = eventPublisher;
-        this.userProfileCacheService = userProfileCacheService;
-    }
 
     /**
      * MyPage 전체 데이터 조회
@@ -127,7 +93,7 @@ public class MyPageService {
         Users user = findUserOrThrow(targetUserId);
 
         // 장착된 칭호 조회
-        List<UserTitle> equippedTitles = userTitleRepository.findEquippedTitlesByUserId(targetUserId);
+        List<UserTitle> equippedTitles = titleService.getEquippedTitleEntitiesByUserId(targetUserId);
         PublicProfileResponse.EquippedTitleInfo leftTitle = null;
         PublicProfileResponse.EquippedTitleInfo rightTitle = null;
 
@@ -140,15 +106,10 @@ public class MyPageService {
         }
 
         // 레벨 정보
-        UserExperience userExp = userExperienceRepository.findByUserId(targetUserId)
-            .orElse(UserExperience.builder().currentLevel(1).build());
+        int level = userExperienceService.getUserLevel(targetUserId);
 
         // 통계 정보
-        UserStats stats = userStatsRepository.findByUserId(targetUserId)
-            .orElse(UserStats.builder()
-                .totalMissionCompletions(0)
-                .totalTitlesAcquired(0)
-                .build());
+        UserStats stats = userStatsService.getOrCreateUserStats(targetUserId);
 
         LocalDate startDate = user.getCreatedAt() != null
             ? user.getCreatedAt().toLocalDate()
@@ -156,7 +117,7 @@ public class MyPageService {
         long daysSinceJoined = ChronoUnit.DAYS.between(startDate, LocalDate.now()) + 1;
 
         // 보유 칭호 수
-        long titlesCount = userTitleRepository.countByUserId(targetUserId);
+        long titlesCount = titleService.countUserTitles(targetUserId);
 
         // 소속 길드 목록 조회
         List<GuildMember> guildMemberships = guildMemberRepository.findAllActiveGuildMemberships(targetUserId);
@@ -214,7 +175,7 @@ public class MyPageService {
             .bio(user.getBio())
             .leftTitle(leftTitle)
             .rightTitle(rightTitle)
-            .level(userExp.getCurrentLevel())
+            .level(level)
             .startDate(startDate)
             .daysSinceJoined(daysSinceJoined)
             .clearedMissionsCount(stats.getTotalMissionCompletions())
@@ -262,8 +223,7 @@ public class MyPageService {
         userRepository.save(user);
 
         userProfileCacheService.evictUserProfileCache(userId);
-        Integer level = userExperienceRepository.findByUserId(userId)
-            .map(UserExperience::getCurrentLevel).orElse(1);
+        int level = userExperienceService.getUserLevel(userId);
         eventPublisher.publishEvent(new UserProfileChangedEvent(
             userId, user.getNickname(), request.getProfileImageUrl(), level));
 
@@ -312,8 +272,7 @@ public class MyPageService {
         userRepository.save(user);
 
         userProfileCacheService.evictUserProfileCache(userId);
-        Integer level = userExperienceRepository.findByUserId(userId)
-            .map(UserExperience::getCurrentLevel).orElse(1);
+        int level = userExperienceService.getUserLevel(userId);
         eventPublisher.publishEvent(new UserProfileChangedEvent(
             userId, user.getNickname(), newImageUrl, level));
 
@@ -326,7 +285,7 @@ public class MyPageService {
      * 보유 칭호 목록 조회
      */
     public UserTitleListResponse getUserTitles(String userId) {
-        List<UserTitle> userTitles = userTitleRepository.findByUserIdWithTitle(userId);
+        List<UserTitle> userTitles = titleService.getUserTitleEntitiesWithTitle(userId);
 
         Long equippedLeftId = null;
         Long equippedRightId = null;
@@ -396,8 +355,7 @@ public class MyPageService {
         userRepository.save(user);
 
         userProfileCacheService.evictUserProfileCache(userId);
-        Integer level = userExperienceRepository.findByUserId(userId)
-            .map(UserExperience::getCurrentLevel).orElse(1);
+        int level = userExperienceService.getUserLevel(userId);
         eventPublisher.publishEvent(new UserProfileChangedEvent(
             userId, nickname, user.getPicture(), level));
 
@@ -437,69 +395,16 @@ public class MyPageService {
     }
 
     /**
-     * 칭호 변경 (좌측/우측 동시 변경)
+     * 칭호 변경 (좌측/우측 동시 변경) — TitleService에 위임
      */
-    @Transactional(transactionManager = "gamificationTransactionManager")
     public TitleChangeResponse changeTitles(String userId, TitleChangeRequest request) {
-        // 좌측/우측 칭호가 같으면 에러
-        if (request.getLeftUserTitleId().equals(request.getRightUserTitleId())) {
-            throw new CustomException("TITLE_001", "좌측과 우측에 같은 칭호를 설정할 수 없습니다.");
-        }
-
-        // 칭호 존재 여부 및 소유권 사전 검증
-        if (!userTitleRepository.existsById(request.getLeftUserTitleId())) {
-            throw new CustomException("TITLE_002", "좌측 칭호를 찾을 수 없습니다.");
-        }
-        if (!userTitleRepository.existsById(request.getRightUserTitleId())) {
-            throw new CustomException("TITLE_002", "우측 칭호를 찾을 수 없습니다.");
-        }
-
-        // 기존 장착 해제 (clearAutomatically=true로 영속성 컨텍스트 클리어됨)
-        userTitleRepository.unequipAllByUserId(userId);
-
-        // 영속성 컨텍스트가 클리어되었으므로 엔티티 다시 조회
-        UserTitle leftUserTitle = userTitleRepository.findById(request.getLeftUserTitleId())
-            .orElseThrow(() -> new CustomException("TITLE_002", "좌측 칭호를 찾을 수 없습니다."));
-
-        if (!leftUserTitle.getUserId().equals(userId)) {
-            throw new CustomException("TITLE_003", "본인의 칭호만 장착할 수 있습니다.");
-        }
-
-        UserTitle rightUserTitle = userTitleRepository.findById(request.getRightUserTitleId())
-            .orElseThrow(() -> new CustomException("TITLE_002", "우측 칭호를 찾을 수 없습니다."));
-
-        if (!rightUserTitle.getUserId().equals(userId)) {
-            throw new CustomException("TITLE_003", "본인의 칭호만 장착할 수 있습니다.");
-        }
-
-        // 새로운 칭호 장착
-        leftUserTitle.equip(TitlePosition.LEFT);
-        rightUserTitle.equip(TitlePosition.RIGHT);
-
-        userTitleRepository.save(leftUserTitle);
-        userTitleRepository.save(rightUserTitle);
-
-        // 피드의 칭호도 업데이트 (별도 트랜잭션 - feed_db)
-        String combinedTitle = leftUserTitle.getTitle().getDisplayName() + " " + rightUserTitle.getTitle().getDisplayName();
-        TitleRarity leftRarity = leftUserTitle.getTitle().getRarity();
-        TitleRarity rightRarity = rightUserTitle.getTitle().getRarity();
-        TitleRarity highestRarity = getHighestRarity(leftRarity, rightRarity);
-        // 가장 높은 등급의 색상 코드 선택
-        String highestColorCode = (leftRarity == highestRarity)
-            ? leftUserTitle.getTitle().getColorCode()
-            : rightUserTitle.getTitle().getColorCode();
-        final String finalUserId = userId;
-        int updatedCount = feedTransactionTemplate.execute(status ->
-            activityFeedRepository.updateUserTitleByUserId(finalUserId, combinedTitle, highestRarity, highestColorCode)
-        );
-
-        log.info("칭호 변경: userId={}, leftTitleId={}, rightTitleId={}, feedsUpdated={}",
-            userId, leftUserTitle.getTitle().getId(), rightUserTitle.getTitle().getId(), updatedCount);
+        TitleChangeResult result = titleService.changeTitles(
+            userId, request.getLeftUserTitleId(), request.getRightUserTitleId());
 
         return TitleChangeResponse.builder()
             .message("칭호가 변경되었습니다.")
-            .leftTitle(toEquippedTitleInfo(leftUserTitle))
-            .rightTitle(toEquippedTitleInfo(rightUserTitle))
+            .leftTitle(toEquippedTitleInfo(result.leftTitle()))
+            .rightTitle(toEquippedTitleInfo(result.rightTitle()))
             .build();
     }
 
@@ -538,7 +443,7 @@ public class MyPageService {
 
     private ProfileInfo buildProfileInfo(Users user, String userId) {
         // 장착된 칭호 조회
-        List<UserTitle> equippedTitles = userTitleRepository.findEquippedTitlesByUserId(userId);
+        List<UserTitle> equippedTitles = titleService.getEquippedTitleEntitiesByUserId(userId);
 
         EquippedTitleInfo leftTitle = null;
         EquippedTitleInfo rightTitle = null;
@@ -567,13 +472,7 @@ public class MyPageService {
     }
 
     private ExperienceInfo buildExperienceInfo(String userId) {
-        UserExperience userExp = userExperienceRepository.findByUserId(userId)
-            .orElse(UserExperience.builder()
-                .userId(userId)
-                .currentLevel(1)
-                .currentExp(0)
-                .totalExp(0)
-                .build());
+        UserExperience userExp = userExperienceService.getOrCreateUserExperience(userId);
 
         Integer nextLevelRequiredExp = getNextLevelRequiredExp(userExp.getCurrentLevel());
 
@@ -595,14 +494,7 @@ public class MyPageService {
     }
 
     private UserInfo buildUserInfo(Users user, String userId) {
-        UserStats stats = userStatsRepository.findByUserId(userId)
-            .orElse(UserStats.builder()
-                .userId(userId)
-                .totalMissionCompletions(0)
-                .totalMissionFullCompletions(0)
-                .totalTitlesAcquired(0)
-                .rankingPoints(0L)
-                .build());
+        UserStats stats = userStatsService.getOrCreateUserStats(userId);
 
         // 가입일 (createdAt)
         LocalDate startDate = user.getCreatedAt() != null
@@ -613,10 +505,10 @@ public class MyPageService {
         long daysSinceJoined = ChronoUnit.DAYS.between(startDate, LocalDate.now()) + 1;
 
         // 랭킹 퍼센타일 계산 (상위 X%)
-        Double rankingPercentile = calculateRankingPercentile(stats.getRankingPoints());
+        Double rankingPercentile = userStatsService.calculateRankingPercentile(stats.getRankingPoints());
 
         // 보유 칭호 수
-        long titlesCount = userTitleRepository.countByUserId(userId);
+        long titlesCount = titleService.countUserTitles(userId);
 
         return UserInfo.builder()
             .startDate(startDate)
@@ -697,29 +589,5 @@ public class MyPageService {
     private Integer getNextLevelRequiredExp(int currentLevel) {
         UserLevelConfig config = userLevelConfigCacheService.getLevelConfigByLevel(currentLevel);
         return config != null ? config.getRequiredExp() : 100 + (currentLevel - 1) * 50;  // 기본 공식
-    }
-
-    private Double calculateRankingPercentile(long rankingPoints) {
-        long totalUsers = userStatsRepository.countTotalUsers();
-        if (totalUsers == 0) {
-            return 100.0;  // 사용자가 없으면 상위 100%
-        }
-
-        long rank = userStatsRepository.calculateRank(rankingPoints);
-        // 상위 X% = (순위 / 전체 사용자 수) * 100
-        return Math.round((double) rank / totalUsers * 1000) / 10.0;
-    }
-
-    /**
-     * 두 등급 중 더 높은 등급 반환
-     */
-    private TitleRarity getHighestRarity(TitleRarity r1, TitleRarity r2) {
-        if (r1 == null) {
-            return r2;
-        }
-        if (r2 == null) {
-            return r1;
-        }
-        return r1.ordinal() > r2.ordinal() ? r1 : r2;
     }
 }

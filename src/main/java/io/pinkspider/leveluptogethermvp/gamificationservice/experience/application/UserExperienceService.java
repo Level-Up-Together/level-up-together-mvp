@@ -18,7 +18,10 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserE
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -150,6 +153,41 @@ public class UserExperienceService {
     public UserExperienceResponse getUserExperience(String userId) {
         UserExperience userExp = getOrCreateUserExperience(userId);
         return UserExperienceResponse.from(userExp, getNextLevelRequiredExp(userExp.getCurrentLevel()));
+    }
+
+    /**
+     * 사용자 레벨만 조회 (없으면 기본 1)
+     */
+    public int getUserLevel(String userId) {
+        return userExperienceRepository.findByUserId(userId)
+            .map(UserExperience::getCurrentLevel)
+            .orElse(1);
+    }
+
+    /**
+     * 여러 사용자 레벨 배치 조회
+     */
+    public Map<String, Integer> getUserLevelMap(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userExperienceRepository.findByUserIdIn(userIds).stream()
+            .collect(Collectors.toMap(UserExperience::getUserId, UserExperience::getCurrentLevel));
+    }
+
+    /**
+     * 기간별 경험치 상위 사용자 조회
+     */
+    public List<Object[]> findTopExpGainersByPeriod(LocalDateTime start, LocalDateTime end, Pageable pageable) {
+        return experienceHistoryRepository.findTopExpGainersByPeriod(start, end, pageable);
+    }
+
+    /**
+     * 카테고리 + 기간별 경험치 상위 사용자 조회
+     */
+    public List<Object[]> findTopExpGainersByCategoryAndPeriod(String categoryName, LocalDateTime start,
+                                                                LocalDateTime end, Pageable pageable) {
+        return experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(categoryName, start, end, pageable);
     }
 
     public Page<ExperienceHistory> getExperienceHistory(String userId, Pageable pageable) {

@@ -11,17 +11,15 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.TodayPlayerResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import io.pinkspider.global.translation.LocaleUtils;
 import java.time.LocalDate;
@@ -47,10 +45,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class HomeService {
 
     private final HomeBannerRepository homeBannerRepository;
-    private final ExperienceHistoryRepository experienceHistoryRepository;
+    private final UserExperienceService userExperienceService;
+    private final TitleService titleService;
     private final UserRepository userRepository;
-    private final UserExperienceRepository userExperienceRepository;
-    private final UserTitleRepository userTitleRepository;
     private final FeaturedPlayerRepository featuredPlayerRepository;
     private final MissionCategoryService missionCategoryService;
     private final GuildExperienceHistoryRepository guildExperienceHistoryRepository;
@@ -101,7 +98,7 @@ public class HomeService {
         LocalDateTime endDate = today.atTime(LocalTime.MAX);
 
         // 상위 5명 조회
-        List<Object[]> topGainers = experienceHistoryRepository.findTopExpGainersByPeriod(
+        List<Object[]> topGainers = userExperienceService.findTopExpGainersByPeriod(
             startDate, endDate, PageRequest.of(0, 5));
 
         if (topGainers.isEmpty()) {
@@ -118,12 +115,10 @@ public class HomeService {
             .collect(Collectors.toMap(Users::getId, u -> u));
 
         // 3. 배치 조회: 레벨 정보
-        Map<String, Integer> levelMap = userExperienceRepository.findByUserIdIn(userIds).stream()
-            .collect(Collectors.toMap(UserExperience::getUserId, UserExperience::getCurrentLevel));
+        Map<String, Integer> levelMap = userExperienceService.getUserLevelMap(userIds);
 
         // 4. 배치 조회: 장착된 칭호
-        Map<String, List<UserTitle>> titleMap = userTitleRepository.findEquippedTitlesByUserIdIn(userIds).stream()
-            .collect(Collectors.groupingBy(UserTitle::getUserId));
+        Map<String, List<UserTitle>> titleMap = titleService.getEquippedTitleEntitiesByUserIds(userIds);
 
         // 5. 결과 조합
         List<TodayPlayerResponse> result = new ArrayList<>();
@@ -221,7 +216,7 @@ public class HomeService {
 
             if (categoryName != null) {
                 int remaining = maxPlayers - result.size();
-                List<Object[]> topGainers = experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+                List<Object[]> topGainers = userExperienceService.findTopExpGainersByCategoryAndPeriod(
                     categoryName, startDate, endDate, PageRequest.of(0, remaining + addedUserIds.size()));
 
                 for (Object[] row : topGainers) {
@@ -326,9 +321,7 @@ public class HomeService {
             return null;
         }
 
-        Integer level = userExperienceRepository.findByUserId(userId)
-            .map(UserExperience::getCurrentLevel)
-            .orElse(1);
+        Integer level = userExperienceService.getUserLevel(userId);
 
         TitleInfo titleInfo = getCombinedEquippedTitleInfo(userId, locale);
 
@@ -441,7 +434,7 @@ public class HomeService {
      * @param locale Accept-Language 헤더에서 추출한 locale (null이면 기본 한국어)
      */
     private TitleInfo getCombinedEquippedTitleInfo(String userId, String locale) {
-        List<UserTitle> equippedTitles = userTitleRepository.findEquippedTitlesByUserId(userId);
+        List<UserTitle> equippedTitles = titleService.getEquippedTitleEntitiesByUserId(userId);
         if (equippedTitles.isEmpty()) {
             return new TitleInfo(null, null, null, null, null, null, null, null, null);
         }

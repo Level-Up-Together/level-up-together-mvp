@@ -5,9 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
@@ -30,7 +29,7 @@ class UserProfileCacheServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private UserExperienceRepository userExperienceRepository;
+    private UserExperienceService userExperienceService;
 
     @Mock
     private TitleService titleService;
@@ -53,15 +52,10 @@ class UserProfileCacheServiceTest {
                 .build();
             setId(user, userId);
 
-            UserExperience experience = UserExperience.builder()
-                .userId(userId)
-                .currentLevel(15)
-                .build();
-
             TitleInfo titleInfo = new TitleInfo("전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700");
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(userExperienceRepository.findByUserId(userId)).thenReturn(Optional.of(experience));
+            when(userExperienceService.getUserLevel(userId)).thenReturn(15);
             when(titleService.getCombinedEquippedTitleInfo(userId)).thenReturn(titleInfo);
 
             // when
@@ -108,7 +102,7 @@ class UserProfileCacheServiceTest {
             TitleInfo titleInfo = new TitleInfo(null, null, null);
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(userExperienceRepository.findByUserId(userId)).thenReturn(Optional.empty());
+            when(userExperienceService.getUserLevel(userId)).thenReturn(1);
             when(titleService.getCombinedEquippedTitleInfo(userId)).thenReturn(titleInfo);
 
             // when
@@ -128,15 +122,10 @@ class UserProfileCacheServiceTest {
                 .build();
             setId(user, userId);
 
-            UserExperience experience = UserExperience.builder()
-                .userId(userId)
-                .currentLevel(5)
-                .build();
-
             TitleInfo titleInfo = new TitleInfo(null, null, null);
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(userExperienceRepository.findByUserId(userId)).thenReturn(Optional.of(experience));
+            when(userExperienceService.getUserLevel(userId)).thenReturn(5);
             when(titleService.getCombinedEquippedTitleInfo(userId)).thenReturn(titleInfo);
 
             // when

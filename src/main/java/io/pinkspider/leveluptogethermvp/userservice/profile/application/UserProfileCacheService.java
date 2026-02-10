@@ -1,16 +1,15 @@
 package io.pinkspider.leveluptogethermvp.userservice.profile.application;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +20,20 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @Slf4j
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class UserProfileCacheService {
 
     private final UserRepository userRepository;
-    private final UserExperienceRepository userExperienceRepository;
+    private final UserExperienceService userExperienceService;
     private final TitleService titleService;
+
+    public UserProfileCacheService(UserRepository userRepository,
+                                    @Lazy UserExperienceService userExperienceService,
+                                    TitleService titleService) {
+        this.userRepository = userRepository;
+        this.userExperienceService = userExperienceService;
+        this.titleService = titleService;
+    }
 
     /**
      * 사용자 프로필 정보 조회 (캐싱)
@@ -46,9 +52,7 @@ public class UserProfileCacheService {
         }
 
         // 사용자 레벨 조회
-        Integer level = userExperienceRepository.findByUserId(userId)
-            .map(UserExperience::getCurrentLevel)
-            .orElse(1);
+        int level = userExperienceService.getUserLevel(userId);
 
         // 사용자 칭호 조회 (TitleService의 캐시 사용)
         TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);

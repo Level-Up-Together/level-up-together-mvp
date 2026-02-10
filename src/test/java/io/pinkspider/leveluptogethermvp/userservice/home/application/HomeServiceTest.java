@@ -24,21 +24,20 @@ import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerRespo
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
+import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.TodayPlayerResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -57,16 +56,13 @@ class HomeServiceTest {
     private HomeBannerRepository homeBannerRepository;
 
     @Mock
-    private ExperienceHistoryRepository experienceHistoryRepository;
+    private UserExperienceService userExperienceService;
+
+    @Mock
+    private TitleService titleService;
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private UserExperienceRepository userExperienceRepository;
-
-    @Mock
-    private UserTitleRepository userTitleRepository;
 
     @Mock
     private FeaturedPlayerRepository featuredPlayerRepository;
@@ -88,7 +84,6 @@ class HomeServiceTest {
 
     private String testUserId;
     private Users testUser;
-    private UserExperience testUserExperience;
     private Long testCategoryId;
     private MissionCategoryResponse testCategoryResponse;
 
@@ -102,13 +97,6 @@ class HomeServiceTest {
             .picture("https://example.com/profile.jpg")
             .build();
         setId(testUser, testUserId);
-
-        testUserExperience = UserExperience.builder()
-            .userId(testUserId)
-            .currentLevel(5)
-            .currentExp(500)
-            .totalExp(4500)
-            .build();
 
         testCategoryResponse = MissionCategoryResponse.builder()
             .id(testCategoryId)
@@ -131,14 +119,14 @@ class HomeServiceTest {
             List<Object[]> topGainers = new ArrayList<>();
             topGainers.add(row1);
 
-            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+            when(userExperienceService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             // 배치 조회 방식으로 변경
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
-            when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserIdIn(List.of(testUserId)))
-                .thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevelMap(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, 5));
+            when(titleService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+                .thenReturn(Map.of());
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayers();
@@ -155,7 +143,7 @@ class HomeServiceTest {
         @DisplayName("경험치 획득자가 없으면 빈 목록을 반환한다")
         void getTodayPlayers_emptyList() {
             // given
-            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+            when(userExperienceService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -204,13 +192,13 @@ class HomeServiceTest {
                 .equippedPosition(TitlePosition.RIGHT)
                 .build();
 
-            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+            when(userExperienceService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
-            when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(leftUserTitle, rightUserTitle));
+            when(userExperienceService.getUserLevelMap(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, 5));
+            when(titleService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, List.of(leftUserTitle, rightUserTitle)));
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayers();
@@ -252,13 +240,13 @@ class HomeServiceTest {
                 .equippedPosition(TitlePosition.LEFT)
                 .build();
 
-            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+            when(userExperienceService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
-            when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(leftUserTitle));
+            when(userExperienceService.getUserLevelMap(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, 5));
+            when(titleService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, List.of(leftUserTitle)));
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayers();
@@ -303,28 +291,14 @@ class HomeServiceTest {
                 .build();
             setId(user2Entity, user2);
 
-            UserExperience user1Exp = UserExperience.builder()
-                .userId(user1)
-                .currentLevel(10)
-                .currentExp(1000)
-                .totalExp(9000)
-                .build();
-
-            UserExperience user2Exp = UserExperience.builder()
-                .userId(user2)
-                .currentLevel(5)
-                .currentExp(500)
-                .totalExp(4500)
-                .build();
-
-            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+            when(userExperienceService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(user1, user2)))
                 .thenReturn(List.of(user1Entity, user2Entity));
-            when(userExperienceRepository.findByUserIdIn(List.of(user1, user2)))
-                .thenReturn(List.of(user1Exp, user2Exp));
-            when(userTitleRepository.findEquippedTitlesByUserIdIn(List.of(user1, user2)))
-                .thenReturn(Collections.emptyList());
+            when(userExperienceService.getUserLevelMap(List.of(user1, user2)))
+                .thenReturn(Map.of(user1, 10, user2, 5));
+            when(titleService.getEquippedTitleEntitiesByUserIds(List.of(user1, user2)))
+                .thenReturn(Map.of());
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayers();
@@ -366,19 +340,11 @@ class HomeServiceTest {
                 .isActive(true)
                 .build();
 
-            UserExperience featuredUserExp = UserExperience.builder()
-                .userId(featuredUserId)
-                .currentLevel(10)
-                .currentExp(1000)
-                .totalExp(9000)
-                .build();
-
             when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
                 .thenReturn(List.of(featuredPlayer));
             when(userRepository.findById(featuredUserId)).thenReturn(Optional.of(featuredUser));
-            when(userExperienceRepository.findByUserId(featuredUserId))
-                .thenReturn(Optional.of(featuredUserExp));
-            when(userTitleRepository.findEquippedTitlesByUserId(featuredUserId))
+            when(userExperienceService.getUserLevel(featuredUserId)).thenReturn(10);
+            when(titleService.getEquippedTitleEntitiesByUserId(featuredUserId))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);
@@ -387,13 +353,12 @@ class HomeServiceTest {
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();
             autoGainers.add(row1);
-            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+            when(userExperienceService.findTopExpGainersByCategoryAndPeriod(
                 eq("운동"), any(), any(), any()))
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-            when(userExperienceRepository.findByUserId(testUserId))
-                .thenReturn(Optional.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+            when(userExperienceService.getUserLevel(testUserId)).thenReturn(5);
+            when(titleService.getEquippedTitleEntitiesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -421,13 +386,12 @@ class HomeServiceTest {
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();
             autoGainers.add(row1);
-            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+            when(userExperienceService.findTopExpGainersByCategoryAndPeriod(
                 eq("운동"), any(), any(), any()))
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-            when(userExperienceRepository.findByUserId(testUserId))
-                .thenReturn(Optional.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+            when(userExperienceService.getUserLevel(testUserId)).thenReturn(5);
+            when(titleService.getEquippedTitleEntitiesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -452,9 +416,8 @@ class HomeServiceTest {
             when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
                 .thenReturn(List.of(featuredPlayer));
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-            when(userExperienceRepository.findByUserId(testUserId))
-                .thenReturn(Optional.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+            when(userExperienceService.getUserLevel(testUserId)).thenReturn(5);
+            when(titleService.getEquippedTitleEntitiesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);
@@ -463,7 +426,7 @@ class HomeServiceTest {
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();
             autoGainers.add(row1);
-            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+            when(userExperienceService.findTopExpGainersByCategoryAndPeriod(
                 eq("운동"), any(), any(), any()))
                 .thenReturn(autoGainers);
 
@@ -514,9 +477,8 @@ class HomeServiceTest {
                 setId(user, userId);
 
                 lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-                lenient().when(userExperienceRepository.findByUserId(userId))
-                    .thenReturn(Optional.of(testUserExperience));
-                lenient().when(userTitleRepository.findEquippedTitlesByUserId(userId))
+                lenient().when(userExperienceService.getUserLevel(userId)).thenReturn(5);
+                lenient().when(titleService.getEquippedTitleEntitiesByUserId(userId))
                     .thenReturn(Collections.emptyList());
             }
 
@@ -832,13 +794,13 @@ class HomeServiceTest {
                 .equippedPosition(TitlePosition.LEFT)
                 .build();
 
-            when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
+            when(userExperienceService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
-            when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserIdIn(List.of(testUserId)))
-                .thenReturn(List.of(leftUserTitle));
+            when(userExperienceService.getUserLevelMap(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, 5));
+            when(titleService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+                .thenReturn(Map.of(testUserId, List.of(leftUserTitle)));
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayers("en");
@@ -877,13 +839,12 @@ class HomeServiceTest {
                 .equippedPosition(TitlePosition.RIGHT)
                 .build();
 
-            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+            when(userExperienceService.findTopExpGainersByCategoryAndPeriod(
                 eq("운동"), any(), any(), any()))
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-            when(userExperienceRepository.findByUserId(testUserId))
-                .thenReturn(Optional.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+            when(userExperienceService.getUserLevel(testUserId)).thenReturn(5);
+            when(titleService.getEquippedTitleEntitiesByUserId(testUserId))
                 .thenReturn(List.of(rightUserTitle));
 
             // when
@@ -920,13 +881,12 @@ class HomeServiceTest {
             Object[] row1 = {testUserId, 100L};
             List<Object[]> autoGainers = new ArrayList<>();
             autoGainers.add(row1);
-            when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(
+            when(userExperienceService.findTopExpGainersByCategoryAndPeriod(
                 eq("운동"), any(), any(), any()))
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-            when(userExperienceRepository.findByUserId(testUserId))
-                .thenReturn(Optional.of(testUserExperience));
-            when(userTitleRepository.findEquippedTitlesByUserId(testUserId))
+            when(userExperienceService.getUserLevel(testUserId)).thenReturn(5);
+            when(titleService.getEquippedTitleEntitiesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
 
             // when

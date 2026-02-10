@@ -75,4 +75,16 @@ public class UserStatsService {
             .map(UserStats::getMaxStreak)
             .orElse(0);
     }
+
+    /**
+     * 랭킹 퍼센타일 계산 (상위 X%)
+     */
+    public Double calculateRankingPercentile(long rankingPoints) {
+        long totalUsers = userStatsRepository.countTotalUsers();
+        if (totalUsers == 0) {
+            return 100.0;
+        }
+        long rank = userStatsRepository.calculateRank(rankingPoints);
+        return Math.round((double) rank / totalUsers * 1000) / 10.0;
+    }
 }
