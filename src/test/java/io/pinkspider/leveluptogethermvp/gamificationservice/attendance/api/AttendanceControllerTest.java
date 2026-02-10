@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.attendance.api;
+package io.pinkspider.leveluptogethermvp.gamificationservice.attendance.api;
 
 import static com.epages.restdocs.apispec.ResourceDocumentation.parameterWithName;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -15,10 +15,10 @@ import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.epages.restdocs.apispec.SimpleType;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.application.AttendanceService;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.AttendanceCheckInResponse;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.AttendanceResponse;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.MonthlyAttendanceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.application.AttendanceService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceCheckInResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.MonthlyAttendanceResponse;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;

@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.attendance.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.attendance.application;
 
 import static io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
 
@@ -9,9 +9,9 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSour
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.AttendanceRecordRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.entity.AttendanceRewardConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.enums.AttendanceRewardType;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.AttendanceCheckInResponse;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.AttendanceResponse;
-import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.MonthlyAttendanceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceCheckInResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.MonthlyAttendanceResponse;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import java.time.LocalDate;
 import java.time.YearMonth;
