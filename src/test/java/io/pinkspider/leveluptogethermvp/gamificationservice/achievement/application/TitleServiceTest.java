@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.event.TitleAcquiredEvent;
-import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedRepository;
+import io.pinkspider.global.event.TitleEquippedEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleAcquisitionType;
@@ -40,9 +40,6 @@ class TitleServiceTest {
 
     @Mock
     private UserTitleRepository userTitleRepository;
-
-    @Mock
-    private ActivityFeedRepository activityFeedRepository;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -304,7 +301,6 @@ class TitleServiceTest {
             when(userTitleRepository.findByUserIdAndTitleId(TEST_USER_ID, titleId))
                 .thenReturn(Optional.of(userTitle));
             when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(List.of());
-            when(activityFeedRepository.updateUserTitleByUserId(any(), any(), any(), any())).thenReturn(0);
 
             // when
             UserTitleResponse result = titleService.equipTitle(TEST_USER_ID, titleId);
@@ -340,7 +336,6 @@ class TitleServiceTest {
         void unequipTitle_success() {
             // given
             when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(List.of());
-            when(activityFeedRepository.updateUserTitleByUserId(any(), any(), any(), any())).thenReturn(0);
 
             // when
             titleService.unequipTitle(TEST_USER_ID, TitlePosition.LEFT);
@@ -359,7 +354,6 @@ class TitleServiceTest {
         void unequipAllTitles_success() {
             // given
             when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(List.of());
-            when(activityFeedRepository.updateUserTitleByUserId(any(), any(), any(), any())).thenReturn(0);
 
             // when
             titleService.unequipAllTitles(TEST_USER_ID);
@@ -671,7 +665,6 @@ class TitleServiceTest {
                 .thenReturn(Optional.of(rightUserTitle));
             when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID))
                 .thenReturn(List.of(leftUserTitle, rightUserTitle));
-            when(activityFeedRepository.updateUserTitleByUserId(any(), any(), any(), any())).thenReturn(0);
 
             // when
             titleService.grantAndEquipDefaultTitles(TEST_USER_ID);

@@ -1,4 +1,4 @@
-package io.pinkspider.global.event.listener;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.event.listener;
 
 import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildMasterAssignedEvent;

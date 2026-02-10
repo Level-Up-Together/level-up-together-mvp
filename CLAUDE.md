@@ -252,6 +252,7 @@ public class YourEventListener {
 | GamificationService | `TitleAcquiredEvent` | `FeedProjectionEventListener` | 칭호 획득 피드 생성 |
 | GamificationService | `AchievementCompletedEvent` | `NotificationEventListener` | 업적 달성 알림 |
 | GamificationService | `AchievementCompletedEvent` | `FeedProjectionEventListener` | 업적 달성 피드 생성 |
+| GamificationService | `TitleEquippedEvent` | `FeedProjectionEventListener` | 칭호 변경 피드 업데이트 |
 | UserExperienceService | `UserLevelUpEvent` | `FeedProjectionEventListener` | 레벨업 피드 생성 |
 | AttendanceService | `AttendanceStreakEvent` | `FeedProjectionEventListener` | 연속 출석 피드 생성 |
 | MissionService | `MissionStateChangedEvent` | `MissionStateHistoryEventListener` | 미션 상태 이력 저장 |

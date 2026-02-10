@@ -7,6 +7,7 @@ import io.pinkspider.global.event.GuildCreatedEvent;
 import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildLevelUpEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
+import io.pinkspider.global.event.TitleEquippedEvent;
 import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
@@ -254,6 +255,17 @@ public class FeedProjectionEventListener {
                 event.userId(), event.guildName(), event.newGuildLevel());
         } catch (Exception e) {
             log.error("피드 프로젝션 실패 - 길드 레벨업: userId={}, error={}", event.userId(), e.getMessage(), e);
+        }
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleTitleEquipped(TitleEquippedEvent event) {
+        try {
+            int updatedCount = feedCommandService.updateFeedTitles(
+                event.userId(), event.titleName(), event.titleRarity(), event.titleColorCode());
+            log.info("피드 칭호 업데이트: userId={}, title={}, count={}", event.userId(), event.titleName(), updatedCount);
+        } catch (Exception e) {
+            log.error("피드 칭호 업데이트 실패: userId={}, error={}", event.userId(), e.getMessage(), e);
         }
     }
 

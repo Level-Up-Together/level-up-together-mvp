@@ -18,6 +18,7 @@ import io.pinkspider.global.event.GuildCreatedEvent;
 import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildLevelUpEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
+import io.pinkspider.global.event.TitleEquippedEvent;
 import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
@@ -375,6 +376,45 @@ class FeedProjectionEventListenerTest {
                 anyString(), anyString(), any(), any(), any(),
                 any(FeedVisibility.class), any(), any(), any()
             );
+        }
+    }
+
+    @Nested
+    @DisplayName("handleTitleEquipped 테스트")
+    class HandleTitleEquippedTest {
+
+        @Test
+        @DisplayName("칭호 장착 이벤트를 수신하면 피드 칭호를 업데이트한다")
+        void handleTitleEquipped_success() {
+            // given
+            TitleEquippedEvent event = new TitleEquippedEvent(
+                TEST_USER_ID, "전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700");
+            when(feedCommandService.updateFeedTitles(
+                TEST_USER_ID, "전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700"))
+                .thenReturn(5);
+
+            // when
+            feedProjectionEventListener.handleTitleEquipped(event);
+
+            // then
+            verify(feedCommandService).updateFeedTitles(
+                TEST_USER_ID, "전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700");
+        }
+
+        @Test
+        @DisplayName("피드 업데이트 실패 시 예외를 삼킨다")
+        void handleTitleEquipped_failure() {
+            // given
+            TitleEquippedEvent event = new TitleEquippedEvent(
+                TEST_USER_ID, "전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700");
+            when(feedCommandService.updateFeedTitles(anyString(), any(), any(), any()))
+                .thenThrow(new RuntimeException("DB 오류"));
+
+            // when - 예외가 발생하지 않아야 함
+            feedProjectionEventListener.handleTitleEquipped(event);
+
+            // then
+            verify(feedCommandService).updateFeedTitles(anyString(), any(), any(), any());
         }
     }
 }

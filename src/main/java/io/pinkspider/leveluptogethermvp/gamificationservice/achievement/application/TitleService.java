@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application;
 
 import io.pinkspider.global.event.TitleAcquiredEvent;
+import io.pinkspider.global.event.TitleEquippedEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.TitleResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserTitleResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
@@ -10,7 +11,6 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePo
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.TitleRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +30,6 @@ public class TitleService {
 
     private final TitleRepository titleRepository;
     private final UserTitleRepository userTitleRepository;
-    private final ActivityFeedRepository activityFeedRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     // 전체 칭호 목록
@@ -259,8 +258,8 @@ public class TitleService {
         userTitle.equip(position);
         log.info("칭호 장착: userId={}, title={}, position={}", userId, userTitle.getTitle().getName(), position);
 
-        // 피드의 칭호도 업데이트
-        updateUserFeedsTitle(userId);
+        // 피드의 칭호도 업데이트 (이벤트 기반)
+        publishTitleEquippedEvent(userId);
 
         return UserTitleResponse.from(userTitle);
     }
@@ -272,8 +271,8 @@ public class TitleService {
         userTitleRepository.unequipByUserIdAndPosition(userId, position);
         log.info("칭호 해제: userId={}, position={}", userId, position);
 
-        // 피드의 칭호도 업데이트
-        updateUserFeedsTitle(userId);
+        // 피드의 칭호도 업데이트 (이벤트 기반)
+        publishTitleEquippedEvent(userId);
     }
 
     // 모든 칭호 해제
@@ -283,16 +282,14 @@ public class TitleService {
         userTitleRepository.unequipAllByUserId(userId);
         log.info("모든 칭호 해제: userId={}", userId);
 
-        // 피드의 칭호도 업데이트
-        updateUserFeedsTitle(userId);
+        // 피드의 칭호도 업데이트 (이벤트 기반)
+        publishTitleEquippedEvent(userId);
     }
 
-    // 사용자의 모든 피드의 칭호 업데이트
-    private void updateUserFeedsTitle(String userId) {
+    // 칭호 장착/해제 시 피드 업데이트 이벤트 발행
+    private void publishTitleEquippedEvent(String userId) {
         TitleInfo titleInfo = getCombinedEquippedTitleInfo(userId);
-        int updatedCount = activityFeedRepository.updateUserTitleByUserId(userId, titleInfo.name(), titleInfo.rarity(), titleInfo.colorCode());
-        log.info("피드 칭호 업데이트: userId={}, title={}, rarity={}, colorCode={}, count={}",
-            userId, titleInfo.name(), titleInfo.rarity(), titleInfo.colorCode(), updatedCount);
+        eventPublisher.publishEvent(new TitleEquippedEvent(userId, titleInfo.name(), titleInfo.rarity(), titleInfo.colorCode()));
     }
 
     // 칭호 생성 (관리자용)

@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.global.event.listener;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.event.listener;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -7,7 +7,6 @@ import static org.mockito.Mockito.verify;
 
 import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildMasterAssignedEvent;
-import io.pinkspider.global.event.listener.AchievementEventListener;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

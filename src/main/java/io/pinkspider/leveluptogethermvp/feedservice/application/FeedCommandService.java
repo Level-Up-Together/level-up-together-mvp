@@ -352,4 +352,12 @@ public class FeedCommandService {
             log.info("Feed image updated by executionId: executionId={}, imageUrl={}", executionId, imageUrl);
         });
     }
+
+    /**
+     * 사용자의 모든 피드의 칭호 정보 업데이트 (칭호 장착/해제 시 호출)
+     */
+    @Transactional(transactionManager = "feedTransactionManager")
+    public int updateFeedTitles(String userId, String titleName, TitleRarity titleRarity, String titleColorCode) {
+        return activityFeedRepository.updateUserTitleByUserId(userId, titleName, titleRarity, titleColorCode);
+    }
 }
