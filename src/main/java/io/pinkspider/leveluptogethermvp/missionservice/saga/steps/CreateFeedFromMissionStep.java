@@ -8,7 +8,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExec
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.DailyMissionInstanceRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExecutionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
@@ -26,19 +26,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionContext> {
 
-    private final ActivityFeedService activityFeedService;
+    private final FeedCommandService feedCommandService;
     private final UserProfileCacheService userProfileCacheService;
     private final MissionExecutionRepository executionRepository;
     private final DailyMissionInstanceRepository instanceRepository;
     private final CreateFeedFromMissionStep self;
 
     public CreateFeedFromMissionStep(
-            ActivityFeedService activityFeedService,
+            FeedCommandService feedCommandService,
             UserProfileCacheService userProfileCacheService,
             MissionExecutionRepository executionRepository,
             DailyMissionInstanceRepository instanceRepository,
             @Lazy CreateFeedFromMissionStep self) {
-        this.activityFeedService = activityFeedService;
+        this.feedCommandService = feedCommandService;
         this.userProfileCacheService = userProfileCacheService;
         this.executionRepository = executionRepository;
         this.instanceRepository = instanceRepository;
@@ -85,7 +85,7 @@ public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionCont
             Integer durationMinutes = execution.calculateExpByDuration();
             Long categoryId = mission.getCategoryId();
 
-            ActivityFeed feed = activityFeedService.createMissionSharedFeed(
+            ActivityFeed feed = feedCommandService.createMissionSharedFeed(
                 userId,
                 profile.nickname(),
                 profile.picture(),
@@ -132,7 +132,7 @@ public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionCont
 
             Integer durationMinutes = instance.getDurationMinutes();
 
-            ActivityFeed feed = activityFeedService.createMissionSharedFeed(
+            ActivityFeed feed = feedCommandService.createMissionSharedFeed(
                 userId,
                 profile.nickname(),
                 profile.picture(),
@@ -196,7 +196,7 @@ public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionCont
             }
 
             // 피드 삭제
-            activityFeedService.deleteFeedById(feedId);
+            feedCommandService.deleteFeedById(feedId);
             log.info("Compensated feed deletion: feedId={}", feedId);
             return SagaStepResult.success("피드 삭제 완료");
         } catch (Exception e) {

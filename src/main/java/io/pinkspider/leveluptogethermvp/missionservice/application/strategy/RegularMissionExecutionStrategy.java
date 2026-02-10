@@ -14,7 +14,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSag
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import java.time.LocalDate;
@@ -34,7 +34,7 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
     private final MissionParticipantRepository participantRepository;
     private final MissionCompletionSaga missionCompletionSaga;
     private final MissionImageStorageService missionImageStorageService;
-    private final ActivityFeedService activityFeedService;
+    private final FeedCommandService feedCommandService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserService userService;
     private final UserExperienceService userExperienceService;
@@ -203,7 +203,7 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
             Integer durationMinutes = execution.calculateExpByDuration();
             Long categoryId = mission.getCategoryId();
 
-            var createdFeed = activityFeedService.createMissionSharedFeed(
+            var createdFeed = feedCommandService.createMissionSharedFeed(
                 userId,
                 user.getNickname(),
                 user.getPicture(),

@@ -2,6 +2,7 @@ package io.pinkspider.leveluptogethermvp.userservice.experience.application;
 
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.global.event.GuildCreationEligibleEvent;
+import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
@@ -88,6 +89,9 @@ public class UserExperienceService {
 
         if (levelAfter > levelBefore) {
             log.info("레벨 업! userId={}, {} -> {}", userId, levelBefore, levelAfter);
+
+            // 레벨업 피드 프로젝션 이벤트 발행
+            eventPublisher.publishEvent(new UserLevelUpEvent(userId, levelAfter, userExp.getTotalExp()));
 
             // 프로필 캐시 무효화 + 스냅샷 동기화 이벤트 발행
             userProfileCacheService.evictUserProfileCache(userId);

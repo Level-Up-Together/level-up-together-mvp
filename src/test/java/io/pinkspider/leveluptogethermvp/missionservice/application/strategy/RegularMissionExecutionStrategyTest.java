@@ -28,7 +28,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionCon
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
 import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import java.time.LocalDate;
 import org.springframework.context.ApplicationEventPublisher;
@@ -60,7 +60,7 @@ class RegularMissionExecutionStrategyTest {
     private MissionImageStorageService missionImageStorageService;
 
     @Mock
-    private ActivityFeedService activityFeedService;
+    private FeedCommandService feedCommandService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;

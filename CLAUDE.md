@@ -45,7 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `guildservice` | guild_db | Guild creation/management, members, experience/levels, bulletin board, territory, invitations |
 | `chatservice` | chat_db | Guild chat messaging, chat participants, read status, direct messages |
 | `metaservice` | meta_db | Common codes, calendar holidays, Redis-cached metadata, level configuration |
-| `feedservice` | feed_db | Activity feed, likes, comments, feed visibility management |
+| `feedservice` | feed_db | Activity feed (CQRS Read Model), likes, comments, feed visibility, FeedProjectionEventListener |
 | `notificationservice` | notification_db | Push notifications, notification preferences, notification management |
 | `adminservice` | admin_db | Home banners, featured content (players, guilds, feeds) |
 | `gamificationservice` | gamification_db | Titles, achievements, user stats, experience/levels, attendance tracking, events, seasons |
@@ -106,7 +106,7 @@ Each service module follows a consistent layered structure:
 - `scheduler/` - Scheduled batch jobs (optional)
 - `saga/` - Saga orchestration steps (optional)
 
-Note: Some services vary slightly (e.g., `feedservice` has no `api/` layer, `noticeservice`/`supportservice` use `core/` instead of `application/`).
+Note: Some services vary slightly (e.g., `noticeservice`/`supportservice` use `core/` instead of `application/`). `feedservice` follows CQRS pattern with `FeedQueryService` (read) + `FeedCommandService` (write).
 
 ### API Response Format
 
@@ -242,10 +242,18 @@ public class YourEventListener {
 | 발행 서비스 | 이벤트 | 수신 리스너 | 처리 내용 |
 |------------|--------|------------|----------|
 | GuildService | `GuildJoinedEvent` | `AchievementEventListener` | 길드 가입 업적 체크 |
+| GuildService | `GuildJoinedEvent` | `FeedProjectionEventListener` | 길드 가입 피드 생성 |
+| GuildService | `GuildCreatedEvent` | `FeedProjectionEventListener` | 길드 창설 피드 생성 |
 | GuildService | `GuildInvitationEvent` | `NotificationEventListener` | 초대 알림 발송 |
+| GuildExperienceService | `GuildLevelUpEvent` | `FeedProjectionEventListener` | 길드 레벨업 피드 생성 |
 | FriendService | `FriendRequestAcceptedEvent` | `NotificationEventListener` | 친구 수락 알림 |
+| FriendService | `FriendRequestAcceptedEvent` | `FeedProjectionEventListener` | 친구 추가 피드 생성 (양쪽) |
 | GamificationService | `TitleAcquiredEvent` | `NotificationEventListener` | 칭호 획득 알림 |
+| GamificationService | `TitleAcquiredEvent` | `FeedProjectionEventListener` | 칭호 획득 피드 생성 |
 | GamificationService | `AchievementCompletedEvent` | `NotificationEventListener` | 업적 달성 알림 |
+| GamificationService | `AchievementCompletedEvent` | `FeedProjectionEventListener` | 업적 달성 피드 생성 |
+| UserExperienceService | `UserLevelUpEvent` | `FeedProjectionEventListener` | 레벨업 피드 생성 |
+| AttendanceService | `AttendanceStreakEvent` | `FeedProjectionEventListener` | 연속 출석 피드 생성 |
 | MissionService | `MissionStateChangedEvent` | `MissionStateHistoryEventListener` | 미션 상태 이력 저장 |
 | GuildMemberService | `GuildMemberJoinedChatNotifyEvent` | `ChatEventListener` | 채팅방 입장 알림 |
 | GuildMemberService | `GuildMemberLeftChatNotifyEvent` | `ChatEventListener` | 채팅방 퇴장 알림 |

@@ -19,7 +19,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSag
 import io.pinkspider.leveluptogethermvp.missionservice.scheduler.DailyMissionInstanceScheduler;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +52,7 @@ public class DailyMissionInstanceService {
     private final MissionParticipantRepository participantRepository;
     private final DailyMissionInstanceScheduler instanceScheduler;
     private final UserExperienceService userExperienceService;
-    private final ActivityFeedService activityFeedService;
+    private final FeedCommandService feedCommandService;
     private final ApplicationEventPublisher eventPublisher;
     private final TitleService titleService;
     private final UserService userService;
@@ -447,7 +447,7 @@ public class DailyMissionInstanceService {
             Integer userLevel = userExperienceService.getOrCreateUserExperience(userId).getCurrentLevel();
             TitleService.TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);
 
-            ActivityFeed feed = activityFeedService.createMissionSharedFeed(
+            ActivityFeed feed = feedCommandService.createMissionSharedFeed(
                 userId,
                 user.getNickname(),
                 user.getPicture(),

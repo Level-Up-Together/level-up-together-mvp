@@ -7,7 +7,7 @@ import io.pinkspider.global.event.MissionDeletedEvent;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
 import io.pinkspider.global.event.listener.MissionFeedEventListener;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class MissionFeedEventListenerTest {
 
     @Mock
-    private ActivityFeedService activityFeedService;
+    private FeedCommandService feedCommandService;
 
     @InjectMocks
     private MissionFeedEventListener eventListener;
@@ -40,7 +40,7 @@ class MissionFeedEventListenerTest {
             eventListener.handleFeedImageChanged(event);
 
             // then
-            verify(activityFeedService).updateFeedImageUrlByExecutionId(1L, "https://example.com/image.jpg");
+            verify(feedCommandService).updateFeedImageUrlByExecutionId(1L, "https://example.com/image.jpg");
         }
 
         @Test
@@ -53,7 +53,7 @@ class MissionFeedEventListenerTest {
             eventListener.handleFeedImageChanged(event);
 
             // then
-            verify(activityFeedService).updateFeedImageUrlByExecutionId(1L, null);
+            verify(feedCommandService).updateFeedImageUrlByExecutionId(1L, null);
         }
 
         @Test
@@ -62,7 +62,7 @@ class MissionFeedEventListenerTest {
             // given
             var event = new MissionFeedImageChangedEvent("user-123", 1L, "https://example.com/image.jpg");
             doThrow(new RuntimeException("DB error"))
-                .when(activityFeedService).updateFeedImageUrlByExecutionId(1L, "https://example.com/image.jpg");
+                .when(feedCommandService).updateFeedImageUrlByExecutionId(1L, "https://example.com/image.jpg");
 
             // when - should not throw
             eventListener.handleFeedImageChanged(event);
@@ -83,7 +83,7 @@ class MissionFeedEventListenerTest {
             eventListener.handleFeedUnshared(event);
 
             // then
-            verify(activityFeedService).deleteFeedByExecutionId(1L);
+            verify(feedCommandService).deleteFeedByExecutionId(1L);
         }
 
         @Test
@@ -92,7 +92,7 @@ class MissionFeedEventListenerTest {
             // given
             var event = new MissionFeedUnsharedEvent("user-123", 1L);
             doThrow(new RuntimeException("DB error"))
-                .when(activityFeedService).deleteFeedByExecutionId(1L);
+                .when(feedCommandService).deleteFeedByExecutionId(1L);
 
             // when - should not throw
             eventListener.handleFeedUnshared(event);
@@ -113,7 +113,7 @@ class MissionFeedEventListenerTest {
             eventListener.handleMissionDeleted(event);
 
             // then
-            verify(activityFeedService).deleteFeedsByMissionId(1L);
+            verify(feedCommandService).deleteFeedsByMissionId(1L);
         }
 
         @Test
@@ -122,7 +122,7 @@ class MissionFeedEventListenerTest {
             // given
             var event = new MissionDeletedEvent("user-123", 1L);
             doThrow(new RuntimeException("DB error"))
-                .when(activityFeedService).deleteFeedsByMissionId(1L);
+                .when(feedCommandService).deleteFeedsByMissionId(1L);
 
             // when - should not throw
             eventListener.handleMissionDeleted(event);

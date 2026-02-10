@@ -27,7 +27,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.DailyMissi
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExecutionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import java.time.LocalDate;
@@ -46,7 +46,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CreateFeedFromMissionStepTest {
 
     @Mock
-    private ActivityFeedService activityFeedService;
+    private FeedCommandService feedCommandService;
 
     @Mock
     private UserProfileCacheService userProfileCacheService;
@@ -77,7 +77,7 @@ class CreateFeedFromMissionStepTest {
     void setUp() {
         // self-injection mock을 사용하여 CreateFeedFromMissionStep 생성
         createFeedFromMissionStep = new CreateFeedFromMissionStep(
-            activityFeedService,
+            feedCommandService,
             userProfileCacheService,
             executionRepository,
             instanceRepository,
@@ -168,7 +168,7 @@ class CreateFeedFromMissionStepTest {
             // then
             assertThat(result.isSuccess()).isTrue();
             assertThat(result.getMessage()).contains("피드 공유 미요청");
-            verify(activityFeedService, never()).createMissionSharedFeed(
+            verify(feedCommandService, never()).createMissionSharedFeed(
                 anyString(), anyString(), anyString(), anyInt(), anyString(), any(TitleRarity.class),
                 anyString(), any(Long.class), any(Long.class), anyString(), anyString(), any(Long.class),
                 anyString(), anyString(), any(Integer.class), anyInt()
@@ -180,7 +180,7 @@ class CreateFeedFromMissionStepTest {
         void execute_success() {
             // given
             when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(userProfile);
-            when(activityFeedService.createMissionSharedFeed(
+            when(feedCommandService.createMissionSharedFeed(
                 anyString(), anyString(), anyString(), anyInt(), anyString(), any(TitleRarity.class),
                 anyString(), any(Long.class), any(Long.class), anyString(), anyString(), any(Long.class),
                 anyString(), anyString(), any(Integer.class), anyInt()
@@ -200,7 +200,7 @@ class CreateFeedFromMissionStepTest {
         void execute_updatesSharedStatusOnExecution() {
             // given
             when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(userProfile);
-            when(activityFeedService.createMissionSharedFeed(
+            when(feedCommandService.createMissionSharedFeed(
                 anyString(), anyString(), anyString(), anyInt(), anyString(), any(TitleRarity.class),
                 anyString(), any(Long.class), any(Long.class), anyString(), anyString(), any(Long.class),
                 anyString(), anyString(), any(Integer.class), anyInt()
@@ -245,7 +245,7 @@ class CreateFeedFromMissionStepTest {
 
             // then
             assertThat(result.isSuccess()).isTrue();
-            verify(activityFeedService, never()).deleteFeedById(anyLong());
+            verify(feedCommandService, never()).deleteFeedById(anyLong());
         }
 
         @Test
@@ -259,7 +259,7 @@ class CreateFeedFromMissionStepTest {
 
             // then
             assertThat(result.isSuccess()).isTrue();
-            verify(activityFeedService).deleteFeedById(FEED_ID);
+            verify(feedCommandService).deleteFeedById(FEED_ID);
         }
 
         @Test
@@ -286,7 +286,7 @@ class CreateFeedFromMissionStepTest {
             // given
             context.setCreatedFeedId(FEED_ID);
             doThrow(new RuntimeException("삭제 실패"))
-                .when(activityFeedService).deleteFeedById(FEED_ID);
+                .when(feedCommandService).deleteFeedById(FEED_ID);
 
             // when
             SagaStepResult result = createFeedFromMissionStep.compensate(context);

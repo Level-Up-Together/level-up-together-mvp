@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.feed.domain.dto;
+package io.pinkspider.leveluptogethermvp.feedservice.domain.dto;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
 

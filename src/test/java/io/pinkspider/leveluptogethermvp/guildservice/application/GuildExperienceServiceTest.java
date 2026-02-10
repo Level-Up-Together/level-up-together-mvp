@@ -24,6 +24,7 @@ import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entit
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -53,6 +54,9 @@ class GuildExperienceServiceTest {
 
     @Mock
     private UserLevelConfigCacheService userLevelConfigCacheService;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private GuildExperienceService guildExperienceService;

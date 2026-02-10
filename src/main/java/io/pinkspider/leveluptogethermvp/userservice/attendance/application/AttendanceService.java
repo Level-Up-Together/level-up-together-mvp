@@ -2,6 +2,7 @@ package io.pinkspider.leveluptogethermvp.userservice.attendance.application;
 
 import static io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
 
+import io.pinkspider.global.event.AttendanceStreakEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AttendanceRecord;
 import io.pinkspider.global.cache.AttendanceRewardConfigCacheService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
@@ -21,6 +22,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +36,10 @@ public class AttendanceService {
     private final AttendanceRecordRepository attendanceRecordRepository;
     private final AttendanceRewardConfigCacheService rewardConfigCacheService;
     private final UserExperienceService userExperienceService;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final int DEFAULT_DAILY_EXP = 10;
+    private static final Set<Integer> STREAK_MILESTONES = Set.of(7, 14, 30, 60, 90);
 
     @Transactional(transactionManager = "gamificationTransactionManager")
     public AttendanceCheckInResponse checkIn(String userId) {
@@ -88,6 +92,11 @@ public class AttendanceService {
                 "출석 체크 보상" + (consecutiveDays > 1 ? " (" + consecutiveDays + "일 연속)" : ""),
                 DEFAULT_CATEGORY_NAME
             );
+        }
+
+        // 연속 출석 마일스톤 달성 시 피드 프로젝션 이벤트 발행
+        if (STREAK_MILESTONES.contains(consecutiveDays)) {
+            eventPublisher.publishEvent(new AttendanceStreakEvent(userId, consecutiveDays));
         }
 
         log.info("출석 체크 완료: userId={}, consecutiveDays={}, totalExp={}",

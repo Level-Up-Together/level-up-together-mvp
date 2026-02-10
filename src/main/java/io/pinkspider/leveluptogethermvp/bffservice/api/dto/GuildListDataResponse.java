@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildPostListResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

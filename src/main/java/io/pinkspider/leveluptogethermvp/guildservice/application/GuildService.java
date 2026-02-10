@@ -12,6 +12,7 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRol
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberStatus;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.global.event.GuildCreatedEvent;
 import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildMasterAssignedEvent;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
@@ -113,6 +114,9 @@ public class GuildService {
 
         // 길드 마스터 업적 및 가입 업적 이벤트 발행
         publishGuildAchievementEvents(userId, savedGuild, true, true);
+
+        // 길드 창설 피드 프로젝션 이벤트 발행
+        eventPublisher.publishEvent(new GuildCreatedEvent(userId, savedGuild.getId(), savedGuild.getName()));
 
         log.info("길드 생성 완료: id={}, name={}, master={}", savedGuild.getId(), savedGuild.getName(), userId);
 

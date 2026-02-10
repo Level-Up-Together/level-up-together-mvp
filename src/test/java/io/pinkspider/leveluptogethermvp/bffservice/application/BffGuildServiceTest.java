@@ -18,8 +18,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRol
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberStatus;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildPostType;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedQueryService;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
 import java.time.LocalDateTime;
@@ -47,7 +47,7 @@ class BffGuildServiceTest {
     private GuildPostService guildPostService;
 
     @Mock
-    private ActivityFeedService activityFeedService;
+    private FeedQueryService feedQueryService;
 
     @InjectMocks
     private BffGuildService bffGuildService;
@@ -212,7 +212,7 @@ class BffGuildServiceTest {
             when(guildQueryService.getMyGuilds(testUserId)).thenReturn(List.of(testGuildResponse));
             when(guildQueryService.getPublicGuilds(any(), any())).thenReturn(guildPage);
             when(guildPostService.getNotices(1L, testUserId)).thenReturn(List.of(noticePost));
-            when(activityFeedService.getGuildFeeds(anyLong(), anyString(), anyInt(), anyInt())).thenReturn(feedPage);
+            when(feedQueryService.getGuildFeeds(anyLong(), anyString(), anyInt(), anyInt())).thenReturn(feedPage);
 
             // when
             GuildListDataResponse response = bffGuildService.getGuildList(testUserId, 10, 10);
@@ -279,7 +279,7 @@ class BffGuildServiceTest {
             when(guildQueryService.getPublicGuilds(any(), any())).thenReturn(guildPage);
             when(guildPostService.getNotices(1L, testUserId)).thenReturn(List.of(notice1));
             when(guildPostService.getNotices(2L, testUserId)).thenReturn(List.of(notice2));
-            when(activityFeedService.getGuildFeeds(anyLong(), anyString(), anyInt(), anyInt())).thenReturn(feedPage);
+            when(feedQueryService.getGuildFeeds(anyLong(), anyString(), anyInt(), anyInt())).thenReturn(feedPage);
 
             // when
             GuildListDataResponse response = bffGuildService.getGuildList(testUserId, 10, 10);

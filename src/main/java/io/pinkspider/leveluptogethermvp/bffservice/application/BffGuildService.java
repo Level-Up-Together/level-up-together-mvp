@@ -10,8 +10,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryServi
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildMemberResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildPostListResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedQueryService;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -32,7 +32,7 @@ public class BffGuildService {
 
     private final GuildQueryService guildQueryService;
     private final GuildPostService guildPostService;
-    private final ActivityFeedService activityFeedService;
+    private final FeedQueryService feedQueryService;
 
     /**
      * 길드 상세 화면에 필요한 모든 데이터를 한 번에 조회합니다.
@@ -206,7 +206,7 @@ public class BffGuildService {
                 List<ActivityFeedResponse> allFeeds = myGuildIds.stream()
                     .flatMap(guildId -> {
                         try {
-                            return activityFeedService.getGuildFeeds(guildId, userId, 0, activityFeedSize)
+                            return feedQueryService.getGuildFeeds(guildId, userId, 0, activityFeedSize)
                                 .getContent().stream();
                         } catch (Exception e) {
                             log.warn("Failed to fetch feeds for guild {}: {}", guildId, e.getMessage());

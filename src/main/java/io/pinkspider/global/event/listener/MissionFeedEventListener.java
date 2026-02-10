@@ -5,7 +5,7 @@ import static io.pinkspider.global.config.AsyncConfig.EVENT_EXECUTOR;
 import io.pinkspider.global.event.MissionDeletedEvent;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -23,7 +23,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class MissionFeedEventListener {
 
-    private final ActivityFeedService activityFeedService;
+    private final FeedCommandService feedCommandService;
 
     /**
      * 미션 수행 기록의 이미지 변경 시 피드 이미지 동기화
@@ -32,7 +32,7 @@ public class MissionFeedEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleFeedImageChanged(MissionFeedImageChangedEvent event) {
         safeHandle("MissionFeedImageChanged", () ->
-            activityFeedService.updateFeedImageUrlByExecutionId(
+            feedCommandService.updateFeedImageUrlByExecutionId(
                 event.executionId(), event.imageUrl()));
     }
 
@@ -43,7 +43,7 @@ public class MissionFeedEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleFeedUnshared(MissionFeedUnsharedEvent event) {
         safeHandle("MissionFeedUnshared", () ->
-            activityFeedService.deleteFeedByExecutionId(event.executionId()));
+            feedCommandService.deleteFeedByExecutionId(event.executionId()));
     }
 
     /**
@@ -53,7 +53,7 @@ public class MissionFeedEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMissionDeleted(MissionDeletedEvent event) {
         safeHandle("MissionDeleted", () ->
-            activityFeedService.deleteFeedsByMissionId(event.missionId()));
+            feedCommandService.deleteFeedsByMissionId(event.missionId()));
     }
 
     private void safeHandle(String eventName, Runnable action) {

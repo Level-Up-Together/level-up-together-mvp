@@ -1,11 +1,11 @@
-package io.pinkspider.leveluptogethermvp.userservice.feed.application;
+package io.pinkspider.leveluptogethermvp.feedservice.application;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.userservice.feed.domain.dto.UserTitleInfo;
+import io.pinkspider.leveluptogethermvp.feedservice.domain.dto.UserTitleInfo;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

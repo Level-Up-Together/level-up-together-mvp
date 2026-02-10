@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.feed.api.dto;
+package io.pinkspider.leveluptogethermvp.feedservice.api.dto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;

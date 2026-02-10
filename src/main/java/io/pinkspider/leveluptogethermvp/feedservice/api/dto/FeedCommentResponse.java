@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.feed.api.dto;
+package io.pinkspider.leveluptogethermvp.feedservice.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;

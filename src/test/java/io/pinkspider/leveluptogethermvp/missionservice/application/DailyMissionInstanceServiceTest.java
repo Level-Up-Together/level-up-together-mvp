@@ -41,7 +41,7 @@ import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserE
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import org.springframework.context.ApplicationEventPublisher;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
@@ -76,7 +76,7 @@ class DailyMissionInstanceServiceTest {
     private UserExperienceService userExperienceService;
 
     @Mock
-    private ActivityFeedService activityFeedService;
+    private FeedCommandService feedCommandService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -965,7 +965,7 @@ class DailyMissionInstanceServiceTest {
                 .thenReturn(userExperience);
             when(titleService.getCombinedEquippedTitleInfo(TEST_USER_ID))
                 .thenReturn(new TitleService.TitleInfo("테스트 칭호", TitleRarity.COMMON, "#FFFFFF"));
-            when(activityFeedService.createMissionSharedFeed(any(), any(), any(), any(), any(), any(), any(),
+            when(feedCommandService.createMissionSharedFeed(any(), any(), any(), any(), any(), any(), any(),
                     any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(feed);
             when(instanceRepository.save(any(DailyMissionInstance.class)))
@@ -976,7 +976,7 @@ class DailyMissionInstanceServiceTest {
 
             // then
             assertThat(response).isNotNull();
-            verify(activityFeedService).createMissionSharedFeed(any(), any(), any(), any(), any(), any(), any(),
+            verify(feedCommandService).createMissionSharedFeed(any(), any(), any(), any(), any(), any(), any(),
                 any(), any(), any(), any(), any(), any(), any(), any(), any());
         }
     }

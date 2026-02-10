@@ -14,8 +14,8 @@ import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryS
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.noticeservice.api.dto.NoticeResponse;
 import io.pinkspider.leveluptogethermvp.noticeservice.application.NoticeService;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedQueryService;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.TodayPlayerResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.application.HomeService;
@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class BffHomeService {
 
-    private final ActivityFeedService activityFeedService;
+    private final FeedQueryService feedQueryService;
     private final HomeService homeService;
     private final MissionCategoryService missionCategoryService;
     private final GuildQueryService guildQueryService;
@@ -49,7 +49,7 @@ public class BffHomeService {
     private final Executor bffExecutor;
 
     public BffHomeService(
-            ActivityFeedService activityFeedService,
+            FeedQueryService feedQueryService,
             HomeService homeService,
             MissionCategoryService missionCategoryService,
             GuildQueryService guildQueryService,
@@ -58,7 +58,7 @@ public class BffHomeService {
             SeasonRankingService seasonRankingService,
             AchievementService achievementService,
             @Qualifier("bffExecutor") Executor bffExecutor) {
-        this.activityFeedService = activityFeedService;
+        this.feedQueryService = feedQueryService;
         this.homeService = homeService;
         this.missionCategoryService = missionCategoryService;
         this.guildQueryService = guildQueryService;
@@ -114,10 +114,10 @@ public class BffHomeService {
                 Page<ActivityFeedResponse> feedPage1;
                 if (categoryId != null) {
                     // 카테고리별 피드 조회 (하이브리드)
-                    feedPage1 = activityFeedService.getPublicFeedsByCategory(categoryId, userId, feedPage, feedSize);
+                    feedPage1 = feedQueryService.getPublicFeedsByCategory(categoryId, userId, feedPage, feedSize);
                 } else {
                     // 전체 피드 조회
-                    feedPage1 = activityFeedService.getPublicFeeds(userId, feedPage, feedSize);
+                    feedPage1 = feedQueryService.getPublicFeeds(userId, feedPage, feedSize);
                 }
                 return FeedPageData.builder()
                     .content(feedPage1.getContent())

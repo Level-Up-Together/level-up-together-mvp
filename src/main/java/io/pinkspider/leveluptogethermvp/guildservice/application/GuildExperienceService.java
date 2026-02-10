@@ -2,6 +2,7 @@ package io.pinkspider.leveluptogethermvp.guildservice.application;
 
 import io.pinkspider.global.cache.GuildLevelConfigCacheService;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.global.event.GuildLevelUpEvent;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildExperienceResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory;
@@ -14,6 +15,7 @@ import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entit
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ public class GuildExperienceService {
     private final GuildExperienceHistoryRepository historyRepository;
     private final GuildMemberRepository guildMemberRepository;
     private final UserLevelConfigCacheService userLevelConfigCacheService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public GuildExperienceResponse addExperience(Long guildId, int expAmount, GuildExpSourceType sourceType,
@@ -59,6 +62,10 @@ public class GuildExperienceService {
 
         if (levelAfter > levelBefore) {
             log.info("길드 레벨 업! guildId={}, {} -> {}", guildId, levelBefore, levelAfter);
+
+            // 길드 레벨업 피드 프로젝션 이벤트 발행
+            eventPublisher.publishEvent(new GuildLevelUpEvent(
+                contributorId, guildId, guild.getName(), levelAfter));
         }
 
         log.info("길드 경험치 획득: guildId={}, amount={}, total={}, level={}",

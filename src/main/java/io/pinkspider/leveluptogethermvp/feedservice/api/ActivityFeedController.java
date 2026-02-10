@@ -1,13 +1,14 @@
-package io.pinkspider.leveluptogethermvp.userservice.feed.api;
+package io.pinkspider.leveluptogethermvp.feedservice.api;
 
 import io.pinkspider.global.api.ApiResult;
 import io.pinkspider.leveluptogethermvp.userservice.core.annotation.CurrentUser;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.CreateFeedRequest;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.FeedCommentRequest;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.FeedCommentResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.FeedLikeResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedQueryService;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ActivityFeedController {
 
-    private final ActivityFeedService activityFeedService;
+    private final FeedQueryService feedQueryService;
+    private final FeedCommandService feedCommandService;
 
     /**
      * 전체 공개 피드 조회 - categoryId가 있으면 해당 카테고리별 피드 조회
@@ -46,9 +48,9 @@ public class ActivityFeedController {
     ) {
         Page<ActivityFeedResponse> feeds;
         if (categoryId != null) {
-            feeds = activityFeedService.getPublicFeedsByCategory(categoryId, userId, page, size, acceptLanguage);
+            feeds = feedQueryService.getPublicFeedsByCategory(categoryId, userId, page, size, acceptLanguage);
         } else {
-            feeds = activityFeedService.getPublicFeeds(userId, page, size, acceptLanguage);
+            feeds = feedQueryService.getPublicFeeds(userId, page, size, acceptLanguage);
         }
         return ResponseEntity.ok(ApiResult.<Page<ActivityFeedResponse>>builder().value(feeds).build());
     }
@@ -63,7 +65,7 @@ public class ActivityFeedController {
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage
     ) {
-        Page<ActivityFeedResponse> feeds = activityFeedService.getTimelineFeeds(userId, page, size, acceptLanguage);
+        Page<ActivityFeedResponse> feeds = feedQueryService.getTimelineFeeds(userId, page, size, acceptLanguage);
         return ResponseEntity.ok(ApiResult.<Page<ActivityFeedResponse>>builder().value(feeds).build());
     }
 
@@ -78,7 +80,7 @@ public class ActivityFeedController {
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage
     ) {
-        Page<ActivityFeedResponse> feeds = activityFeedService.getUserFeeds(targetUserId, currentUserId, page, size, acceptLanguage);
+        Page<ActivityFeedResponse> feeds = feedQueryService.getUserFeeds(targetUserId, currentUserId, page, size, acceptLanguage);
         return ResponseEntity.ok(ApiResult.<Page<ActivityFeedResponse>>builder().value(feeds).build());
     }
 
@@ -93,7 +95,7 @@ public class ActivityFeedController {
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage
     ) {
-        Page<ActivityFeedResponse> feeds = activityFeedService.getGuildFeeds(guildId, currentUserId, page, size, acceptLanguage);
+        Page<ActivityFeedResponse> feeds = feedQueryService.getGuildFeeds(guildId, currentUserId, page, size, acceptLanguage);
         return ResponseEntity.ok(ApiResult.<Page<ActivityFeedResponse>>builder().value(feeds).build());
     }
 
@@ -108,7 +110,7 @@ public class ActivityFeedController {
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage
     ) {
-        Page<ActivityFeedResponse> feeds = activityFeedService.getFeedsByCategory(category, currentUserId, page, size, acceptLanguage);
+        Page<ActivityFeedResponse> feeds = feedQueryService.getFeedsByCategory(category, currentUserId, page, size, acceptLanguage);
         return ResponseEntity.ok(ApiResult.<Page<ActivityFeedResponse>>builder().value(feeds).build());
     }
 
@@ -133,9 +135,9 @@ public class ActivityFeedController {
 
         Page<ActivityFeedResponse> feeds;
         if (category != null && !category.isEmpty() && !category.equals("전체")) {
-            feeds = activityFeedService.searchFeedsByCategory(keyword.trim(), category, currentUserId, page, size, acceptLanguage);
+            feeds = feedQueryService.searchFeedsByCategory(keyword.trim(), category, currentUserId, page, size, acceptLanguage);
         } else {
-            feeds = activityFeedService.searchFeeds(keyword.trim(), currentUserId, page, size, acceptLanguage);
+            feeds = feedQueryService.searchFeeds(keyword.trim(), currentUserId, page, size, acceptLanguage);
         }
         return ResponseEntity.ok(ApiResult.<Page<ActivityFeedResponse>>builder().value(feeds).build());
     }
@@ -149,7 +151,7 @@ public class ActivityFeedController {
         @CurrentUser(required = false) String currentUserId,
         @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage
     ) {
-        ActivityFeedResponse feed = activityFeedService.getFeed(feedId, currentUserId, acceptLanguage);
+        ActivityFeedResponse feed = feedQueryService.getFeed(feedId, currentUserId, acceptLanguage);
         return ResponseEntity.ok(ApiResult.<ActivityFeedResponse>builder().value(feed).build());
     }
 
@@ -161,7 +163,7 @@ public class ActivityFeedController {
         @CurrentUser String userId,
         @Valid @RequestBody CreateFeedRequest request
     ) {
-        ActivityFeedResponse feed = activityFeedService.createFeed(userId, request);
+        ActivityFeedResponse feed = feedCommandService.createFeed(userId, request);
         return ResponseEntity.ok(ApiResult.<ActivityFeedResponse>builder().value(feed).build());
     }
 
@@ -173,7 +175,7 @@ public class ActivityFeedController {
         @PathVariable Long feedId,
         @CurrentUser String userId
     ) {
-        activityFeedService.deleteFeed(feedId, userId);
+        feedCommandService.deleteFeed(feedId, userId);
         return ResponseEntity.ok(ApiResult.<Void>builder().build());
     }
 
@@ -185,7 +187,7 @@ public class ActivityFeedController {
         @PathVariable Long feedId,
         @CurrentUser String userId
     ) {
-        FeedLikeResponse response = activityFeedService.toggleLike(feedId, userId);
+        FeedLikeResponse response = feedCommandService.toggleLike(feedId, userId);
         return ResponseEntity.ok(ApiResult.<FeedLikeResponse>builder().value(response).build());
     }
 
@@ -200,7 +202,7 @@ public class ActivityFeedController {
         @RequestParam(defaultValue = "20") int size,
         @RequestHeader(value = HttpHeaders.ACCEPT_LANGUAGE, required = false) String acceptLanguage
     ) {
-        Page<FeedCommentResponse> comments = activityFeedService.getComments(feedId, currentUserId, page, size, acceptLanguage);
+        Page<FeedCommentResponse> comments = feedQueryService.getComments(feedId, currentUserId, page, size, acceptLanguage);
         return ResponseEntity.ok(ApiResult.<Page<FeedCommentResponse>>builder().value(comments).build());
     }
 
@@ -213,7 +215,7 @@ public class ActivityFeedController {
         @CurrentUser String userId,
         @Valid @RequestBody FeedCommentRequest request
     ) {
-        FeedCommentResponse comment = activityFeedService.addComment(feedId, userId, request);
+        FeedCommentResponse comment = feedCommandService.addComment(feedId, userId, request);
         return ResponseEntity.ok(ApiResult.<FeedCommentResponse>builder().value(comment).build());
     }
 
@@ -226,7 +228,7 @@ public class ActivityFeedController {
         @PathVariable Long commentId,
         @CurrentUser String userId
     ) {
-        activityFeedService.deleteComment(feedId, commentId, userId);
+        feedCommandService.deleteComment(feedId, commentId, userId);
         return ResponseEntity.ok(ApiResult.<Void>builder().build());
     }
 }

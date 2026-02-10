@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.feed.api;
+package io.pinkspider.leveluptogethermvp.feedservice.api;
 
 import static com.epages.restdocs.apispec.ResourceDocumentation.parameterWithName;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -19,12 +19,13 @@ import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.epages.restdocs.apispec.SimpleType;
 import io.pinkspider.global.component.LmObjectMapper;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.ActivityFeedResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.CreateFeedRequest;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.FeedCommentRequest;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.FeedCommentResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.api.dto.FeedLikeResponse;
-import io.pinkspider.leveluptogethermvp.userservice.feed.application.ActivityFeedService;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
+import io.pinkspider.leveluptogethermvp.feedservice.application.FeedQueryService;
 import io.pinkspider.util.MockUtil;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -68,7 +69,10 @@ class ActivityFeedControllerTest {
     private final LmObjectMapper objectMapper = new LmObjectMapper();
 
     @MockitoBean
-    private ActivityFeedService activityFeedService;
+    private FeedQueryService feedQueryService;
+
+    @MockitoBean
+    private FeedCommandService feedCommandService;
 
     private static final String MOCK_USER_ID = "test-user-123";
 
@@ -81,7 +85,7 @@ class ActivityFeedControllerTest {
         Page<ActivityFeedResponse> responses = new PageImpl<>(
             List.of(feedResponse), PageRequest.of(0, 20), 1);
 
-        when(activityFeedService.getPublicFeeds(anyString(), anyInt(), anyInt(), any()))
+        when(feedQueryService.getPublicFeeds(anyString(), anyInt(), anyInt(), any()))
             .thenReturn(responses);
 
         // when
@@ -180,7 +184,7 @@ class ActivityFeedControllerTest {
         Page<ActivityFeedResponse> responses = new PageImpl<>(
             List.of(feedResponse), PageRequest.of(0, 20), 1);
 
-        when(activityFeedService.getTimelineFeeds(anyString(), anyInt(), anyInt(), any()))
+        when(feedQueryService.getTimelineFeeds(anyString(), anyInt(), anyInt(), any()))
             .thenReturn(responses);
 
         // when
@@ -278,7 +282,7 @@ class ActivityFeedControllerTest {
         ActivityFeedResponse response = MockUtil.readJsonFileToClass(
             "fixture/feed/activityFeedResponse.json", ActivityFeedResponse.class);
 
-        when(activityFeedService.getFeed(anyLong(), anyString(), any()))
+        when(feedQueryService.getFeed(anyLong(), anyString(), any()))
             .thenReturn(response);
 
         // when
@@ -349,7 +353,7 @@ class ActivityFeedControllerTest {
         Long feedId = 1L;
         FeedLikeResponse mockResponse = new FeedLikeResponse(true, 5);
 
-        when(activityFeedService.toggleLike(anyLong(), anyString()))
+        when(feedCommandService.toggleLike(anyLong(), anyString()))
             .thenReturn(mockResponse);
 
         // when
@@ -394,7 +398,7 @@ class ActivityFeedControllerTest {
         Page<FeedCommentResponse> responses = new PageImpl<>(
             List.of(commentResponse), PageRequest.of(0, 20), 1);
 
-        when(activityFeedService.getComments(anyLong(), any(), anyInt(), anyInt(), any()))
+        when(feedQueryService.getComments(anyLong(), any(), anyInt(), anyInt(), any()))
             .thenReturn(responses);
 
         // when
@@ -475,7 +479,7 @@ class ActivityFeedControllerTest {
         FeedCommentResponse response = MockUtil.readJsonFileToClass(
             "fixture/feed/feedCommentResponse.json", FeedCommentResponse.class);
 
-        when(activityFeedService.addComment(anyLong(), anyString(), any(FeedCommentRequest.class)))
+        when(feedCommandService.addComment(anyLong(), anyString(), any(FeedCommentRequest.class)))
             .thenReturn(response);
 
         // when
@@ -531,7 +535,7 @@ class ActivityFeedControllerTest {
         Long feedId = 1L;
         Long commentId = 1L;
 
-        doNothing().when(activityFeedService).deleteComment(anyLong(), anyLong(), anyString());
+        doNothing().when(feedCommandService).deleteComment(anyLong(), anyLong(), anyString());
 
         // when
         ResultActions resultActions = mockMvc.perform(
@@ -569,7 +573,7 @@ class ActivityFeedControllerTest {
         // given
         Long feedId = 1L;
 
-        doNothing().when(activityFeedService).deleteFeed(anyLong(), anyString());
+        doNothing().when(feedCommandService).deleteFeed(anyLong(), anyString());
 
         // when
         ResultActions resultActions = mockMvc.perform(
@@ -610,7 +614,7 @@ class ActivityFeedControllerTest {
         Page<ActivityFeedResponse> responses = new PageImpl<>(
             List.of(feedResponse), PageRequest.of(0, 20), 1);
 
-        when(activityFeedService.getGuildFeeds(anyLong(), anyString(), anyInt(), anyInt(), any()))
+        when(feedQueryService.getGuildFeeds(anyLong(), anyString(), anyInt(), anyInt(), any()))
             .thenReturn(responses);
 
         // when
@@ -712,7 +716,7 @@ class ActivityFeedControllerTest {
         Page<ActivityFeedResponse> responses = new PageImpl<>(
             List.of(feedResponse), PageRequest.of(0, 20), 1);
 
-        when(activityFeedService.searchFeeds(anyString(), anyString(), anyInt(), anyInt(), any()))
+        when(feedQueryService.searchFeeds(anyString(), anyString(), anyInt(), anyInt(), any()))
             .thenReturn(responses);
 
         // when
@@ -814,7 +818,7 @@ class ActivityFeedControllerTest {
         Page<ActivityFeedResponse> responses = new PageImpl<>(
             List.of(feedResponse), PageRequest.of(0, 20), 1);
 
-        when(activityFeedService.searchFeedsByCategory(anyString(), anyString(), anyString(), anyInt(), anyInt(), any()))
+        when(feedQueryService.searchFeedsByCategory(anyString(), anyString(), anyString(), anyInt(), anyInt(), any()))
             .thenReturn(responses);
 
         // when
