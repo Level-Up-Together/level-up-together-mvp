@@ -7,16 +7,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.pinkspider.global.cache.GuildLevelConfigCacheService;
 import io.pinkspider.global.test.TestReflectionUtils;
 
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildExperienceResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
@@ -43,7 +43,7 @@ class GuildExperienceServiceTest {
     private GuildRepository guildRepository;
 
     @Mock
-    private GuildLevelConfigRepository levelConfigRepository;
+    private GuildLevelConfigCacheService guildLevelConfigCacheService;
 
     @Mock
     private GuildExperienceHistoryRepository historyRepository;
@@ -93,8 +93,8 @@ class GuildExperienceServiceTest {
         void addExperience_success() {
             // given
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findAllByOrderByLevelAsc()).thenReturn(List.of(testLevelConfig));
-            when(levelConfigRepository.findByLevel(1)).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(testLevelConfig);
             when(historyRepository.save(any(GuildExperienceHistory.class))).thenAnswer(inv -> inv.getArgument(0));
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
@@ -140,8 +140,8 @@ class GuildExperienceServiceTest {
                 .build();
 
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findAllByOrderByLevelAsc()).thenReturn(List.of(testLevelConfig, level2Config));
-            when(levelConfigRepository.findByLevel(any())).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(testLevelConfig, level2Config));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(testLevelConfig);
             when(historyRepository.save(any(GuildExperienceHistory.class))).thenAnswer(inv -> inv.getArgument(0));
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
@@ -165,8 +165,8 @@ class GuildExperienceServiceTest {
 
             // 레벨1 config만 있고 레벨2 config는 없음
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findAllByOrderByLevelAsc()).thenReturn(List.of(testLevelConfig)); // level 1만
-            when(levelConfigRepository.findByLevel(any())).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(testLevelConfig)); // level 1만
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(testLevelConfig);
             when(historyRepository.save(any(GuildExperienceHistory.class))).thenAnswer(inv -> inv.getArgument(0));
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
@@ -193,7 +193,7 @@ class GuildExperienceServiceTest {
         void getGuildExperience_success() {
             // given
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findByLevel(1)).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(testLevelConfig);
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
 
@@ -260,7 +260,7 @@ class GuildExperienceServiceTest {
             testGuild.addExperience(500);
 
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findByLevel(any())).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(testLevelConfig);
             when(historyRepository.save(any(GuildExperienceHistory.class))).thenAnswer(inv -> inv.getArgument(0));
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
@@ -290,8 +290,8 @@ class GuildExperienceServiceTest {
                 .build();
 
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findAllByOrderByLevelAsc()).thenReturn(List.of(testLevelConfig, level2Config));
-            when(levelConfigRepository.findByLevel(any())).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(testLevelConfig, level2Config));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(testLevelConfig);
             when(historyRepository.save(any(GuildExperienceHistory.class))).thenAnswer(inv -> inv.getArgument(0));
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
@@ -325,8 +325,8 @@ class GuildExperienceServiceTest {
                 .build();
 
             when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(levelConfigRepository.findAllByOrderByLevelAsc()).thenReturn(List.of(testLevelConfig, level2Config));
-            when(levelConfigRepository.findByLevel(any())).thenReturn(Optional.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(testLevelConfig, level2Config));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(testLevelConfig);
             when(historyRepository.save(any(GuildExperienceHistory.class))).thenAnswer(inv -> inv.getArgument(0));
             when(guildMemberRepository.countActiveMembers(1L)).thenReturn(5L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(any())).thenReturn(UserLevelConfig.builder().level(1).requiredExp(100).build());
@@ -364,7 +364,7 @@ class GuildExperienceServiceTest {
         @DisplayName("모든 레벨 설정을 조회한다")
         void getAllLevelConfigs_success() {
             // given
-            when(levelConfigRepository.findAllByOrderByLevelAsc()).thenReturn(List.of(testLevelConfig));
+            when(guildLevelConfigCacheService.getAllLevelConfigs()).thenReturn(List.of(testLevelConfig));
 
             // when
             List<GuildLevelConfig> configs = guildExperienceService.getAllLevelConfigs();
@@ -378,8 +378,11 @@ class GuildExperienceServiceTest {
         @DisplayName("레벨 설정을 생성하거나 업데이트한다")
         void createOrUpdateLevelConfig_success() {
             // given
-            when(levelConfigRepository.findByLevel(5)).thenReturn(Optional.empty());
-            when(levelConfigRepository.save(any(GuildLevelConfig.class))).thenAnswer(inv -> inv.getArgument(0));
+            GuildLevelConfig newConfig = GuildLevelConfig.builder()
+                .level(5).requiredExp(2000).cumulativeExp(5000).maxMembers(60)
+                .title("상급 길드").description("상급 길드입니다").build();
+            when(guildLevelConfigCacheService.createOrUpdateLevelConfig(5, 2000, 5000, 60, "상급 길드", "상급 길드입니다"))
+                .thenReturn(newConfig);
 
             // when
             GuildLevelConfig config = guildExperienceService.createOrUpdateLevelConfig(
@@ -390,7 +393,7 @@ class GuildExperienceServiceTest {
             assertThat(config).isNotNull();
             assertThat(config.getLevel()).isEqualTo(5);
             assertThat(config.getRequiredExp()).isEqualTo(2000);
-            verify(levelConfigRepository).save(any(GuildLevelConfig.class));
+            verify(guildLevelConfigCacheService).createOrUpdateLevelConfig(5, 2000, 5000, 60, "상급 길드", "상급 길드입니다");
         }
     }
 }

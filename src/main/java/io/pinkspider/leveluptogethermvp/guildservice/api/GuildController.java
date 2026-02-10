@@ -19,7 +19,7 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildUpdateRequest;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.JoinRequestProcessRequest;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.TransferMasterRequest;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

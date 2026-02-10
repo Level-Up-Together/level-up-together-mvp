@@ -4,12 +4,12 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildCreateReque
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildUpdateRequest;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildLevelConfig;
+import io.pinkspider.global.cache.GuildLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildJoinType;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRole;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberStatus;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.global.event.GuildJoinedEvent;
@@ -35,7 +35,7 @@ public class GuildService {
 
     private final GuildRepository guildRepository;
     private final GuildMemberRepository guildMemberRepository;
-    private final GuildLevelConfigRepository levelConfigRepository;
+    private final GuildLevelConfigCacheService guildLevelConfigCacheService;
     private final MissionCategoryService missionCategoryService;
     private final ApplicationEventPublisher eventPublisher;
     private final GuildHeadquartersService guildHeadquartersService;
@@ -82,9 +82,8 @@ public class GuildService {
         }
 
         // 레벨 1 설정에서 maxMembers 가져오기 (Admin에서 설정한 값 사용)
-        int defaultMaxMembers = levelConfigRepository.findByLevel(1)
-            .map(GuildLevelConfig::getMaxMembers)
-            .orElse(10); // 설정이 없으면 기본값 10
+        GuildLevelConfig level1Config = guildLevelConfigCacheService.getLevelConfigByLevel(1);
+        int defaultMaxMembers = level1Config != null ? level1Config.getMaxMembers() : 10; // 설정이 없으면 기본값 10
 
         Guild guild = Guild.builder()
             .name(request.getName())

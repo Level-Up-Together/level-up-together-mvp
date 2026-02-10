@@ -1,13 +1,13 @@
 package io.pinkspider.leveluptogethermvp.guildservice.application;
 
+import io.pinkspider.global.cache.GuildLevelConfigCacheService;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildExperienceResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
@@ -22,11 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional(readOnly = true, transactionManager = "guildTransactionManager")
 public class GuildExperienceService {
 
     private final GuildRepository guildRepository;
-    private final GuildLevelConfigRepository guildLevelConfigRepository;
+    private final GuildLevelConfigCacheService guildLevelConfigCacheService;
     private final GuildExperienceHistoryRepository historyRepository;
     private final GuildMemberRepository guildMemberRepository;
     private final UserLevelConfigCacheService userLevelConfigCacheService;
@@ -79,7 +79,7 @@ public class GuildExperienceService {
     }
 
     public List<GuildLevelConfig> getAllLevelConfigs() {
-        return guildLevelConfigRepository.findAllByOrderByLevelAsc();
+        return guildLevelConfigCacheService.getAllLevelConfigs();
     }
 
     /**
@@ -152,7 +152,7 @@ public class GuildExperienceService {
         if (levelAfter < levelBefore) {
             log.info("길드 레벨 다운: guildId={}, {} -> {}", guildId, levelBefore, levelAfter);
             // 레벨 다운 시 맥스 멤버 수 조정
-            GuildLevelConfig newLevelConfig = guildLevelConfigRepository.findByLevel(levelAfter).orElse(null);
+            GuildLevelConfig newLevelConfig = guildLevelConfigCacheService.getLevelConfigByLevel(levelAfter);
             if (newLevelConfig != null) {
                 guild.updateMaxMembersByLevel(newLevelConfig.getMaxMembers());
             }
@@ -168,7 +168,7 @@ public class GuildExperienceService {
      * 레벨 다운 처리 (경험치 차감으로 인한)
      */
     private void processLevelDown(Guild guild, int targetTotalExp) {
-        List<GuildLevelConfig> levelConfigs = guildLevelConfigRepository.findAllByOrderByLevelAsc();
+        List<GuildLevelConfig> levelConfigs = guildLevelConfigCacheService.getAllLevelConfigs();
 
         if (targetTotalExp <= 0) {
             guild.setCurrentLevel(1);
@@ -201,27 +201,17 @@ public class GuildExperienceService {
         guild.setCurrentExp(Math.max(0, remainingExp));
     }
 
-    @Transactional
     public GuildLevelConfig createOrUpdateLevelConfig(Integer level, Integer requiredExp,
                                                       Integer cumulativeExp, Integer maxMembers,
                                                       String title, String description) {
-        GuildLevelConfig config = guildLevelConfigRepository.findByLevel(level)
-            .orElse(GuildLevelConfig.builder().level(level).build());
-
-        config.setRequiredExp(requiredExp);
-        config.setCumulativeExp(cumulativeExp);
-        config.setMaxMembers(maxMembers);
-        config.setTitle(title);
-        config.setDescription(description);
-
-        return guildLevelConfigRepository.save(config);
+        return guildLevelConfigCacheService.createOrUpdateLevelConfig(level, requiredExp, cumulativeExp, maxMembers, title, description);
     }
 
     /**
      * 길드 레벨업 처리 레벨업 조건: 인원수 * 유저 레벨 필요 경험치
      */
     private void processLevelUp(Guild guild) {
-        List<GuildLevelConfig> guildLevelConfigs = guildLevelConfigRepository.findAllByOrderByLevelAsc();
+        List<GuildLevelConfig> guildLevelConfigs = guildLevelConfigCacheService.getAllLevelConfigs();
 
         while (true) {
             int currentLevel = guild.getCurrentLevel();
@@ -271,9 +261,8 @@ public class GuildExperienceService {
         // 길드 레벨업에 필요한 경험치 = 인원수 * 유저 레벨 필요 경험치
         int requiredExp = calculateGuildRequiredExp(guild.getId(), guild.getCurrentLevel());
 
-        String levelTitle = guildLevelConfigRepository.findByLevel(guild.getCurrentLevel())
-            .map(GuildLevelConfig::getTitle)
-            .orElse("Lv." + guild.getCurrentLevel());
+        GuildLevelConfig levelConfig = guildLevelConfigCacheService.getLevelConfigByLevel(guild.getCurrentLevel());
+        String levelTitle = levelConfig != null ? levelConfig.getTitle() : "Lv." + guild.getCurrentLevel();
 
         return GuildExperienceResponse.from(guild, requiredExp, levelTitle);
     }

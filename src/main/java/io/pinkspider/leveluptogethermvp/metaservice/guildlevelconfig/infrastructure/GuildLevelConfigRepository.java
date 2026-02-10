@@ -1,6 +1,6 @@
-package io.pinkspider.leveluptogethermvp.guildservice.infrastructure;
+package io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.infrastructure;
 
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

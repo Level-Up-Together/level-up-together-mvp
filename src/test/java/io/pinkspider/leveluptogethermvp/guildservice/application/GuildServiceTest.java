@@ -20,13 +20,13 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildCreateReque
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildUpdateRequest;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildLevelConfig;
+import io.pinkspider.global.cache.GuildLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildJoinType;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRole;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberStatus;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
@@ -55,7 +55,7 @@ class GuildServiceTest {
     private GuildMemberRepository guildMemberRepository;
 
     @Mock
-    private GuildLevelConfigRepository levelConfigRepository;
+    private GuildLevelConfigCacheService guildLevelConfigCacheService;
 
     @Mock
     private MissionCategoryService missionCategoryService;
@@ -143,8 +143,8 @@ class GuildServiceTest {
             when(missionCategoryService.getCategory(testCategoryId)).thenReturn(testCategory);
             when(guildMemberRepository.hasActiveGuildMembershipInCategory(testUserId, testCategoryId)).thenReturn(false);
             when(guildRepository.existsByNameAndIsActiveTrue("새 길드")).thenReturn(false);
-            when(levelConfigRepository.findByLevel(1)).thenReturn(Optional.of(
-                GuildLevelConfig.builder().level(1).maxMembers(20).build()));
+            when(guildLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(
+                GuildLevelConfig.builder().level(1).maxMembers(20).build());
             when(guildRepository.save(any(Guild.class))).thenAnswer(invocation -> {
                 Guild guild = invocation.getArgument(0);
                 setId(guild, 1L);
