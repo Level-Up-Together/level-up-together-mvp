@@ -12,11 +12,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AttendanceRecord;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AttendanceRewardConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AttendanceRewardType;
+import io.pinkspider.global.cache.AttendanceRewardConfigCacheService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.AttendanceRecordRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.AttendanceRewardConfigRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.entity.AttendanceRewardConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.enums.AttendanceRewardType;
 import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.AttendanceCheckInResponse;
 import io.pinkspider.leveluptogethermvp.userservice.attendance.domain.dto.MonthlyAttendanceResponse;
 import io.pinkspider.leveluptogethermvp.userservice.experience.application.UserExperienceService;
@@ -38,7 +38,7 @@ class AttendanceServiceTest {
     private AttendanceRecordRepository attendanceRecordRepository;
 
     @Mock
-    private AttendanceRewardConfigRepository rewardConfigRepository;
+    private AttendanceRewardConfigCacheService rewardConfigCacheService;
 
     @Mock
     private UserExperienceService userExperienceService;
@@ -71,11 +71,11 @@ class AttendanceServiceTest {
                 .thenReturn(Optional.empty());
             when(attendanceRecordRepository.findByUserIdAndAttendanceDate(TEST_USER_ID, today.minusDays(1)))
                 .thenReturn(Optional.empty());
-            when(rewardConfigRepository.findByRewardTypeAndIsActiveTrue(AttendanceRewardType.DAILY))
-                .thenReturn(Optional.of(AttendanceRewardConfig.builder()
+            when(rewardConfigCacheService.getConfigByRewardType(AttendanceRewardType.DAILY))
+                .thenReturn(AttendanceRewardConfig.builder()
                     .rewardType(AttendanceRewardType.DAILY)
                     .rewardExp(10)
-                    .build()));
+                    .build());
             when(attendanceRecordRepository.saveAndFlush(any(AttendanceRecord.class))).thenReturn(savedRecord);
 
             // when
@@ -122,11 +122,11 @@ class AttendanceServiceTest {
                 .thenReturn(Optional.empty());
             when(attendanceRecordRepository.findByUserIdAndAttendanceDate(TEST_USER_ID, yesterday))
                 .thenReturn(Optional.of(yesterdayRecord));
-            when(rewardConfigRepository.findByRewardTypeAndIsActiveTrue(AttendanceRewardType.DAILY))
-                .thenReturn(Optional.of(AttendanceRewardConfig.builder()
+            when(rewardConfigCacheService.getConfigByRewardType(AttendanceRewardType.DAILY))
+                .thenReturn(AttendanceRewardConfig.builder()
                     .rewardType(AttendanceRewardType.DAILY)
                     .rewardExp(10)
-                    .build()));
+                    .build());
             when(attendanceRecordRepository.saveAndFlush(any(AttendanceRecord.class))).thenReturn(savedRecord);
 
             // when
@@ -152,16 +152,16 @@ class AttendanceServiceTest {
                 .thenReturn(Optional.empty());
             when(attendanceRecordRepository.findByUserIdAndAttendanceDate(TEST_USER_ID, yesterday))
                 .thenReturn(Optional.of(yesterdayRecord));
-            when(rewardConfigRepository.findByRewardTypeAndIsActiveTrue(AttendanceRewardType.DAILY))
-                .thenReturn(Optional.of(AttendanceRewardConfig.builder()
+            when(rewardConfigCacheService.getConfigByRewardType(AttendanceRewardType.DAILY))
+                .thenReturn(AttendanceRewardConfig.builder()
                     .rewardType(AttendanceRewardType.DAILY)
                     .rewardExp(10)
-                    .build()));
-            when(rewardConfigRepository.findByRewardTypeAndIsActiveTrue(AttendanceRewardType.CONSECUTIVE_3))
-                .thenReturn(Optional.of(AttendanceRewardConfig.builder()
+                    .build());
+            when(rewardConfigCacheService.getConfigByRewardType(AttendanceRewardType.CONSECUTIVE_3))
+                .thenReturn(AttendanceRewardConfig.builder()
                     .rewardType(AttendanceRewardType.CONSECUTIVE_3)
                     .rewardExp(20)
-                    .build()));
+                    .build());
             when(attendanceRecordRepository.saveAndFlush(any(AttendanceRecord.class))).thenReturn(savedRecord);
 
             // when
@@ -337,29 +337,13 @@ class AttendanceServiceTest {
     class InitializeDefaultRewardConfigsTest {
 
         @Test
-        @DisplayName("보상 설정이 없으면 기본 설정을 초기화한다")
-        void initializeDefaultRewardConfigs_empty() {
-            // given
-            when(rewardConfigRepository.count()).thenReturn(0L);
-
+        @DisplayName("캐시 서비스에 위임한다")
+        void initializeDefaultRewardConfigs_delegatesToCacheService() {
             // when
             attendanceService.initializeDefaultRewardConfigs();
 
             // then
-            verify(rewardConfigRepository, org.mockito.Mockito.atLeastOnce()).save(any(AttendanceRewardConfig.class));
-        }
-
-        @Test
-        @DisplayName("보상 설정이 이미 있으면 초기화하지 않는다")
-        void initializeDefaultRewardConfigs_alreadyExists() {
-            // given
-            when(rewardConfigRepository.count()).thenReturn(5L);
-
-            // when
-            attendanceService.initializeDefaultRewardConfigs();
-
-            // then
-            verify(rewardConfigRepository, never()).save(any());
+            verify(rewardConfigCacheService).initializeDefaultRewardConfigs();
         }
     }
 }

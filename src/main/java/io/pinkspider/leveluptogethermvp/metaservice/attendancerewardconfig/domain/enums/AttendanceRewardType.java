@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums;
+package io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

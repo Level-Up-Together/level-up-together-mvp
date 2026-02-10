@@ -1,7 +1,7 @@
-package io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity;
+package io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.entity;
 
 import io.pinkspider.global.domain.auditentity.LocalDateTimeBaseEntity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AttendanceRewardType;
+import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.enums.AttendanceRewardType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

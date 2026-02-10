@@ -1,7 +1,7 @@
-package io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure;
+package io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.infrastructure;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AttendanceRewardConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.AttendanceRewardType;
+import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.entity.AttendanceRewardConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.enums.AttendanceRewardType;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
