@@ -1,7 +1,7 @@
 package io.pinkspider.global.cache;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true, transactionManager = "gamificationTransactionManager")
+@Transactional(readOnly = true, transactionManager = "metaTransactionManager")
 public class UserLevelConfigCacheService {
 
     private final UserLevelConfigRepository userLevelConfigRepository;

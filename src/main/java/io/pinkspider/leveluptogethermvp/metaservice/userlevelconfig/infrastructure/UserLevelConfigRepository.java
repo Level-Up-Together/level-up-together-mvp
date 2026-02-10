@@ -1,6 +1,6 @@
-package io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.infrastructure;
+package io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

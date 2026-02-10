@@ -20,7 +20,7 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperie
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.userlevelconfig.domain.entity.UserLevelConfig;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
