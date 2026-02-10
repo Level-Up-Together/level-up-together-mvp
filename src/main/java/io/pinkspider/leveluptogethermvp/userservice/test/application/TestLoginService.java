@@ -1,7 +1,7 @@
 package io.pinkspider.leveluptogethermvp.userservice.test.application;
 
 import io.pinkspider.global.util.CryptoUtils;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.userservice.core.util.JwtUtil;
 import io.pinkspider.leveluptogethermvp.userservice.oauth.application.MultiDeviceTokenService;
 import io.pinkspider.leveluptogethermvp.userservice.oauth.components.DeviceIdentifier;

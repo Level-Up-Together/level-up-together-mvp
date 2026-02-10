@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application;
 
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,8 +16,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.Exper
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserStatsRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.LevelRankingResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.RankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.LevelRankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.RankingResponse;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.util.Collections;

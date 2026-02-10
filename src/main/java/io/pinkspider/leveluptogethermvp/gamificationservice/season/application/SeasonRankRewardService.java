@@ -12,7 +12,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructur
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleAcquisitionType;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.TitleRepository;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.TitleResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.TitleResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

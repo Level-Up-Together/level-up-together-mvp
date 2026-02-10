@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;

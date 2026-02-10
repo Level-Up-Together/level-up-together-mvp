@@ -1,7 +1,7 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application;
 
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.LevelRankingResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.RankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.LevelRankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.RankingResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;

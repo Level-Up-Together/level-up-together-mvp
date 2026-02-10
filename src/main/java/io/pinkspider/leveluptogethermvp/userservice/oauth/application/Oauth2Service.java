@@ -18,7 +18,7 @@ import io.pinkspider.leveluptogethermvp.userservice.oauth.domain.dto.jwt.CreateJ
 import io.pinkspider.leveluptogethermvp.userservice.oauth.domain.dto.jwt.OAuth2LoginUriResponseDto;
 import io.pinkspider.leveluptogethermvp.userservice.oauth.domain.dto.kakao.KakaoUserInfo;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.enums.NotificationType;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.userservice.geoip.GeoIpService;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.leveluptogethermvp.userservice.geoip.GeoIpService.GeoIpResult;

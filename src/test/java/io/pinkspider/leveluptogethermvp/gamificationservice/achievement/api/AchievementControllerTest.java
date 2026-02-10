@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.api;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.api;
 
 import static com.epages.restdocs.apispec.ResourceDocumentation.parameterWithName;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -17,14 +17,14 @@ import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.epages.restdocs.apispec.SimpleType;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.AchievementResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.TitleResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.UserAchievementResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.AchievementResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.TitleResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserAchievementResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.stats.domain.dto.UserStatsResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.UserTitleResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserTitleResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleAcquisitionType;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePosition;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;

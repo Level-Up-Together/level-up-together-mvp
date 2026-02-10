@@ -4,7 +4,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.event.api.dto.EventR
 import io.pinkspider.leveluptogethermvp.gamificationservice.event.application.EventService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.application.SeasonRankingService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse.FeedPageData;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse.GuildPageData;

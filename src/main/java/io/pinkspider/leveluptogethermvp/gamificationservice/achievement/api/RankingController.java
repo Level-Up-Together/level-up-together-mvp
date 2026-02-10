@@ -1,9 +1,9 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.api;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.api;
 
 import io.pinkspider.global.api.ApiResult;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.RankingService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.LevelRankingResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.RankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.RankingService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.LevelRankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.RankingResponse;
 import io.pinkspider.leveluptogethermvp.userservice.core.annotation.CurrentUser;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

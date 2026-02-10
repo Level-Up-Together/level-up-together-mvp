@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.api;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.api;
 
 import static com.epages.restdocs.apispec.ResourceDocumentation.parameterWithName;
 import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
@@ -16,8 +16,8 @@ import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.epages.restdocs.apispec.SimpleType;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.application.RankingService;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.RankingResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.RankingService;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.RankingResponse;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

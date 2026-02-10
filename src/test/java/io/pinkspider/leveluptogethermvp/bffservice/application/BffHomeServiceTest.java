@@ -70,7 +70,7 @@ class BffHomeServiceTest {
     private io.pinkspider.leveluptogethermvp.gamificationservice.event.application.EventService eventService;
 
     @Mock
-    private io.pinkspider.leveluptogethermvp.userservice.achievement.application.AchievementService achievementService;
+    private io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService achievementService;
 
     // 테스트용 동기 Executor - CompletableFuture가 즉시 실행되도록 함
     private final Executor directExecutor = Runnable::run;

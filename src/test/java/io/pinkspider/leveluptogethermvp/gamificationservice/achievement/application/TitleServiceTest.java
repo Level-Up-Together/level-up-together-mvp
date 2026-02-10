@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application;
 
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,8 +18,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitlePo
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.TitleRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.TitleResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.UserTitleResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.TitleResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserTitleResponse;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;

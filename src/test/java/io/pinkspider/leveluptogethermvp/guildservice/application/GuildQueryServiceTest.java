@@ -67,7 +67,7 @@ class GuildQueryServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private io.pinkspider.leveluptogethermvp.userservice.achievement.application.TitleService titleService;
+    private io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService titleService;
 
     @Mock
     private ReportService reportService;

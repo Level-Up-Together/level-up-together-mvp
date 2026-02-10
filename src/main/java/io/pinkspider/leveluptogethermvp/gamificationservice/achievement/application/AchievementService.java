@@ -1,11 +1,11 @@
-package io.pinkspider.leveluptogethermvp.userservice.achievement.application;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application;
 
 import static io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory.DEFAULT_CATEGORY_NAME;
 
 import io.pinkspider.global.cache.AchievementCacheService;
 import io.pinkspider.global.event.AchievementCompletedEvent;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.AchievementResponse;
-import io.pinkspider.leveluptogethermvp.userservice.achievement.domain.dto.UserAchievementResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.AchievementResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserAchievementResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strategy.AchievementCheckStrategy;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strategy.AchievementCheckStrategyRegistry;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
