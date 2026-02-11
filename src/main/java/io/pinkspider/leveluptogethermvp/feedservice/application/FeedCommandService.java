@@ -11,7 +11,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
-import io.pinkspider.leveluptogethermvp.feedservice.domain.dto.UserTitleInfo;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedLike;
@@ -41,7 +41,7 @@ public class FeedCommandService {
     private final UserExistsCacheService userExistsCacheService;
     private final UserProfileCacheService userProfileCacheService;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserTitleInfoHelper userTitleInfoHelper;
+    private final TitleService titleService;
 
     /**
      * 시스템에서 자동 생성되는 활동 피드
@@ -95,9 +95,9 @@ public class FeedCommandService {
         UserProfileCache userProfile = userProfileCacheService.getUserProfile(userId);
 
         // 사용자 장착 칭호 정보 조회
-        UserTitleInfo titleInfo = userTitleInfoHelper.getUserEquippedTitleInfo(userId);
-        String userTitle = titleInfo.titleName();
-        TitleRarity userTitleRarity = titleInfo.titleRarity();
+        TitleService.TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);
+        String userTitle = titleInfo.name();
+        TitleRarity userTitleRarity = titleInfo.rarity();
         String userTitleColorCode = titleInfo.colorCode();
 
         ActivityFeed feed = ActivityFeed.builder()

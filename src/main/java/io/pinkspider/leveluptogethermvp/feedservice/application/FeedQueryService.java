@@ -19,7 +19,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedLikeRepos
 import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendCacheService;
-import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.FriendshipRepository;
+import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import java.time.LocalDate;
@@ -49,7 +49,7 @@ public class FeedQueryService {
     private final ActivityFeedRepository activityFeedRepository;
     private final FeedLikeRepository feedLikeRepository;
     private final FeedCommentRepository feedCommentRepository;
-    private final FriendshipRepository friendshipRepository;
+    private final FriendService friendService;
     private final FriendCacheService friendCacheService;
     private final FeaturedContentQueryService featuredContentQueryService;
     private final UserProfileCacheService userProfileCacheService;
@@ -277,7 +277,7 @@ public class FeedQueryService {
         Set<Long> likedFeedIds = getLikedFeedIds(currentUserId, feeds.getContent());
 
         // 친구 여부에 따라 visibility 필터링
-        boolean isFriend = friendshipRepository.areFriends(currentUserId, targetUserId);
+        boolean isFriend = friendService.areFriends(currentUserId, targetUserId);
         boolean isSelf = currentUserId.equals(targetUserId);
 
         // 신고 상태 일괄 조회

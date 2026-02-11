@@ -25,7 +25,7 @@ import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendCacheService;
-import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.FriendshipRepository;
+import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
@@ -58,7 +58,7 @@ class FeedQueryServiceTest {
     private FeedCommentRepository feedCommentRepository;
 
     @Mock
-    private FriendshipRepository friendshipRepository;
+    private FriendService friendService;
 
     @Mock
     private FriendCacheService friendCacheService;
@@ -185,7 +185,7 @@ class FeedQueryServiceTest {
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
                 .thenReturn(Collections.emptyList());
-            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
+            when(friendService.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
 
             // when
             Page<ActivityFeedResponse> result = feedQueryService.getUserFeeds(OTHER_USER_ID, TEST_USER_ID, 0, 10);
@@ -408,7 +408,7 @@ class FeedQueryServiceTest {
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
                 .thenReturn(Collections.emptyList());
-            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
+            when(friendService.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
             when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
 
             // when
@@ -679,7 +679,7 @@ class FeedQueryServiceTest {
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
                 .thenReturn(Collections.emptyList());
-            when(friendshipRepository.areFriends(TEST_USER_ID, TEST_USER_ID)).thenReturn(false);
+            when(friendService.areFriends(TEST_USER_ID, TEST_USER_ID)).thenReturn(false);
             when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
 
             // when
@@ -709,7 +709,7 @@ class FeedQueryServiceTest {
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
                 .thenReturn(Collections.emptyList());
-            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(true);
+            when(friendService.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(true);
             when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
 
             // when
@@ -739,7 +739,7 @@ class FeedQueryServiceTest {
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
                 .thenReturn(Collections.emptyList());
-            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
+            when(friendService.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
             when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
 
             // when
@@ -856,7 +856,7 @@ class FeedQueryServiceTest {
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
                 .thenReturn(Collections.emptyList());
-            when(friendshipRepository.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
+            when(friendService.areFriends(TEST_USER_ID, OTHER_USER_ID)).thenReturn(false);
 
             Map<String, Boolean> underReviewMap = new HashMap<>();
             underReviewMap.put("1", true);

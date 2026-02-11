@@ -18,7 +18,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
-import io.pinkspider.leveluptogethermvp.feedservice.domain.dto.UserTitleInfo;
+import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedLike;
@@ -63,7 +63,7 @@ class FeedCommandServiceTest {
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private UserTitleInfoHelper userTitleInfoHelper;
+    private TitleService titleService;
 
     @InjectMocks
     private FeedCommandService feedCommandService;
@@ -142,7 +142,7 @@ class FeedCommandServiceTest {
 
             when(userExistsCacheService.existsById(TEST_USER_ID)).thenReturn(true);
             when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileCache(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 5, null, null, null));
-            when(userTitleInfoHelper.getUserEquippedTitleInfo(TEST_USER_ID)).thenReturn(UserTitleInfo.empty());
+            when(titleService.getCombinedEquippedTitleInfo(TEST_USER_ID)).thenReturn(new TitleService.TitleInfo(null, null, null));
             when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(savedFeed);
 
             // when
