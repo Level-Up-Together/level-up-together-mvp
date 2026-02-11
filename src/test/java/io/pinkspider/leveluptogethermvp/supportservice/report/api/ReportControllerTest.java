@@ -16,7 +16,7 @@ import io.pinkspider.global.component.LmObjectMapper;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportCreateRequest;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportResponse;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import java.time.LocalDateTime;

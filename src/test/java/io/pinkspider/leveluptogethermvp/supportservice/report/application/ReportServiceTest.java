@@ -11,7 +11,7 @@ import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.global.test.TestReflectionUtils;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportCreateRequest;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportResponse;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.core.feignclient.AdminReportApiResponse;
 import io.pinkspider.leveluptogethermvp.supportservice.report.core.feignclient.AdminReportCheckResponse;

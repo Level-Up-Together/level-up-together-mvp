@@ -32,7 +32,7 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostCommentRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import java.time.LocalDateTime;
 import java.util.Collections;

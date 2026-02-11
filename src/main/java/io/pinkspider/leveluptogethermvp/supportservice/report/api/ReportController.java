@@ -3,7 +3,7 @@ package io.pinkspider.leveluptogethermvp.supportservice.report.api;
 import io.pinkspider.global.api.ApiResult;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportCreateRequest;
 import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportResponse;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import jakarta.validation.Valid;
 import java.security.Principal;

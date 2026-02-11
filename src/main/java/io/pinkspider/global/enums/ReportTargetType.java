@@ -1,4 +1,4 @@
-package io.pinkspider.leveluptogethermvp.supportservice.report.api.dto;
+package io.pinkspider.global.enums;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

@@ -1,9 +1,8 @@
 package io.pinkspider.leveluptogethermvp.userservice.home.application;
 
-import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedPlayer;
+import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.BannerType;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedPlayerRepository;
 import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
@@ -48,7 +47,7 @@ public class HomeService {
     private final UserExperienceService userExperienceService;
     private final TitleService titleService;
     private final UserRepository userRepository;
-    private final FeaturedPlayerRepository featuredPlayerRepository;
+    private final FeaturedContentQueryService featuredContentQueryService;
     private final MissionCategoryService missionCategoryService;
     private final GuildExperienceHistoryRepository guildExperienceHistoryRepository;
     private final GuildRepository guildRepository;
@@ -188,11 +187,10 @@ public class HomeService {
         int maxPlayers = 5;
 
         // 1. Admin Featured Players 먼저 조회
-        List<FeaturedPlayer> featuredPlayers = featuredPlayerRepository.findActiveFeaturedPlayers(categoryId, now);
-        for (FeaturedPlayer fp : featuredPlayers) {
+        List<String> featuredUserIds = featuredContentQueryService.getActiveFeaturedPlayerUserIds(categoryId, now);
+        for (String userId : featuredUserIds) {
             if (result.size() >= maxPlayers) break;
 
-            String userId = fp.getUserId();
             if (addedUserIds.contains(userId)) continue;
 
             TodayPlayerResponse player = buildTodayPlayerResponse(userId, 0L, rank, locale);

@@ -8,13 +8,12 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.JoinRequestSta
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildJoinRequestRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedGuild;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedGuildRepository;
+import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.DetailedTitleInfo;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -41,7 +40,7 @@ public class GuildQueryService {
     private final GuildRepository guildRepository;
     private final GuildMemberRepository guildMemberRepository;
     private final GuildJoinRequestRepository joinRequestRepository;
-    private final FeaturedGuildRepository featuredGuildRepository;
+    private final FeaturedContentQueryService featuredContentQueryService;
     private final UserRepository userRepository;
     private final TitleService titleService;
     private final ReportService reportService;
@@ -131,11 +130,10 @@ public class GuildQueryService {
         int maxGuilds = 5;
 
         // 1. Admin Featured Guilds 먼저 조회
-        List<FeaturedGuild> featuredGuilds = featuredGuildRepository.findActiveFeaturedGuilds(categoryId, now);
-        for (FeaturedGuild fg : featuredGuilds) {
+        List<Long> featuredGuildIds = featuredContentQueryService.getActiveFeaturedGuildIds(categoryId, now);
+        for (Long guildId : featuredGuildIds) {
             if (result.size() >= maxGuilds) break;
 
-            Long guildId = fg.getGuildId();
             if (addedGuildIds.contains(guildId)) continue;
 
             try {

@@ -12,8 +12,7 @@ import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.global.translation.TranslationService;
-import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedFeed;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedFeedRepository;
+import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
@@ -22,7 +21,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedR
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedCommentRepository;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedLikeRepository;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendCacheService;
@@ -65,7 +64,7 @@ class FeedQueryServiceTest {
     private FriendCacheService friendCacheService;
 
     @Mock
-    private FeaturedFeedRepository featuredFeedRepository;
+    private FeaturedContentQueryService featuredContentQueryService;
 
     @Mock
     private UserProfileCacheService userProfileCacheService;
@@ -569,7 +568,7 @@ class FeedQueryServiceTest {
             ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
             Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
 
-            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any())).thenReturn(Collections.emptyList());
+            when(featuredContentQueryService.getActiveFeaturedFeedIds(eq(categoryId), any())).thenReturn(Collections.emptyList());
             when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))
@@ -591,14 +590,8 @@ class FeedQueryServiceTest {
             ActivityFeed featuredFeed = createTestFeed(1L, TEST_USER_ID);
             ActivityFeed normalFeed = createTestFeed(2L, OTHER_USER_ID);
 
-            FeaturedFeed featured = FeaturedFeed.builder()
-                .categoryId(categoryId)
-                .feedId(1L)
-                .displayOrder(1)
-                .build();
-
-            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any()))
-                .thenReturn(List.of(featured));
+            when(featuredContentQueryService.getActiveFeaturedFeedIds(eq(categoryId), any()))
+                .thenReturn(List.of(1L));
             when(activityFeedRepository.findByIdIn(List.of(1L)))
                 .thenReturn(List.of(featuredFeed));
             when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
@@ -621,14 +614,8 @@ class FeedQueryServiceTest {
             Long categoryId = 1L;
             ActivityFeed feed = createTestFeed(1L, TEST_USER_ID);
 
-            FeaturedFeed featured = FeaturedFeed.builder()
-                .categoryId(categoryId)
-                .feedId(1L)
-                .displayOrder(1)
-                .build();
-
-            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any()))
-                .thenReturn(List.of(featured));
+            when(featuredContentQueryService.getActiveFeaturedFeedIds(eq(categoryId), any()))
+                .thenReturn(List.of(1L));
             when(activityFeedRepository.findByIdIn(List.of(1L)))
                 .thenReturn(List.of(feed));
             when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
@@ -653,7 +640,7 @@ class FeedQueryServiceTest {
             Page<ActivityFeed> feedPage = new PageImpl<>(List.of(feed));
             String acceptLanguage = "en";
 
-            when(featuredFeedRepository.findActiveFeaturedFeeds(eq(categoryId), any())).thenReturn(Collections.emptyList());
+            when(featuredContentQueryService.getActiveFeaturedFeedIds(eq(categoryId), any())).thenReturn(Collections.emptyList());
             when(activityFeedRepository.findPublicFeedsByCategoryIdInTimeRange(eq(categoryId), any(), any(), any(Pageable.class)))
                 .thenReturn(feedPage);
             when(feedLikeRepository.findLikedFeedIds(eq(TEST_USER_ID), anyList()))

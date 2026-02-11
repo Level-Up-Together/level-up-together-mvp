@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.supportservice.report.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.pinkspider.global.enums.ReportTargetType;
 import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;

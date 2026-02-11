@@ -22,7 +22,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionPar
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionTemplateRepository;
 import io.pinkspider.global.event.MissionDeletedEvent;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import java.util.List;
 import java.util.Map;

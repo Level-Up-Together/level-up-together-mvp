@@ -18,7 +18,7 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostCom
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.global.event.GuildBulletinCreatedEvent;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import java.util.List;
 import java.util.Map;

@@ -10,11 +10,10 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedPlayer;
+import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.BannerType;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.LinkType;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedPlayerRepository;
 import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
@@ -65,7 +64,7 @@ class HomeServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private FeaturedPlayerRepository featuredPlayerRepository;
+    private FeaturedContentQueryService featuredContentQueryService;
 
     @Mock
     private MissionCategoryService missionCategoryService;
@@ -333,15 +332,8 @@ class HomeServiceTest {
                 .build();
             setId(featuredUser, featuredUserId);
 
-            FeaturedPlayer featuredPlayer = FeaturedPlayer.builder()
-                .categoryId(testCategoryId)
-                .userId(featuredUserId)
-                .displayOrder(1)
-                .isActive(true)
-                .build();
-
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
-                .thenReturn(List.of(featuredPlayer));
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
+                .thenReturn(List.of(featuredUserId));
             when(userRepository.findById(featuredUserId)).thenReturn(Optional.of(featuredUser));
             when(userExperienceService.getUserLevel(featuredUserId)).thenReturn(10);
             when(titleService.getEquippedTitleEntitiesByUserId(featuredUserId))
@@ -378,7 +370,7 @@ class HomeServiceTest {
         @DisplayName("Featured Player가 없으면 자동 선정만 조회한다")
         void getTodayPlayersByCategory_onlyAutoSelection() {
             // given
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);
@@ -406,15 +398,8 @@ class HomeServiceTest {
         @DisplayName("중복된 사용자는 제외된다")
         void getTodayPlayersByCategory_noDuplicates() {
             // given
-            FeaturedPlayer featuredPlayer = FeaturedPlayer.builder()
-                .categoryId(testCategoryId)
-                .userId(testUserId)  // 자동 선정과 동일한 사용자
-                .displayOrder(1)
-                .isActive(true)
-                .build();
-
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
-                .thenReturn(List.of(featuredPlayer));
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
+                .thenReturn(List.of(testUserId));
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
             when(userExperienceService.getUserLevel(testUserId)).thenReturn(5);
             when(titleService.getEquippedTitleEntitiesByUserId(testUserId))
@@ -442,7 +427,7 @@ class HomeServiceTest {
         @DisplayName("카테고리가 없으면 빈 목록을 반환한다")
         void getTodayPlayersByCategory_categoryNotFound() {
             // given
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenThrow(new io.pinkspider.global.exception.CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
@@ -459,16 +444,10 @@ class HomeServiceTest {
         void getTodayPlayersByCategory_maxFivePlayers() {
             // given
             // 6명의 Featured Player 생성
-            List<FeaturedPlayer> manyFeaturedPlayers = new java.util.ArrayList<>();
+            List<String> manyFeaturedUserIds = new java.util.ArrayList<>();
             for (int i = 1; i <= 6; i++) {
                 String userId = "user-" + i;
-                FeaturedPlayer fp = FeaturedPlayer.builder()
-                    .categoryId(testCategoryId)
-                    .userId(userId)
-                    .displayOrder(i)
-                    .isActive(true)
-                    .build();
-                manyFeaturedPlayers.add(fp);
+                manyFeaturedUserIds.add(userId);
 
                 Users user = Users.builder()
                     .nickname("사용자 " + i)
@@ -482,8 +461,8 @@ class HomeServiceTest {
                     .thenReturn(Collections.emptyList());
             }
 
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
-                .thenReturn(manyFeaturedPlayers);
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
+                .thenReturn(manyFeaturedUserIds);
 
             // when
             List<TodayPlayerResponse> result = homeService.getTodayPlayersByCategory(testCategoryId);
@@ -814,7 +793,7 @@ class HomeServiceTest {
         @DisplayName("아랍어로 카테고리별 플레이어를 조회한다")
         void getTodayPlayersByCategory_withArabicLocale() {
             // given
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);
@@ -865,15 +844,9 @@ class HomeServiceTest {
         void getTodayPlayersByCategory_userNotFound_skip() {
             // given
             String missingUserId = "missing-user-id";
-            FeaturedPlayer featuredPlayer = FeaturedPlayer.builder()
-                .categoryId(testCategoryId)
-                .userId(missingUserId)
-                .displayOrder(1)
-                .isActive(true)
-                .build();
 
-            when(featuredPlayerRepository.findActiveFeaturedPlayers(eq(testCategoryId), any()))
-                .thenReturn(List.of(featuredPlayer));
+            when(featuredContentQueryService.getActiveFeaturedPlayerUserIds(eq(testCategoryId), any()))
+                .thenReturn(List.of(missingUserId));
             when(userRepository.findById(missingUserId)).thenReturn(Optional.empty());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);

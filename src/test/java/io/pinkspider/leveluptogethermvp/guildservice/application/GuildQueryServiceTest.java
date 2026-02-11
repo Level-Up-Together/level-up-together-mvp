@@ -17,8 +17,9 @@ import static org.mockito.Mockito.when;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildHelper;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildMemberResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
+import io.pinkspider.global.enums.ReportTargetType;
+import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildJoinType;
@@ -29,8 +30,6 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildJoinReq
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
-import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedGuild;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedGuildRepository;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,7 +60,7 @@ class GuildQueryServiceTest {
     private GuildJoinRequestRepository joinRequestRepository;
 
     @Mock
-    private FeaturedGuildRepository featuredGuildRepository;
+    private FeaturedContentQueryService featuredContentQueryService;
 
     @Mock
     private UserRepository userRepository;
@@ -138,15 +137,8 @@ class GuildQueryServiceTest {
                 .build();
             setId(featuredGuild, featuredGuildId);
 
-            FeaturedGuild fg = FeaturedGuild.builder()
-                .categoryId(testCategoryId)
-                .guildId(featuredGuildId)
-                .displayOrder(1)
-                .isActive(true)
-                .build();
-
-            when(featuredGuildRepository.findActiveFeaturedGuilds(eq(testCategoryId), any()))
-                .thenReturn(List.of(fg));
+            when(featuredContentQueryService.getActiveFeaturedGuildIds(eq(testCategoryId), any()))
+                .thenReturn(List.of(featuredGuildId));
             when(guildRepository.findByIdAndIsActiveTrue(featuredGuildId))
                 .thenReturn(Optional.of(featuredGuild));
             when(guildMemberRepository.countActiveMembers(featuredGuildId)).thenReturn(10L);
@@ -173,7 +165,7 @@ class GuildQueryServiceTest {
         @DisplayName("Featured 길드가 없으면 자동 선정만 조회한다")
         void getPublicGuildsByCategory_onlyAutoSelection() {
             // given
-            when(featuredGuildRepository.findActiveFeaturedGuilds(eq(testCategoryId), any()))
+            when(featuredContentQueryService.getActiveFeaturedGuildIds(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
             when(guildRepository.findPublicGuildsByCategoryOrderByMemberCount(eq(testCategoryId), any()))
                 .thenReturn(List.of(testGuild));
@@ -194,15 +186,9 @@ class GuildQueryServiceTest {
         void getPublicGuildsByCategory_noDuplicates() {
             // given
             Long guildId = 1L;
-            FeaturedGuild fg = FeaturedGuild.builder()
-                .categoryId(testCategoryId)
-                .guildId(guildId)  // 자동 선정과 동일한 길드
-                .displayOrder(1)
-                .isActive(true)
-                .build();
 
-            when(featuredGuildRepository.findActiveFeaturedGuilds(eq(testCategoryId), any()))
-                .thenReturn(List.of(fg));
+            when(featuredContentQueryService.getActiveFeaturedGuildIds(eq(testCategoryId), any()))
+                .thenReturn(List.of(guildId));
             when(guildRepository.findByIdAndIsActiveTrue(guildId))
                 .thenReturn(Optional.of(testGuild));
             when(guildMemberRepository.countActiveMembers(guildId)).thenReturn(10L);
@@ -224,7 +210,7 @@ class GuildQueryServiceTest {
         @DisplayName("카테고리가 null이면 빈 목록을 반환한다")
         void getPublicGuildsByCategory_nullCategory() {
             // given
-            when(featuredGuildRepository.findActiveFeaturedGuilds(eq(null), any()))
+            when(featuredContentQueryService.getActiveFeaturedGuildIds(eq(null), any()))
                 .thenReturn(Collections.emptyList());
             when(guildRepository.findPublicGuildsByCategoryOrderByMemberCount(eq(null), any()))
                 .thenReturn(Collections.emptyList());
@@ -240,16 +226,10 @@ class GuildQueryServiceTest {
         @DisplayName("최대 5개까지만 반환한다")
         void getPublicGuildsByCategory_maxFiveGuilds() {
             // given
-            List<FeaturedGuild> manyFeaturedGuilds = new java.util.ArrayList<>();
+            List<Long> manyFeaturedGuildIds = new java.util.ArrayList<>();
             for (int i = 1; i <= 6; i++) {
                 Long guildId = (long) (i + 10);  // 11, 12, 13, ...
-                FeaturedGuild fg = FeaturedGuild.builder()
-                    .categoryId(testCategoryId)
-                    .guildId(guildId)
-                    .displayOrder(i)
-                    .isActive(true)
-                    .build();
-                manyFeaturedGuilds.add(fg);
+                manyFeaturedGuildIds.add(guildId);
 
                 Guild guild = Guild.builder()
                     .name("길드 " + i)
@@ -265,8 +245,8 @@ class GuildQueryServiceTest {
                 lenient().when(guildMemberRepository.countActiveMembers(guildId)).thenReturn(5L);
             }
 
-            when(featuredGuildRepository.findActiveFeaturedGuilds(eq(testCategoryId), any()))
-                .thenReturn(manyFeaturedGuilds);
+            when(featuredContentQueryService.getActiveFeaturedGuildIds(eq(testCategoryId), any()))
+                .thenReturn(manyFeaturedGuildIds);
 
 
             // when
@@ -582,7 +562,7 @@ class GuildQueryServiceTest {
         @DisplayName("카테고리별 공개 길드 조회 시 신고 처리중 상태가 일괄 조회된다")
         void getPublicGuildsByCategory_batchUnderReviewCheck() {
             // given
-            when(featuredGuildRepository.findActiveFeaturedGuilds(eq(testCategoryId), any()))
+            when(featuredContentQueryService.getActiveFeaturedGuildIds(eq(testCategoryId), any()))
                 .thenReturn(Collections.emptyList());
             when(guildRepository.findPublicGuildsByCategoryOrderByMemberCount(eq(testCategoryId), any()))
                 .thenReturn(List.of(testGuild));

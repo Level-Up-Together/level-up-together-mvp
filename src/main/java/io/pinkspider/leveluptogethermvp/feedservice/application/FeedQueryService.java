@@ -6,8 +6,7 @@ import io.pinkspider.global.translation.TranslationService;
 import io.pinkspider.global.translation.dto.TranslationInfo;
 import io.pinkspider.global.translation.enums.ContentType;
 import io.pinkspider.global.translation.enums.SupportedLocale;
-import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.FeaturedFeed;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.FeaturedFeedRepository;
+import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
@@ -17,7 +16,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedRepository;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedCommentRepository;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedLikeRepository;
-import io.pinkspider.leveluptogethermvp.supportservice.report.api.dto.ReportTargetType;
+import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.infrastructure.FriendshipRepository;
@@ -52,7 +51,7 @@ public class FeedQueryService {
     private final FeedCommentRepository feedCommentRepository;
     private final FriendshipRepository friendshipRepository;
     private final FriendCacheService friendCacheService;
-    private final FeaturedFeedRepository featuredFeedRepository;
+    private final FeaturedContentQueryService featuredContentQueryService;
     private final UserProfileCacheService userProfileCacheService;
     private final TranslationService translationService;
     private final ReportService reportService;
@@ -151,10 +150,7 @@ public class FeedQueryService {
         LocalDateTime endTime = timeRange[1];
 
         // 1. Admin Featured Feeds 먼저 조회
-        List<FeaturedFeed> featuredFeeds = featuredFeedRepository.findActiveFeaturedFeeds(categoryId, now);
-        List<Long> featuredFeedIds = featuredFeeds.stream()
-            .map(FeaturedFeed::getFeedId)
-            .toList();
+        List<Long> featuredFeedIds = featuredContentQueryService.getActiveFeaturedFeedIds(categoryId, now);
 
         List<ActivityFeed> featuredFeedList = new ArrayList<>();
         if (!featuredFeedIds.isEmpty()) {
