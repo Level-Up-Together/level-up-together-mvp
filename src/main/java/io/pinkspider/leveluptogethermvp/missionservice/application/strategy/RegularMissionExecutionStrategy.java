@@ -11,12 +11,10 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExe
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,9 +34,7 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
     private final MissionImageStorageService missionImageStorageService;
     private final FeedCommandService feedCommandService;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserService userService;
-    private final UserExperienceService userExperienceService;
-    private final TitleService titleService;
+    private final UserProfileCacheService userProfileCacheService;
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager")
@@ -197,20 +193,18 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
         Mission mission = participant.getMission();
 
         try {
-            Users user = userService.findByUserId(userId);
-            Integer userLevel = userExperienceService.getOrCreateUserExperience(userId).getCurrentLevel();
-            TitleService.TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);
+            UserProfileCache profile = userProfileCacheService.getUserProfile(userId);
             Integer durationMinutes = execution.calculateExpByDuration();
             Long categoryId = mission.getCategoryId();
 
             var createdFeed = feedCommandService.createMissionSharedFeed(
                 userId,
-                user.getNickname(),
-                user.getPicture(),
-                userLevel,
-                titleInfo.name(),
-                titleInfo.rarity(),
-                titleInfo.colorCode(),
+                profile.nickname(),
+                profile.picture(),
+                profile.level(),
+                profile.titleName(),
+                profile.titleRarity(),
+                profile.titleColorCode(),
                 execution.getId(),
                 mission.getId(),
                 mission.getTitle(),

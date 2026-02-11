@@ -18,7 +18,8 @@ import io.pinkspider.global.test.TestReflectionUtils;
 
 import io.pinkspider.global.saga.SagaResult;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
+import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
@@ -34,17 +35,10 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantS
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.DailyMissionInstanceRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.scheduler.DailyMissionInstanceScheduler;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import org.springframework.context.ApplicationEventPublisher;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -73,25 +67,13 @@ class DailyMissionInstanceServiceTest {
     private DailyMissionInstanceScheduler instanceScheduler;
 
     @Mock
-    private UserExperienceService userExperienceService;
-
-    @Mock
     private FeedCommandService feedCommandService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private TitleService titleService;
-
-    @Mock
-    private UserService userService;
-
-    @Mock
-    private UserStatsService userStatsService;
-
-    @Mock
-    private AchievementService achievementService;
+    private UserProfileCacheService userProfileCacheService;
 
     @Mock
     private MissionImageStorageService missionImageStorageService;
@@ -111,8 +93,6 @@ class DailyMissionInstanceServiceTest {
     private Mission mission;
     private MissionParticipant participant;
     private DailyMissionInstance instance;
-    private Users user;
-    private UserExperience userExperience;
 
     @BeforeEach
     void setUp() {
@@ -139,20 +119,6 @@ class DailyMissionInstanceServiceTest {
 
         instance = DailyMissionInstance.createFrom(participant, LocalDate.now());
         setId(instance, INSTANCE_ID);
-
-        user = Users.builder()
-            .id(TEST_USER_ID)
-            .email("test@example.com")
-            .provider("google")
-            .nickname("테스트유저")
-            .picture("https://example.com/profile.jpg")
-            .build();
-
-        userExperience = UserExperience.builder()
-            .userId(TEST_USER_ID)
-            .currentLevel(10)
-            .currentExp(500)
-            .build();
     }
 
     @Nested
@@ -959,12 +925,8 @@ class DailyMissionInstanceServiceTest {
                 .thenReturn(Optional.of(instance));
             when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
                 .thenReturn(Optional.of(instance));
-            when(userService.findByUserId(TEST_USER_ID))
-                .thenReturn(user);
-            when(userExperienceService.getOrCreateUserExperience(TEST_USER_ID))
-                .thenReturn(userExperience);
-            when(titleService.getCombinedEquippedTitleInfo(TEST_USER_ID))
-                .thenReturn(new TitleService.TitleInfo("테스트 칭호", TitleRarity.COMMON, "#FFFFFF"));
+            when(userProfileCacheService.getUserProfile(TEST_USER_ID))
+                .thenReturn(new UserProfileCache(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 10, "테스트 칭호", TitleRarity.COMMON, "#FFFFFF"));
             when(feedCommandService.createMissionSharedFeed(any(), any(), any(), any(), any(), any(), any(),
                     any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(feed);

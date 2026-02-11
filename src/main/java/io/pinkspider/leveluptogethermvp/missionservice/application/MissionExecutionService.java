@@ -1,8 +1,6 @@
 package io.pinkspider.leveluptogethermvp.missionservice.application;
 
 import io.pinkspider.global.saga.SagaResult;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildExperienceHistory.GuildExpSourceType;
 import io.pinkspider.leveluptogethermvp.missionservice.application.strategy.MissionExecutionStrategyResolver;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
@@ -13,11 +11,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExe
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,10 +28,6 @@ public class MissionExecutionService {
 
     private final MissionExecutionRepository executionRepository;
     private final MissionParticipantRepository participantRepository;
-    private final UserExperienceService userExperienceService;
-    private final GuildExperienceService guildExperienceService;
-    private final UserStatsService userStatsService;
-    private final AchievementService achievementService;
     private final MissionCompletionSaga missionCompletionSaga;
     private final ApplicationEventPublisher eventPublisher;
     private final MissionExecutionStrategyResolver strategyResolver;
@@ -190,73 +180,6 @@ public class MissionExecutionService {
         }
     }
 
-    /**
-     * 레거시 방식의 미션 수행 완료 처리 (Saga 미적용)
-     *
-     * @deprecated Saga 패턴 적용된 completeExecution 사용 권장
-     */
-    @Deprecated
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse completeExecutionLegacy(Long executionId, String userId, String note) {
-        MissionExecution execution = findExecutionById(executionId);
-        validateExecutionOwner(execution, userId);
-
-        execution.complete();
-        if (note != null) {
-            execution.setNote(note);
-        }
-
-        Mission mission = execution.getParticipant().getMission();
-        int expEarned = mission.getExpPerCompletion() != null ? mission.getExpPerCompletion() : 10;
-        execution.setExpEarned(expEarned);
-
-        Long categoryId = mission.getCategoryId();
-        userExperienceService.addExperience(
-            userId,
-            expEarned,
-            ExpSourceType.MISSION_EXECUTION,
-            mission.getId(),
-            "미션 수행 완료: " + mission.getTitle(),
-            categoryId,
-            mission.getCategoryName()
-        );
-
-        // 길드 미션인 경우 길드 경험치 지급
-        if (mission.isGuildMission() && mission.getGuildId() != null) {
-            int guildExpEarned = mission.getGuildExpPerCompletion() != null ? mission.getGuildExpPerCompletion() : 5;
-            try {
-                guildExperienceService.addExperience(
-                    mission.getGuildIdAsLong(),
-                    guildExpEarned,
-                    GuildExpSourceType.GUILD_MISSION_EXECUTION,
-                    mission.getId(),
-                    userId,
-                    "길드 미션 수행: " + mission.getTitle()
-                );
-                log.info("길드 경험치 지급: guildId={}, userId={}, exp={}", mission.getGuildId(), userId, guildExpEarned);
-            } catch (Exception e) {
-                log.warn("길드 경험치 지급 실패: guildId={}, error={}", mission.getGuildId(), e.getMessage());
-            }
-        }
-
-        updateParticipantProgress(execution.getParticipant());
-
-        checkAndGrantFullCompletionBonus(execution.getParticipant());
-
-        // 업적 및 통계 업데이트
-        boolean isGuildMission = mission.isGuildMission();
-        try {
-            userStatsService.recordMissionCompletion(userId, isGuildMission);
-            // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
-            achievementService.checkAchievementsByDataSource(userId, "USER_STATS");
-        } catch (Exception e) {
-            log.warn("업적 업데이트 실패: userId={}, error={}", userId, e.getMessage());
-        }
-
-        log.info("미션 수행 완료: executionId={}, userId={}, exp={}", executionId, userId, expEarned);
-        return MissionExecutionResponse.from(execution);
-    }
-
     @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse completeExecutionByDate(Long missionId, String userId, LocalDate date, String note) {
         MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
@@ -317,86 +240,5 @@ public class MissionExecutionService {
             userId, missionId, executionDate, execution.getId());
 
         return MissionExecutionResponse.from(execution);
-    }
-
-    private MissionExecution findExecutionById(Long executionId) {
-        return executionRepository.findById(executionId)
-            .orElseThrow(() -> new IllegalArgumentException("수행 기록을 찾을 수 없습니다: " + executionId));
-    }
-
-    private void validateExecutionOwner(MissionExecution execution, String userId) {
-        if (!execution.getParticipant().getUserId().equals(userId)) {
-            throw new IllegalStateException("본인의 수행 기록만 완료할 수 있습니다.");
-        }
-    }
-
-    private void updateParticipantProgress(MissionParticipant participant) {
-        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
-        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
-            participant.getId(), ExecutionStatus.COMPLETED);
-
-        int progress = totalExecutions > 0
-            ? (int) ((completedExecutions * 100) / totalExecutions)
-            : 0;
-        participant.updateProgress(progress);
-    }
-
-    private void checkAndGrantFullCompletionBonus(MissionParticipant participant) {
-        long totalExecutions = executionRepository.findByParticipantId(participant.getId()).size();
-        long completedExecutions = executionRepository.countByParticipantIdAndStatus(
-            participant.getId(), ExecutionStatus.COMPLETED);
-
-        if (totalExecutions > 0 && completedExecutions == totalExecutions) {
-            Mission mission = participant.getMission();
-            int bonusExp = mission.getBonusExpOnFullCompletion() != null
-                ? mission.getBonusExpOnFullCompletion() : 50;
-
-            Long bonusCategoryId = mission.getCategoryId();
-            userExperienceService.addExperience(
-                participant.getUserId(),
-                bonusExp,
-                ExpSourceType.MISSION_FULL_COMPLETION,
-                mission.getId(),
-                "미션 전체 완료 보너스: " + mission.getTitle(),
-                bonusCategoryId,
-                mission.getCategoryName()
-            );
-
-            // 길드 미션인 경우 길드 보너스 경험치 지급
-            if (mission.isGuildMission() && mission.getGuildId() != null) {
-                int guildBonusExp = mission.getGuildBonusExpOnFullCompletion() != null
-                    ? mission.getGuildBonusExpOnFullCompletion() : 20;
-                try {
-                    guildExperienceService.addExperience(
-                        mission.getGuildIdAsLong(),
-                        guildBonusExp,
-                        GuildExpSourceType.GUILD_MISSION_FULL_COMPLETION,
-                        mission.getId(),
-                        participant.getUserId(),
-                        "길드 미션 전체 완료 보너스: " + mission.getTitle()
-                    );
-                    log.info("길드 전체 완료 보너스 지급: guildId={}, userId={}, exp={}",
-                        mission.getGuildId(), participant.getUserId(), guildBonusExp);
-                } catch (Exception e) {
-                    log.warn("길드 보너스 경험치 지급 실패: guildId={}, error={}", mission.getGuildId(), e.getMessage());
-                }
-            }
-
-            participant.complete();
-
-            // 미션 전체 완료 업적 체크
-            try {
-                // 미션 기간 계산: totalExecutions가 실제 완주한 일수
-                int durationDays = (int) totalExecutions;
-                userStatsService.recordMissionFullCompletion(participant.getUserId(), durationDays);
-                // 동적 Strategy 패턴으로 USER_STATS 관련 업적 체크
-                achievementService.checkAchievementsByDataSource(participant.getUserId(), "USER_STATS");
-            } catch (Exception e) {
-                log.warn("미션 전체 완료 업적 업데이트 실패: userId={}, error={}", participant.getUserId(), e.getMessage());
-            }
-
-            log.info("미션 전체 완료 보너스 지급: userId={}, missionId={}, bonusExp={}",
-                participant.getUserId(), mission.getId(), bonusExp);
-        }
     }
 }

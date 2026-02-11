@@ -12,7 +12,6 @@ import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.test.TestReflectionUtils;
 
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
@@ -25,17 +24,11 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantS
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExecutionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionExecutionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.global.saga.SagaResult;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
 import org.springframework.context.ApplicationEventPublisher;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
-import io.pinkspider.leveluptogethermvp.missionservice.application.LocalMissionImageStorageService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,18 +50,6 @@ class MissionExecutionServiceTest {
 
     @Mock
     private MissionParticipantRepository participantRepository;
-
-    @Mock
-    private UserExperienceService userExperienceService;
-
-    @Mock
-    private GuildExperienceService guildExperienceService;
-
-    @Mock
-    private UserStatsService userStatsService;
-
-    @Mock
-    private AchievementService achievementService;
 
     @Mock
     private MissionCompletionSaga missionCompletionSaga;
@@ -700,121 +681,4 @@ class MissionExecutionServiceTest {
         }
     }
 
-    @Nested
-    @DisplayName("레거시 미션 완료 테스트")
-    class CompleteExecutionLegacyTest {
-
-        @Test
-        @DisplayName("레거시 방식으로 미션 수행을 완료한다 (길드 미션 아님)")
-        void completeExecutionLegacy_regularMission_success() {
-            // given
-            LocalDate executionDate = LocalDate.now();
-            MissionExecution execution = MissionExecution.builder()
-                .participant(testParticipant)
-                .executionDate(executionDate)
-                .status(ExecutionStatus.IN_PROGRESS)
-                .build();
-            setId(execution, 1L);
-            TestReflectionUtils.setField(execution, "startedAt", LocalDateTime.now().minusMinutes(5));
-
-            when(executionRepository.findById(1L))
-                .thenReturn(Optional.of(execution));
-            when(executionRepository.findByParticipantId(testParticipant.getId()))
-                .thenReturn(List.of(execution));
-            when(executionRepository.countByParticipantIdAndStatus(testParticipant.getId(), ExecutionStatus.COMPLETED))
-                .thenReturn(0L);
-
-            // when
-            MissionExecutionResponse response = executionService.completeExecutionLegacy(1L, testUserId, "완료");
-
-            // then
-            assertThat(response).isNotNull();
-            verify(userExperienceService).addExperience(eq(testUserId), anyInt(), any(), any(), any(), any(), any());
-            verify(userStatsService).recordMissionCompletion(testUserId, false);
-            verify(achievementService).checkAchievementsByDataSource(testUserId, "USER_STATS");
-        }
-
-        @Test
-        @DisplayName("레거시 방식으로 길드 미션을 완료한다")
-        void completeExecutionLegacy_guildMission_success() {
-            // given
-            Mission guildMission = Mission.builder()
-                .title("길드 미션")
-                .description("길드 함께 하기")
-                .status(MissionStatus.IN_PROGRESS)
-                .visibility(MissionVisibility.PUBLIC)
-                .type(MissionType.GUILD)
-                .creatorId(testUserId)
-                .guildId("123")
-                .missionInterval(MissionInterval.DAILY)
-                .expPerCompletion(50)
-                .guildExpPerCompletion(30)
-                .build();
-            setId(guildMission, 2L);
-
-            MissionParticipant guildParticipant = MissionParticipant.builder()
-                .mission(guildMission)
-                .userId(testUserId)
-                .status(ParticipantStatus.IN_PROGRESS)
-                .build();
-            setId(guildParticipant, 2L);
-
-            LocalDate executionDate = LocalDate.now();
-            MissionExecution execution = MissionExecution.builder()
-                .participant(guildParticipant)
-                .executionDate(executionDate)
-                .status(ExecutionStatus.IN_PROGRESS)
-                .build();
-            setId(execution, 2L);
-            TestReflectionUtils.setField(execution, "startedAt", LocalDateTime.now().minusMinutes(5));
-
-            when(executionRepository.findById(2L))
-                .thenReturn(Optional.of(execution));
-            when(executionRepository.findByParticipantId(guildParticipant.getId()))
-                .thenReturn(List.of(execution));
-            when(executionRepository.countByParticipantIdAndStatus(guildParticipant.getId(), ExecutionStatus.COMPLETED))
-                .thenReturn(0L);
-
-            // when
-            MissionExecutionResponse response = executionService.completeExecutionLegacy(2L, testUserId, "완료");
-
-            // then
-            assertThat(response).isNotNull();
-            verify(guildExperienceService).addExperience(eq(123L), anyInt(), any(), any(), eq(testUserId), any());
-            verify(userStatsService).recordMissionCompletion(testUserId, true);
-        }
-
-        @Test
-        @DisplayName("본인의 수행 기록이 아니면 예외가 발생한다")
-        void completeExecutionLegacy_notOwner_throwsException() {
-            // given
-            MissionExecution execution = MissionExecution.builder()
-                .participant(testParticipant)
-                .executionDate(LocalDate.now())
-                .status(ExecutionStatus.IN_PROGRESS)
-                .build();
-            setId(execution, 1L);
-
-            when(executionRepository.findById(1L))
-                .thenReturn(Optional.of(execution));
-
-            // when & then
-            org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
-                executionService.completeExecutionLegacy(1L, "other-user-456", "완료");
-            });
-        }
-
-        @Test
-        @DisplayName("수행 기록을 찾을 수 없으면 예외가 발생한다")
-        void completeExecutionLegacy_notFound_throwsException() {
-            // given
-            when(executionRepository.findById(999L))
-                .thenReturn(Optional.empty());
-
-            // when & then
-            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
-                executionService.completeExecutionLegacy(999L, testUserId, "완료");
-            });
-        }
-    }
 }

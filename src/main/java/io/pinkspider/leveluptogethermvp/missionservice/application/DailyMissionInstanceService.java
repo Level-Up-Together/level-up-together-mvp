@@ -4,9 +4,8 @@ import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
 import io.pinkspider.global.saga.SagaResult;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
@@ -17,11 +16,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionPar
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
 import io.pinkspider.leveluptogethermvp.missionservice.scheduler.DailyMissionInstanceScheduler;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ExpSourceType;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -51,13 +46,9 @@ public class DailyMissionInstanceService {
     private final DailyMissionInstanceRepository instanceRepository;
     private final MissionParticipantRepository participantRepository;
     private final DailyMissionInstanceScheduler instanceScheduler;
-    private final UserExperienceService userExperienceService;
     private final FeedCommandService feedCommandService;
     private final ApplicationEventPublisher eventPublisher;
-    private final TitleService titleService;
-    private final UserService userService;
-    private final UserStatsService userStatsService;
-    private final AchievementService achievementService;
+    private final UserProfileCacheService userProfileCacheService;
     private final MissionImageStorageService missionImageStorageService;
     private final MissionCompletionSaga missionCompletionSaga;
 
@@ -443,18 +434,16 @@ public class DailyMissionInstanceService {
 
     private void createFeedFromInstance(DailyMissionInstance instance, String userId) {
         try {
-            Users user = userService.findByUserId(userId);
-            Integer userLevel = userExperienceService.getOrCreateUserExperience(userId).getCurrentLevel();
-            TitleService.TitleInfo titleInfo = titleService.getCombinedEquippedTitleInfo(userId);
+            UserProfileCache profile = userProfileCacheService.getUserProfile(userId);
 
             ActivityFeed feed = feedCommandService.createMissionSharedFeed(
                 userId,
-                user.getNickname(),
-                user.getPicture(),
-                userLevel,
-                titleInfo.name(),
-                titleInfo.rarity(),
-                titleInfo.colorCode(),
+                profile.nickname(),
+                profile.picture(),
+                profile.level(),
+                profile.titleName(),
+                profile.titleRarity(),
+                profile.titleColorCode(),
                 instance.getId(),  // executionId 대신 instanceId 사용
                 instance.getParticipant().getMission().getId(),
                 instance.getMissionTitle(),

@@ -26,10 +26,8 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExe
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.application.UserService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import java.time.LocalDate;
 import org.springframework.context.ApplicationEventPublisher;
 import java.time.LocalDateTime;
@@ -66,13 +64,7 @@ class RegularMissionExecutionStrategyTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private UserService userService;
-
-    @Mock
-    private UserExperienceService userExperienceService;
-
-    @Mock
-    private TitleService titleService;
+    private UserProfileCacheService userProfileCacheService;
 
     @InjectMocks
     private RegularMissionExecutionStrategy strategy;
