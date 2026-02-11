@@ -2,9 +2,8 @@ package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strateg
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ComparisonOperator;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRole;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildMembershipInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,7 +19,7 @@ import java.util.List;
 @Slf4j
 public class GuildServiceCheckStrategy implements AchievementCheckStrategy {
 
-    private final GuildMemberRepository guildMemberRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
 
     @Override
     public String getDataSource() {
@@ -29,12 +28,12 @@ public class GuildServiceCheckStrategy implements AchievementCheckStrategy {
 
     @Override
     public Object fetchCurrentValue(String userId, String dataField) {
-        List<GuildMember> activeMembers = guildMemberRepository.findAllActiveGuildMemberships(userId);
+        List<GuildMembershipInfo> memberships = guildQueryFacadeService.getUserGuildMemberships(userId);
 
         return switch (dataField) {
-            case "isGuildMember" -> !activeMembers.isEmpty();
-            case "isGuildMaster" -> activeMembers.stream()
-                .anyMatch(member -> member.getRole() == GuildMemberRole.MASTER);
+            case "isGuildMember" -> !memberships.isEmpty();
+            case "isGuildMaster" -> memberships.stream()
+                .anyMatch(GuildMembershipInfo::isMaster);
             default -> {
                 log.warn("알 수 없는 dataField: {}", dataField);
                 yield false;

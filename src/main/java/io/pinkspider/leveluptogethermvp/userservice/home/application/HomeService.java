@@ -4,10 +4,8 @@ import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContent
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.BannerType;
 import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildWithMemberCount;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
@@ -49,9 +47,7 @@ public class HomeService {
     private final UserRepository userRepository;
     private final FeaturedContentQueryService featuredContentQueryService;
     private final MissionCategoryService missionCategoryService;
-    private final GuildExperienceHistoryRepository guildExperienceHistoryRepository;
-    private final GuildRepository guildRepository;
-    private final GuildMemberRepository guildMemberRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
 
     /**
      * 활성화된 배너 목록 조회
@@ -251,7 +247,7 @@ public class HomeService {
         LocalDateTime endDate = today.atTime(LocalTime.MAX);
 
         // 상위 5개 길드 조회
-        List<Object[]> topGuilds = guildExperienceHistoryRepository.findTopExpGuildsByPeriod(
+        List<Object[]> topGuilds = guildQueryFacadeService.getTopExpGuildsByPeriod(
             startDate, endDate, PageRequest.of(0, 5));
 
         if (topGuilds.isEmpty()) {
@@ -263,18 +259,11 @@ public class HomeService {
             .map(row -> ((Number) row[0]).longValue())
             .collect(Collectors.toList());
 
-        // 2. 배치 조회: 길드 정보
-        Map<Long, Guild> guildMap = guildRepository.findByIdInAndIsActiveTrue(guildIds).stream()
-            .collect(Collectors.toMap(Guild::getId, g -> g));
+        // 2. 배치 조회: 길드 정보 + 멤버 수
+        Map<Long, GuildWithMemberCount> guildMap = guildQueryFacadeService.getGuildsWithMemberCounts(guildIds).stream()
+            .collect(Collectors.toMap(GuildWithMemberCount::id, g -> g));
 
-        // 3. 배치 조회: 멤버 수
-        Map<Long, Long> memberCountMap = guildMemberRepository.countActiveMembersByGuildIds(guildIds).stream()
-            .collect(Collectors.toMap(
-                row -> (Long) row[0],
-                row -> (Long) row[1]
-            ));
-
-        // 4. 결과 조합
+        // 3. 결과 조합
         List<MvpGuildResponse> result = new ArrayList<>();
         int rank = 1;
 
@@ -282,19 +271,17 @@ public class HomeService {
             Long guildId = ((Number) row[0]).longValue();
             Long earnedExp = ((Number) row[1]).longValue();
 
-            Guild guild = guildMap.get(guildId);
+            GuildWithMemberCount guild = guildMap.get(guildId);
             if (guild == null) {
                 continue;
             }
 
-            int memberCount = memberCountMap.getOrDefault(guildId, 0L).intValue();
-
             result.add(MvpGuildResponse.of(
                 guildId,
-                guild.getName(),
-                guild.getImageUrl(),
-                guild.getCurrentLevel(),
-                memberCount,
+                guild.name(),
+                guild.imageUrl(),
+                guild.currentLevel(),
+                guild.memberCount(),
                 earnedExp,
                 rank++
             ));

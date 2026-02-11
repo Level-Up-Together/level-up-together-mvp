@@ -20,9 +20,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.Seaso
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpPlayerResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.entity.Season;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructure.SeasonRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
@@ -50,16 +48,10 @@ class SeasonRankingServiceTest {
     private ExperienceHistoryRepository experienceHistoryRepository;
 
     @Mock
-    private GuildExperienceHistoryRepository guildExperienceHistoryRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @Mock
     private UserProfileCacheService userProfileCacheService;
-
-    @Mock
-    private GuildRepository guildRepository;
-
-    @Mock
-    private GuildMemberRepository guildMemberRepository;
 
     @Mock
     private MissionCategoryService missionCategoryService;
@@ -144,7 +136,7 @@ class SeasonRankingServiceTest {
             when(seasonRepository.findCurrentSeason(any(LocalDateTime.class))).thenReturn(Optional.of(testSeason));
             when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
-            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
+            when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
             when(userProfileCacheService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileCache(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
@@ -198,7 +190,7 @@ class SeasonRankingServiceTest {
             when(seasonRepository.findCurrentSeason(any(LocalDateTime.class))).thenReturn(Optional.of(testSeason));
             when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
-            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
+            when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
             when(userProfileCacheService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileCache(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
@@ -235,7 +227,7 @@ class SeasonRankingServiceTest {
             when(seasonRepository.findCurrentSeason(any(LocalDateTime.class))).thenReturn(Optional.of(testSeason));
             when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
-            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
+            when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
             when(userProfileCacheService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileCache(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
@@ -422,7 +414,7 @@ class SeasonRankingServiceTest {
                 .thenReturn(1000L);
             when(experienceHistoryRepository.countUsersWithMoreExpByPeriod(any(), any(), any()))
                 .thenReturn(4L);
-            when(guildMemberRepository.findAllActiveGuildMemberships(testUserId))
+            when(guildQueryFacadeService.getUserGuildMemberships(testUserId))
                 .thenReturn(List.of());
 
             // when
@@ -440,7 +432,7 @@ class SeasonRankingServiceTest {
             // given
             when(experienceHistoryRepository.sumExpByUserIdAndPeriod(any(), any(), any()))
                 .thenReturn(null);
-            when(guildMemberRepository.findAllActiveGuildMemberships(testUserId))
+            when(guildQueryFacadeService.getUserGuildMemberships(testUserId))
                 .thenReturn(List.of());
 
             // when

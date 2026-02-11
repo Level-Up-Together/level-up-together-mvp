@@ -16,10 +16,7 @@ import io.pinkspider.global.event.GuildInvitationEvent;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.MissionCommentEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildPost;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.enums.NotificationType;
 import java.util.List;
@@ -41,8 +38,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
-    private final GuildRepository guildRepository;
-    private final GuildPostRepository guildPostRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
 
     // ==================== 헬퍼 메서드 ====================
 
@@ -221,16 +217,13 @@ public class NotificationEventListener {
         try {
             if ("GUILD".equals(targetType)) {
                 guildId = Long.parseLong(event.targetId());
-                Guild guild = guildRepository.findByIdAndIsActiveTrue(guildId).orElse(null);
-                if (guild != null) {
-                    guildMasterId = guild.getMasterId();
-                }
+                guildMasterId = guildQueryFacadeService.getGuildMasterId(guildId);
             } else if ("GUILD_NOTICE".equals(targetType)) {
                 Long postId = Long.parseLong(event.targetId());
-                GuildPost post = guildPostRepository.findByIdAndIsDeletedFalse(postId).orElse(null);
-                if (post != null && post.getGuild() != null) {
-                    guildId = post.getGuild().getId();
-                    guildMasterId = post.getGuild().getMasterId();
+                var postInfo = guildQueryFacadeService.getGuildInfoByPostId(postId);
+                if (postInfo != null) {
+                    guildMasterId = postInfo.guildMasterId();
+                    guildId = postInfo.guildId();
                 }
             }
 

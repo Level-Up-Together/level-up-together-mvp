@@ -15,10 +15,8 @@ import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.BannerType;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.enums.LinkType;
 import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
@@ -70,13 +68,7 @@ class HomeServiceTest {
     private MissionCategoryService missionCategoryService;
 
     @Mock
-    private GuildExperienceHistoryRepository guildExperienceHistoryRepository;
-
-    @Mock
-    private GuildRepository guildRepository;
-
-    @Mock
-    private GuildMemberRepository guildMemberRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @InjectMocks
     private HomeService homeService;
@@ -527,38 +519,24 @@ class HomeServiceTest {
     @DisplayName("MVP 길드 조회 테스트")
     class GetMvpGuildsTest {
 
-        private Guild createTestGuild(Long id, String name) {
-            Guild guild = Guild.builder()
-                .name(name)
-                .imageUrl("https://example.com/guild.jpg")
-                .currentLevel(5)
-                .isActive(true)
-                .build();
-            setId(guild, id);
-            return guild;
-        }
-
         @Test
         @DisplayName("MVP 길드 목록을 조회한다")
         void getMvpGuilds_success() {
             // given
             Long guildId = 1L;
-            Guild guild = createTestGuild(guildId, "테스트길드");
 
             Object[] row1 = {guildId, 500L};
             List<Object[]> topGuilds = new ArrayList<>();
             topGuilds.add(row1);
 
-            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
-                .thenReturn(topGuilds);
-            when(guildRepository.findByIdInAndIsActiveTrue(List.of(guildId)))
-                .thenReturn(List.of(guild));
+            GuildFacadeDto.GuildWithMemberCount guildWithCount = new GuildFacadeDto.GuildWithMemberCount(
+                guildId, "테스트길드", "https://example.com/guild.jpg", 5, 10
+            );
 
-            Object[] memberCount = {guildId, 10L};
-            List<Object[]> memberCounts = new ArrayList<>();
-            memberCounts.add(memberCount);
-            when(guildMemberRepository.countActiveMembersByGuildIds(List.of(guildId)))
-                .thenReturn(memberCounts);
+            when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
+                .thenReturn(topGuilds);
+            when(guildQueryFacadeService.getGuildsWithMemberCounts(List.of(guildId)))
+                .thenReturn(List.of(guildWithCount));
 
             // when
             List<MvpGuildResponse> result = homeService.getMvpGuilds();
@@ -574,7 +552,7 @@ class HomeServiceTest {
         @DisplayName("경험치 획득 길드가 없으면 빈 목록을 반환한다")
         void getMvpGuilds_empty() {
             // given
-            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
+            when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
 
             // when
@@ -593,9 +571,9 @@ class HomeServiceTest {
             List<Object[]> topGuilds = new ArrayList<>();
             topGuilds.add(row1);
 
-            when(guildExperienceHistoryRepository.findTopExpGuildsByPeriod(any(), any(), any()))
+            when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(topGuilds);
-            when(guildRepository.findByIdInAndIsActiveTrue(List.of(guildId)))
+            when(guildQueryFacadeService.getGuildsWithMemberCounts(List.of(guildId)))
                 .thenReturn(Collections.emptyList()); // 비활성 길드
 
             // when

@@ -15,10 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCreateRequest;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionTemplateResponse;
@@ -68,10 +65,7 @@ class MissionServiceTest {
     private MissionParticipantService missionParticipantService;
 
     @Mock
-    private GuildMemberRepository guildMemberRepository;
-
-    @Mock
-    private GuildRepository guildRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -321,24 +315,6 @@ class MissionServiceTest {
     @DisplayName("미션 오픈 테스트")
     class OpenMissionTest {
 
-        private Guild createTestGuild(Long guildId) {
-            Guild guild = Guild.builder()
-                .name("테스트 길드")
-                .description("테스트")
-                .categoryId(1L)
-                .masterId(TEST_USER_ID)
-                .build();
-            setId(guild, guildId);
-            return guild;
-        }
-
-        private GuildMember createTestGuildMember(Guild guild, String userId) {
-            return GuildMember.builder()
-                .guild(guild)
-                .userId(userId)
-                .build();
-        }
-
         @Test
         @DisplayName("길드 미션 오픈 시 길드원에게 이벤트가 발행된다")
         void openMission_guildMission_publishesEvent() {
@@ -360,15 +336,10 @@ class MissionServiceTest {
             setId(mission, missionId);
             TestReflectionUtils.setField(mission, "source", MissionSource.USER);
 
-            Guild guild = createTestGuild(guildId);
-            List<GuildMember> guildMembers = List.of(
-                createTestGuildMember(guild, TEST_USER_ID),  // 생성자
-                createTestGuildMember(guild, member1Id),
-                createTestGuildMember(guild, member2Id)
-            );
+            List<String> memberUserIds = List.of(TEST_USER_ID, member1Id, member2Id);
 
             when(missionRepository.findById(missionId)).thenReturn(Optional.of(mission));
-            when(guildMemberRepository.findActiveMembers(guildId)).thenReturn(guildMembers);
+            when(guildQueryFacadeService.getActiveMemberUserIds(guildId)).thenReturn(memberUserIds);
 
             // when
             MissionResponse response = missionService.openMission(missionId, TEST_USER_ID);
@@ -415,7 +386,7 @@ class MissionServiceTest {
             assertThat(response.getStatus()).isEqualTo(MissionStatus.OPEN);
 
             // 길드 관련 로직이 호출되지 않음
-            verify(guildMemberRepository, never()).findActiveMembers(anyLong());
+            verify(guildQueryFacadeService, never()).getActiveMemberUserIds(anyLong());
             verify(eventPublisher, never()).publishEvent(any(GuildMissionArrivedEvent.class));
             verify(missionParticipantService, never()).addGuildMemberAsParticipant(any(), anyString());
         }
@@ -467,7 +438,7 @@ class MissionServiceTest {
 
             // then
             assertThat(response).isNotNull();
-            verify(guildMemberRepository, never()).findActiveMembers(anyLong());
+            verify(guildQueryFacadeService, never()).getActiveMemberUserIds(anyLong());
             verify(eventPublisher, never()).publishEvent(any(GuildMissionArrivedEvent.class));
         }
     }
@@ -1192,17 +1163,6 @@ class MissionServiceTest {
     @DisplayName("길드 관리자 권한 테스트")
     class GuildAdminPermissionTest {
 
-        private Guild createTestGuild(Long guildId) {
-            Guild guild = Guild.builder()
-                .name("테스트 길드")
-                .description("테스트")
-                .categoryId(1L)
-                .masterId(TEST_USER_ID)
-                .build();
-            setId(guild, guildId);
-            return guild;
-        }
-
         @Test
         @DisplayName("길드 관리자가 길드 미션을 삭제할 수 있다")
         void deleteMission_guildAdmin_success() {
@@ -1222,18 +1182,14 @@ class MissionServiceTest {
             setId(mission, missionId);
             TestReflectionUtils.setField(mission, "source", MissionSource.USER);
 
-            Guild guild = createTestGuild(guildId);
-            GuildMember masterMember = GuildMember.builder()
-                .guild(guild)
-                .userId(guildMasterId)
-                .build();
-            // 마스터 역할 설정
-            TestReflectionUtils.setField(masterMember, "role", io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRole.MASTER);
-            TestReflectionUtils.setField(masterMember, "status", io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberStatus.ACTIVE);
+            io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildPermissionCheck permissionCheck =
+                new io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildPermissionCheck(
+                    true, true, false
+                );
 
             when(missionRepository.findById(missionId)).thenReturn(Optional.of(mission));
-            when(guildMemberRepository.findByGuildIdAndUserId(guildId, guildMasterId))
-                .thenReturn(Optional.of(masterMember));
+            when(guildQueryFacadeService.checkPermissions(guildId, guildMasterId))
+                .thenReturn(permissionCheck);
 
             // when
             missionService.deleteMission(missionId, guildMasterId);

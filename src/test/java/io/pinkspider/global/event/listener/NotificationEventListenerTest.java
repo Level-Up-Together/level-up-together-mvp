@@ -19,6 +19,7 @@ import io.pinkspider.global.event.FriendRequestRejectedEvent;
 import io.pinkspider.global.event.GuildBulletinCreatedEvent;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.enums.NotificationType;
 import java.util.List;
@@ -36,6 +37,9 @@ class NotificationEventListenerTest {
 
     @Mock
     private NotificationService notificationService;
+
+    @Mock
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @InjectMocks
     private NotificationEventListener eventListener;

@@ -3,9 +3,8 @@ package io.pinkspider.leveluptogethermvp.userservice.mypage.application;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.global.exception.CustomException;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildMembershipInfo;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleChangeResult;
@@ -41,6 +40,7 @@ import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.Use
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +64,7 @@ public class MyPageService {
     private final UserLevelConfigCacheService userLevelConfigCacheService;
     private final ProfileImageStorageService profileImageStorageService;
     private final ImageModerationService imageModerationService;
-    private final GuildMemberRepository guildMemberRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
     private final ReportService reportService;
     private final ApplicationEventPublisher eventPublisher;
     private final UserProfileCacheService userProfileCacheService;
@@ -120,9 +120,11 @@ public class MyPageService {
         long titlesCount = titleService.countUserTitles(targetUserId);
 
         // 소속 길드 목록 조회
-        List<GuildMember> guildMemberships = guildMemberRepository.findAllActiveGuildMemberships(targetUserId);
+        List<GuildMembershipInfo> guildMemberships = guildQueryFacadeService.getUserGuildMemberships(targetUserId);
+        List<Long> guildIds = guildMemberships.stream().map(GuildMembershipInfo::guildId).toList();
+        Map<Long, Integer> memberCountMap = guildQueryFacadeService.countActiveMembersByGuildIds(guildIds);
         List<PublicProfileResponse.GuildInfo> guilds = guildMemberships.stream()
-            .map(this::toGuildInfo)
+            .map(m -> toGuildInfo(m, memberCountMap.getOrDefault(m.guildId(), 0)))
             .collect(Collectors.toList());
 
         // 본인 여부
@@ -550,15 +552,13 @@ public class MyPageService {
             .build();
     }
 
-    private PublicProfileResponse.GuildInfo toGuildInfo(GuildMember guildMember) {
-        Guild guild = guildMember.getGuild();
-        long memberCount = guildMemberRepository.countActiveMembers(guild.getId());
+    private PublicProfileResponse.GuildInfo toGuildInfo(GuildMembershipInfo membership, int memberCount) {
         return PublicProfileResponse.GuildInfo.builder()
-            .guildId(guild.getId())
-            .name(guild.getName())
-            .imageUrl(guild.getImageUrl())
-            .level(guild.getCurrentLevel())
-            .memberCount((int) memberCount)
+            .guildId(membership.guildId())
+            .name(membership.guildName())
+            .imageUrl(membership.guildImageUrl())
+            .level(membership.guildLevel())
+            .memberCount(memberCount)
             .build();
     }
 

@@ -12,9 +12,8 @@ import io.pinkspider.leveluptogethermvp.chatservice.domain.enums.ChatMessageType
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatMessageRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatParticipantRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatReadStatusRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildBasicInfo;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -38,15 +37,17 @@ public class GuildChatService {
     private final GuildChatMessageRepository chatMessageRepository;
     private final GuildChatReadStatusRepository readStatusRepository;
     private final GuildChatParticipantRepository participantRepository;
-    private final GuildRepository guildRepository;
-    private final GuildMemberRepository memberRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
     private final UserProfileCacheService userProfileCacheService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(transactionManager = "chatTransactionManager")
     public ChatMessageResponse sendMessage(Long guildId, String userId, String nickname,
                                             ChatMessageRequest request) {
-        Guild guild = findGuildById(guildId);
+        GuildBasicInfo guildInfo = guildQueryFacadeService.getGuildBasicInfo(guildId);
+        if (guildInfo == null) {
+            throw new IllegalArgumentException("길드를 찾을 수 없습니다: " + guildId);
+        }
         validateMembership(guildId, userId);
 
         String effectiveNickname = nickname;
@@ -71,8 +72,7 @@ public class GuildChatService {
         GuildChatMessage saved = chatMessageRepository.save(message);
         log.debug("채팅 메시지 전송: guildId={}, userId={}", guildId, userId);
 
-        List<String> memberIds = memberRepository.findActiveMembers(guildId).stream()
-            .map(member -> member.getUserId())
+        List<String> memberIds = guildQueryFacadeService.getActiveMemberUserIds(guildId).stream()
             .filter(memberId -> !memberId.equals(userId))
             .toList();
 
@@ -81,7 +81,7 @@ public class GuildChatService {
                 userId,
                 effectiveNickname,
                 guildId,
-                guild.getName(),
+                guildInfo.name(),
                 saved.getId(),
                 saved.getContent(),
                 memberIds
@@ -153,8 +153,7 @@ public class GuildChatService {
         }
 
         // 본인 메시지이거나 길드 마스터만 삭제 가능
-        Guild guild = findGuildById(guildId);
-        if (!message.getSenderId().equals(userId) && !guild.isMaster(userId)) {
+        if (!message.getSenderId().equals(userId) && !guildQueryFacadeService.isMaster(guildId, userId)) {
             throw new IllegalStateException("본인 메시지 또는 길드 마스터만 삭제할 수 있습니다.");
         }
 
@@ -180,19 +179,14 @@ public class GuildChatService {
             memberNickname + "님이 추방되었습니다.");
     }
 
-    private Guild findGuildById(Long guildId) {
-        return guildRepository.findByIdAndIsActiveTrue(guildId)
-            .orElseThrow(() -> new IllegalArgumentException("길드를 찾을 수 없습니다: " + guildId));
-    }
-
     private void validateGuildExists(Long guildId) {
-        if (!guildRepository.existsByIdAndIsActiveTrue(guildId)) {
+        if (!guildQueryFacadeService.guildExists(guildId)) {
             throw new IllegalArgumentException("길드를 찾을 수 없습니다: " + guildId);
         }
     }
 
     private void validateMembership(Long guildId, String userId) {
-        if (!memberRepository.isActiveMember(guildId, userId)) {
+        if (!guildQueryFacadeService.isActiveMember(guildId, userId)) {
             throw new IllegalStateException("길드 멤버만 채팅에 참여할 수 있습니다.");
         }
     }
@@ -202,8 +196,11 @@ public class GuildChatService {
     public ChatRoomInfoResponse getChatRoomInfo(Long guildId, String userId) {
         validateMembership(guildId, userId);
 
-        Guild guild = findGuildById(guildId);
-        int memberCount = (int) memberRepository.countActiveMembers(guildId);
+        GuildBasicInfo guildInfo = guildQueryFacadeService.getGuildBasicInfo(guildId);
+        if (guildInfo == null) {
+            throw new IllegalArgumentException("길드를 찾을 수 없습니다: " + guildId);
+        }
+        int memberCount = guildQueryFacadeService.getActiveMemberCount(guildId);
         int participantCount = (int) participantRepository.countActiveParticipants(guildId);
 
         GuildChatReadStatus readStatus = readStatusRepository.findByGuildIdAndUserId(guildId, userId)
@@ -215,7 +212,7 @@ public class GuildChatService {
             ? readStatusRepository.countUnreadMessagesForUser(guildId, readStatus.getLastReadMessageId())
             : (int) chatMessageRepository.countByGuildId(guildId);
 
-        return ChatRoomInfoResponse.of(guild.getId(), guild.getName(), guild.getImageUrl(),
+        return ChatRoomInfoResponse.of(guildInfo.id(), guildInfo.name(), guildInfo.imageUrl(),
             memberCount, participantCount, unreadCount, lastReadMessageId);
     }
 

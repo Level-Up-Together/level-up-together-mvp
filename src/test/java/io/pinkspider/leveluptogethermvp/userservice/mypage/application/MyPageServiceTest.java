@@ -25,7 +25,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRa
 import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import io.pinkspider.global.cache.UserLevelConfigCacheService;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.enums.FriendshipStatus;
@@ -84,7 +85,7 @@ class MyPageServiceTest {
     private ImageModerationService imageModerationService;
 
     @Mock
-    private GuildMemberRepository guildMemberRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @Mock
     private ReportService reportService;
@@ -157,7 +158,7 @@ class MyPageServiceTest {
         when(userExperienceService.getUserLevel(userId)).thenReturn(1);
         when(userStatsService.getOrCreateUserStats(userId)).thenReturn(createDefaultUserStats(userId));
         when(titleService.countUserTitles(userId)).thenReturn(0L);
-        when(guildMemberRepository.findAllActiveGuildMemberships(userId)).thenReturn(Collections.emptyList());
+        when(guildQueryFacadeService.getUserGuildMemberships(userId)).thenReturn(Collections.emptyList());
     }
 
     @Nested

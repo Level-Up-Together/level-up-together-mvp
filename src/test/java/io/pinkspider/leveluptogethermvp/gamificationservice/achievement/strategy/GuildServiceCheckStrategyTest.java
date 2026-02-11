@@ -5,11 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberRole;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildMemberStatus;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GuildServiceCheckStrategyTest {
 
     @Mock
-    private GuildMemberRepository guildMemberRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @InjectMocks
     private GuildServiceCheckStrategy strategy;
@@ -43,15 +40,6 @@ class GuildServiceCheckStrategyTest {
         return achievement;
     }
 
-    private GuildMember createTestGuildMember(Long id, String userId, GuildMemberRole role) {
-        GuildMember member = GuildMember.builder()
-            .userId(userId)
-            .role(role)
-            .status(GuildMemberStatus.ACTIVE)
-            .build();
-        setId(member, id);
-        return member;
-    }
 
     @Nested
     @DisplayName("getDataSource 테스트")
@@ -76,9 +64,11 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 멤버이면 isGuildMember가 true를 반환한다")
         void fetchCurrentValue_isGuildMember_true() {
             // given
-            GuildMember member = createTestGuildMember(1L, TEST_USER_ID, GuildMemberRole.MEMBER);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
-                .thenReturn(List.of(member));
+            GuildFacadeDto.GuildMembershipInfo membership = new GuildFacadeDto.GuildMembershipInfo(
+                1L, "테스트 길드", null, 1, false, false
+            );
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
+                .thenReturn(List.of(membership));
 
             // when
             Object result = strategy.fetchCurrentValue(TEST_USER_ID, "isGuildMember");
@@ -91,7 +81,7 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 멤버가 아니면 isGuildMember가 false를 반환한다")
         void fetchCurrentValue_isGuildMember_false() {
             // given
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -105,9 +95,11 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 마스터이면 isGuildMaster가 true를 반환한다")
         void fetchCurrentValue_isGuildMaster_true() {
             // given
-            GuildMember master = createTestGuildMember(1L, TEST_USER_ID, GuildMemberRole.MASTER);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
-                .thenReturn(List.of(master));
+            GuildFacadeDto.GuildMembershipInfo masterMembership = new GuildFacadeDto.GuildMembershipInfo(
+                1L, "테스트 길드", null, 1, true, false
+            );
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
+                .thenReturn(List.of(masterMembership));
 
             // when
             Object result = strategy.fetchCurrentValue(TEST_USER_ID, "isGuildMaster");
@@ -120,9 +112,11 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 마스터가 아니면 isGuildMaster가 false를 반환한다")
         void fetchCurrentValue_isGuildMaster_false() {
             // given
-            GuildMember member = createTestGuildMember(1L, TEST_USER_ID, GuildMemberRole.MEMBER);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
-                .thenReturn(List.of(member));
+            GuildFacadeDto.GuildMembershipInfo memberMembership = new GuildFacadeDto.GuildMembershipInfo(
+                1L, "테스트 길드", null, 1, false, false
+            );
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
+                .thenReturn(List.of(memberMembership));
 
             // when
             Object result = strategy.fetchCurrentValue(TEST_USER_ID, "isGuildMaster");
@@ -135,7 +129,7 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("알 수 없는 필드면 false를 반환한다")
         void fetchCurrentValue_unknownField_returnsFalse() {
             // given
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -155,9 +149,11 @@ class GuildServiceCheckStrategyTest {
         void checkCondition_boolean_satisfied_returnsTrue() {
             // given
             Achievement achievement = createTestAchievement(1L, "isGuildMember", "EQ", 1);
-            GuildMember member = createTestGuildMember(1L, TEST_USER_ID, GuildMemberRole.MEMBER);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
-                .thenReturn(List.of(member));
+            GuildFacadeDto.GuildMembershipInfo membership = new GuildFacadeDto.GuildMembershipInfo(
+                1L, "테스트 길드", null, 1, false, false
+            );
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
+                .thenReturn(List.of(membership));
 
             // when
             boolean result = strategy.checkCondition(TEST_USER_ID, achievement);
@@ -171,9 +167,11 @@ class GuildServiceCheckStrategyTest {
         void checkCondition_boolean_notSatisfied_returnsFalse() {
             // given
             Achievement achievement = createTestAchievement(1L, "isGuildMaster", "EQ", 1);
-            GuildMember member = createTestGuildMember(1L, TEST_USER_ID, GuildMemberRole.MEMBER);
-            when(guildMemberRepository.findAllActiveGuildMemberships(TEST_USER_ID))
-                .thenReturn(List.of(member));
+            GuildFacadeDto.GuildMembershipInfo memberMembership = new GuildFacadeDto.GuildMembershipInfo(
+                1L, "테스트 길드", null, 1, false, false
+            );
+            when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
+                .thenReturn(List.of(memberMembership));
 
             // when
             boolean result = strategy.checkCondition(TEST_USER_ID, achievement);

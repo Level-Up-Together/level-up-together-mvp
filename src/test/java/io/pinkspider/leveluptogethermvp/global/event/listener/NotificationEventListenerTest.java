@@ -15,13 +15,7 @@ import io.pinkspider.global.event.GuildChatMessageEvent;
 import io.pinkspider.global.event.GuildCreationEligibleEvent;
 import io.pinkspider.global.event.GuildInvitationEvent;
 import io.pinkspider.global.event.MissionCommentEvent;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildPost;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildJoinType;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildPostType;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildPostRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.enums.NotificationType;
 import io.pinkspider.global.event.listener.NotificationEventListener;
@@ -44,10 +38,7 @@ class NotificationEventListenerTest {
     private NotificationService notificationService;
 
     @Mock
-    private GuildRepository guildRepository;
-
-    @Mock
-    private GuildPostRepository guildPostRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @InjectMocks
     private NotificationEventListener notificationEventListener;
@@ -61,41 +52,6 @@ class NotificationEventListenerTest {
     private static final String INVITEE_ID = "invitee-user-200";
     private static final String MISSION_CREATOR_ID = "mission-creator-300";
 
-    private Guild createTestGuild(Long id, String masterId) {
-        Guild guild = Guild.builder()
-            .name("테스트 길드")
-            .description("테스트 설명")
-            .visibility(GuildVisibility.PUBLIC)
-            .joinType(GuildJoinType.OPEN)
-            .masterId(masterId)
-            .maxMembers(10)
-            .isActive(true)
-            .currentLevel(1)
-            .currentExp(0)
-            .totalExp(0)
-            .categoryId(1L)
-            .build();
-        setId(guild, id);
-        return guild;
-    }
-
-    private GuildPost createTestGuildPost(Long postId, Long guildId, String authorId) {
-        Guild guild = createTestGuild(guildId, GUILD_MASTER_ID);
-        GuildPost post = GuildPost.builder()
-            .guild(guild)
-            .authorId(authorId)
-            .authorNickname("작성자")
-            .title("테스트 공지")
-            .content("테스트 내용")
-            .postType(GuildPostType.NOTICE)
-            .isPinned(false)
-            .viewCount(0)
-            .commentCount(0)
-            .isDeleted(false)
-            .build();
-        setId(post, postId);
-        return post;
-    }
 
     @Nested
     @DisplayName("handleContentReported 테스트")
@@ -151,11 +107,10 @@ class NotificationEventListenerTest {
         void handleContentReported_guildType_notifiesGuildMaster() {
             // given
             Long guildId = 100L;
-            Guild guild = createTestGuild(guildId, GUILD_MASTER_ID);
             ContentReportedEvent event = new ContentReportedEvent(
                 REPORTER_ID, "GUILD", String.valueOf(guildId), TARGET_USER_ID, "길드", LocalDateTime.now()
             );
-            when(guildRepository.findByIdAndIsActiveTrue(guildId)).thenReturn(Optional.of(guild));
+            when(guildQueryFacadeService.getGuildMasterId(guildId)).thenReturn(GUILD_MASTER_ID);
 
             // when
             notificationEventListener.handleContentReported(event);
@@ -171,11 +126,13 @@ class NotificationEventListenerTest {
             // given
             Long postId = 1L;
             Long guildId = 100L;
-            GuildPost post = createTestGuildPost(postId, guildId, TARGET_USER_ID);
             ContentReportedEvent event = new ContentReportedEvent(
                 REPORTER_ID, "GUILD_NOTICE", String.valueOf(postId), TARGET_USER_ID, "길드 공지", LocalDateTime.now()
             );
-            when(guildPostRepository.findByIdAndIsDeletedFalse(postId)).thenReturn(Optional.of(post));
+            var postInfo = new io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService.GuildPostInfo(
+                guildId, GUILD_MASTER_ID
+            );
+            when(guildQueryFacadeService.getGuildInfoByPostId(postId)).thenReturn(postInfo);
 
             // when
             notificationEventListener.handleContentReported(event);
@@ -190,11 +147,10 @@ class NotificationEventListenerTest {
         void handleContentReported_targetUserIsGuildMaster_noDuplicateNotification() {
             // given
             Long guildId = 100L;
-            Guild guild = createTestGuild(guildId, TARGET_USER_ID);
             ContentReportedEvent event = new ContentReportedEvent(
                 REPORTER_ID, "GUILD", String.valueOf(guildId), TARGET_USER_ID, "길드", LocalDateTime.now()
             );
-            when(guildRepository.findByIdAndIsActiveTrue(guildId)).thenReturn(Optional.of(guild));
+            when(guildQueryFacadeService.getGuildMasterId(guildId)).thenReturn(TARGET_USER_ID);
 
             // when
             notificationEventListener.handleContentReported(event);
@@ -212,7 +168,7 @@ class NotificationEventListenerTest {
             ContentReportedEvent event = new ContentReportedEvent(
                 REPORTER_ID, "GUILD", String.valueOf(guildId), TARGET_USER_ID, "길드", LocalDateTime.now()
             );
-            when(guildRepository.findByIdAndIsActiveTrue(guildId)).thenReturn(Optional.empty());
+            when(guildQueryFacadeService.getGuildMasterId(guildId)).thenReturn(null);
 
             // when
             notificationEventListener.handleContentReported(event);
@@ -259,11 +215,10 @@ class NotificationEventListenerTest {
         void handleContentReported_notificationServiceThrows_continuesProcessing() {
             // given
             Long guildId = 100L;
-            Guild guild = createTestGuild(guildId, GUILD_MASTER_ID);
             ContentReportedEvent event = new ContentReportedEvent(
                 REPORTER_ID, "GUILD", String.valueOf(guildId), TARGET_USER_ID, "길드", LocalDateTime.now()
             );
-            when(guildRepository.findByIdAndIsActiveTrue(guildId)).thenReturn(Optional.of(guild));
+            when(guildQueryFacadeService.getGuildMasterId(guildId)).thenReturn(GUILD_MASTER_ID);
             org.mockito.Mockito.doThrow(new RuntimeException("알림 생성 실패"))
                 .when(notificationService).notifyContentReported(anyString(), anyString());
 

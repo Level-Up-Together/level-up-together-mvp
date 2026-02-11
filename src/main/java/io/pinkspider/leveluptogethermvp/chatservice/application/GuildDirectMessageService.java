@@ -7,8 +7,7 @@ import io.pinkspider.leveluptogethermvp.chatservice.domain.entity.GuildDirectCon
 import io.pinkspider.leveluptogethermvp.chatservice.domain.entity.GuildDirectMessage;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildDirectConversationRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildDirectMessageRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.FcmPushService;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.PushMessageRequest;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
@@ -32,8 +31,7 @@ public class GuildDirectMessageService {
 
     private final GuildDirectConversationRepository conversationRepository;
     private final GuildDirectMessageRepository messageRepository;
-    private final GuildMemberRepository memberRepository;
-    private final GuildRepository guildRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
     private final UserProfileCacheService userProfileCacheService;
     private final FcmPushService fcmPushService;
 
@@ -209,13 +207,13 @@ public class GuildDirectMessageService {
     // ============ 헬퍼 메서드 ============
 
     private void validateGuildExists(Long guildId) {
-        if (!guildRepository.existsByIdAndIsActiveTrue(guildId)) {
+        if (!guildQueryFacadeService.guildExists(guildId)) {
             throw new IllegalArgumentException("길드를 찾을 수 없습니다: " + guildId);
         }
     }
 
     private void validateMembership(Long guildId, String userId) {
-        if (!memberRepository.isActiveMember(guildId, userId)) {
+        if (!guildQueryFacadeService.isActiveMember(guildId, userId)) {
             throw new IllegalStateException("길드 멤버만 DM을 사용할 수 있습니다.");
         }
     }
@@ -224,10 +222,10 @@ public class GuildDirectMessageService {
         if (userId1.equals(userId2)) {
             throw new IllegalArgumentException("자기 자신에게 DM을 보낼 수 없습니다.");
         }
-        if (!memberRepository.isActiveMember(guildId, userId1)) {
+        if (!guildQueryFacadeService.isActiveMember(guildId, userId1)) {
             throw new IllegalStateException("발신자가 길드 멤버가 아닙니다.");
         }
-        if (!memberRepository.isActiveMember(guildId, userId2)) {
+        if (!guildQueryFacadeService.isActiveMember(guildId, userId2)) {
             throw new IllegalStateException("수신자가 길드 멤버가 아닙니다.");
         }
     }

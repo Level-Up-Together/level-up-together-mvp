@@ -2,10 +2,8 @@ package io.pinkspider.leveluptogethermvp.missionservice.application;
 
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.MissionStateChangedEvent;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildPermissionCheck;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCreateRequest;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionTemplateResponse;
@@ -45,8 +43,7 @@ public class MissionService {
     private final MissionParticipantRepository participantRepository;
     private final MissionCategoryService missionCategoryService;
     private final MissionParticipantService missionParticipantService;
-    private final GuildMemberRepository guildMemberRepository;
-    private final GuildRepository guildRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
     private final ApplicationEventPublisher eventPublisher;
     private final ReportService reportService;
 
@@ -79,10 +76,7 @@ public class MissionService {
         if (request.getType() == MissionType.GUILD && request.getGuildId() != null) {
             try {
                 Long guildId = Long.parseLong(request.getGuildId());
-                Guild guild = guildRepository.findById(guildId).orElse(null);
-                if (guild != null) {
-                    guildName = guild.getName();
-                }
+                guildName = guildQueryFacadeService.getGuildName(guildId);
             } catch (NumberFormatException e) {
                 log.warn("길드 ID 파싱 실패: guildId={}", request.getGuildId());
             }
@@ -315,11 +309,9 @@ public class MissionService {
     private void notifyGuildMembersAboutRecruitment(Mission mission, String creatorId) {
         try {
             Long guildId = mission.getGuildIdAsLong();
-            List<GuildMember> activeMembers = guildMemberRepository.findActiveMembers(guildId);
 
             // 생성자를 제외한 활성 길드원 ID 목록 추출
-            List<String> memberIds = activeMembers.stream()
-                .map(GuildMember::getUserId)
+            List<String> memberIds = guildQueryFacadeService.getActiveMemberUserIds(guildId).stream()
                 .filter(memberId -> !memberId.equals(creatorId))
                 .toList();
 
@@ -402,8 +394,8 @@ public class MissionService {
         boolean isGuildAdmin = false;
 
         if (mission.isGuildMission() && mission.getGuildIdAsLong() != null) {
-            GuildMember member = guildMemberRepository.findByGuildIdAndUserId(mission.getGuildIdAsLong(), userId).orElse(null);
-            if (member != null && member.isActive() && member.isMasterOrSubMaster()) {
+            GuildPermissionCheck perm = guildQueryFacadeService.checkPermissions(mission.getGuildIdAsLong(), userId);
+            if (perm.isActiveMember() && perm.isMasterOrSubMaster()) {
                 isGuildAdmin = true;
             }
         }
@@ -437,8 +429,8 @@ public class MissionService {
 
         // 길드 미션인 경우 길드 마스터 또는 부길드마스터도 허용
         if (mission.isGuildMission() && mission.getGuildIdAsLong() != null) {
-            GuildMember member = guildMemberRepository.findByGuildIdAndUserId(mission.getGuildIdAsLong(), userId).orElse(null);
-            if (member != null && member.isActive() && member.isMasterOrSubMaster()) {
+            GuildPermissionCheck perm = guildQueryFacadeService.checkPermissions(mission.getGuildIdAsLong(), userId);
+            if (perm.isActiveMember() && perm.isMasterOrSubMaster()) {
                 return;
             }
         }

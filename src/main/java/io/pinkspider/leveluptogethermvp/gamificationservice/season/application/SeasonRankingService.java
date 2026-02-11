@@ -7,7 +7,9 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.Seaso
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.entity.Season;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructure.SeasonRepository;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.SeasonMyRankingResponse;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.GuildMember;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildMembershipInfo;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildWithMemberCount;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
@@ -17,10 +19,6 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.TitleRa
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildExperienceHistoryRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import io.pinkspider.global.translation.LocaleUtils;
@@ -48,12 +46,10 @@ public class SeasonRankingService {
 
     private final SeasonRepository seasonRepository;
     private final ExperienceHistoryRepository experienceHistoryRepository;
-    private final GuildExperienceHistoryRepository guildExperienceHistoryRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
     private final UserProfileCacheService userProfileCacheService;
     private final UserExperienceRepository userExperienceRepository;
     private final UserTitleRepository userTitleRepository;
-    private final GuildRepository guildRepository;
-    private final GuildMemberRepository guildMemberRepository;
     private final MissionCategoryService missionCategoryService;
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -175,7 +171,7 @@ public class SeasonRankingService {
      * 시즌 MVP 길드 조회 (시즌 기간 동안 가장 많은 경험치를 획득한 길드)
      */
     private List<SeasonMvpGuildResponse> getSeasonMvpGuilds(Season season, int limit) {
-        List<Object[]> topGuilds = guildExperienceHistoryRepository.findTopExpGuildsByPeriod(
+        List<Object[]> topGuilds = guildQueryFacadeService.getTopExpGuildsByPeriod(
             season.getStartAt(), season.getEndAt(), PageRequest.of(0, limit));
 
         if (topGuilds.isEmpty()) {
@@ -187,18 +183,11 @@ public class SeasonRankingService {
             .map(row -> ((Number) row[0]).longValue())
             .collect(Collectors.toList());
 
-        // 2. 배치 조회: 길드 정보
-        Map<Long, Guild> guildMap = guildRepository.findByIdInAndIsActiveTrue(guildIds).stream()
-            .collect(Collectors.toMap(Guild::getId, g -> g));
+        // 2. 배치 조회: 길드 정보 + 멤버 수
+        Map<Long, GuildWithMemberCount> guildMap = guildQueryFacadeService.getGuildsWithMemberCounts(guildIds).stream()
+            .collect(Collectors.toMap(GuildWithMemberCount::id, g -> g));
 
-        // 3. 배치 조회: 멤버 수
-        Map<Long, Long> memberCountMap = guildMemberRepository.countActiveMembersByGuildIds(guildIds).stream()
-            .collect(Collectors.toMap(
-                row -> (Long) row[0],
-                row -> (Long) row[1]
-            ));
-
-        // 4. 결과 조합
+        // 3. 결과 조합
         List<SeasonMvpGuildResponse> result = new ArrayList<>();
         int rank = 1;
 
@@ -206,19 +195,17 @@ public class SeasonRankingService {
             Long guildId = ((Number) row[0]).longValue();
             Long earnedExp = ((Number) row[1]).longValue();
 
-            Guild guild = guildMap.get(guildId);
+            GuildWithMemberCount guild = guildMap.get(guildId);
             if (guild == null) {
                 continue;
             }
 
-            int memberCount = memberCountMap.getOrDefault(guildId, 0L).intValue();
-
             result.add(SeasonMvpGuildResponse.of(
                 guildId,
-                guild.getName(),
-                guild.getImageUrl(),
-                guild.getCurrentLevel(),
-                memberCount,
+                guild.name(),
+                guild.imageUrl(),
+                guild.currentLevel(),
+                guild.memberCount(),
                 earnedExp,
                 rank++
             ));
@@ -397,19 +384,19 @@ public class SeasonRankingService {
         Integer guildRank = null;
         Long guildSeasonExp = null;
 
-        List<GuildMember> myGuildMembers = guildMemberRepository.findAllActiveGuildMemberships(userId);
-        if (!myGuildMembers.isEmpty()) {
+        List<GuildMembershipInfo> myGuildMemberships = guildQueryFacadeService.getUserGuildMemberships(userId);
+        if (!myGuildMemberships.isEmpty()) {
             // 첫 번째 활성 길드를 주요 길드로 사용
-            Guild guild = myGuildMembers.get(0).getGuild();
-            guildId = guild.getId();
-            guildName = guild.getName();
+            GuildMembershipInfo primaryGuild = myGuildMemberships.get(0);
+            guildId = primaryGuild.guildId();
+            guildName = primaryGuild.guildName();
 
             // 길드 경험치 및 순위 조회
-            guildSeasonExp = guildExperienceHistoryRepository.sumExpByGuildIdAndPeriod(
+            guildSeasonExp = guildQueryFacadeService.sumGuildExpByPeriod(
                 guildId, season.getStartAt(), season.getEndAt());
 
             if (guildSeasonExp != null && guildSeasonExp > 0) {
-                Long guildsAboveMe = guildExperienceHistoryRepository.countGuildsWithMoreExpByPeriod(
+                Long guildsAboveMe = guildQueryFacadeService.countGuildsWithMoreExp(
                     season.getStartAt(), season.getEndAt(), guildSeasonExp);
                 guildRank = guildsAboveMe.intValue() + 1;
             }

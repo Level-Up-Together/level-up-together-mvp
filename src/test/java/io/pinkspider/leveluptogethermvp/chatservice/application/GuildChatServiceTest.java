@@ -20,10 +20,8 @@ import io.pinkspider.leveluptogethermvp.chatservice.domain.enums.ChatMessageType
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatMessageRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatParticipantRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatReadStatusRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildBasicInfo;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import java.time.LocalDateTime;
@@ -57,10 +55,7 @@ class GuildChatServiceTest {
     private GuildChatParticipantRepository participantRepository;
 
     @Mock
-    private GuildRepository guildRepository;
-
-    @Mock
-    private GuildMemberRepository memberRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @Mock
     private UserProfileCacheService userProfileCacheService;
@@ -71,7 +66,6 @@ class GuildChatServiceTest {
     @InjectMocks
     private GuildChatService guildChatService;
 
-    private Guild testGuild;
     private GuildChatMessage testMessage;
     private String testUserId;
     private String testNickname;
@@ -80,16 +74,6 @@ class GuildChatServiceTest {
     void setUp() {
         testUserId = "test-user-id";
         testNickname = "테스터";
-
-        testGuild = Guild.builder()
-            .name("테스트 길드")
-            .description("테스트 길드 설명")
-            .visibility(GuildVisibility.PUBLIC)
-            .masterId(testUserId)
-            .maxMembers(50)
-            .categoryId(1L)
-            .build();
-        setId(testGuild, 1L);
 
         testMessage = GuildChatMessage.createTextMessage(1L, testUserId, testNickname, "테스트 메시지");
         setId(testMessage, 1L);
@@ -107,9 +91,9 @@ class GuildChatServiceTest {
                 .content("안녕하세요!")
                 .build();
 
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(memberRepository.findActiveMembers(1L)).thenReturn(java.util.Collections.emptyList());
+            when(guildQueryFacadeService.getGuildBasicInfo(1L)).thenReturn(new GuildBasicInfo(1L, "테스트길드", null, 1));
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.getActiveMemberUserIds(1L)).thenReturn(java.util.Collections.emptyList());
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -135,9 +119,9 @@ class GuildChatServiceTest {
                 .imageUrl("https://example.com/image.jpg")
                 .build();
 
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(memberRepository.findActiveMembers(1L)).thenReturn(java.util.Collections.emptyList());
+            when(guildQueryFacadeService.getGuildBasicInfo(1L)).thenReturn(new GuildBasicInfo(1L, "테스트길드", null, 1));
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.getActiveMemberUserIds(1L)).thenReturn(java.util.Collections.emptyList());
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -161,8 +145,8 @@ class GuildChatServiceTest {
                 .content("안녕하세요!")
                 .build();
 
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(false);
+            when(guildQueryFacadeService.getGuildBasicInfo(1L)).thenReturn(new GuildBasicInfo(1L, "테스트길드", null, 1));
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> guildChatService.sendMessage(1L, testUserId, testNickname, request))
@@ -178,7 +162,7 @@ class GuildChatServiceTest {
                 .content("안녕하세요!")
                 .build();
 
-            when(guildRepository.findByIdAndIsActiveTrue(999L)).thenReturn(Optional.empty());
+            when(guildQueryFacadeService.getGuildBasicInfo(999L)).thenThrow(new IllegalArgumentException("길드를 찾을 수 없습니다"));
 
             // when & then
             assertThatThrownBy(() -> guildChatService.sendMessage(999L, testUserId, testNickname, request))
@@ -195,7 +179,7 @@ class GuildChatServiceTest {
         @DisplayName("시스템 메시지를 전송한다")
         void sendSystemMessage_success() {
             // given
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -216,7 +200,7 @@ class GuildChatServiceTest {
         @DisplayName("멤버 가입 알림을 전송한다")
         void notifyMemberJoin_success() {
             // given
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -234,7 +218,7 @@ class GuildChatServiceTest {
         @DisplayName("멤버 탈퇴 알림을 전송한다")
         void notifyMemberLeave_success() {
             // given
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -260,7 +244,7 @@ class GuildChatServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
             Page<GuildChatMessage> messagePage = new PageImpl<>(List.of(testMessage), pageable, 1);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findByGuildIdOrderByCreatedAtDesc(1L, pageable)).thenReturn(messagePage);
 
             // when
@@ -277,7 +261,7 @@ class GuildChatServiceTest {
             // given
             LocalDateTime since = LocalDateTime.now().minusMinutes(5);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findNewMessages(1L, since)).thenReturn(List.of(testMessage));
 
             // when
@@ -291,7 +275,7 @@ class GuildChatServiceTest {
         @DisplayName("특정 ID 이후의 메시지를 조회한다")
         void getMessagesAfterId_success() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findMessagesAfterId(1L, 0L)).thenReturn(List.of(testMessage));
 
             // when
@@ -306,7 +290,7 @@ class GuildChatServiceTest {
         void getMessages_nonMember_fail() {
             // given
             Pageable pageable = PageRequest.of(0, 20);
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(false);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> guildChatService.getMessages(1L, testUserId, pageable))
@@ -324,7 +308,6 @@ class GuildChatServiceTest {
         void deleteMessage_byOwner_success() {
             // given
             when(chatMessageRepository.findById(1L)).thenReturn(Optional.of(testMessage));
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
 
             // when
             guildChatService.deleteMessage(1L, 1L, testUserId);
@@ -342,7 +325,7 @@ class GuildChatServiceTest {
             setId(otherMessage, 2L);
 
             when(chatMessageRepository.findById(2L)).thenReturn(Optional.of(otherMessage));
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
+            when(guildQueryFacadeService.isMaster(1L, testUserId)).thenReturn(true);
 
             // when
             guildChatService.deleteMessage(1L, 2L, testUserId); // masterId = testUserId
@@ -357,18 +340,11 @@ class GuildChatServiceTest {
             // given
             String otherUserId = "other-user-id";
 
-            // testGuild의 마스터를 다른 사람으로 설정
-            Guild otherGuild = Guild.builder()
-                .name("다른 길드")
-                .masterId("another-master-id")
-                .build();
-            setId(otherGuild, 2L);
-
             GuildChatMessage otherMessage = GuildChatMessage.createTextMessage(2L, "message-owner", "메시지소유자", "다른 메시지");
             setId(otherMessage, 2L);
 
             when(chatMessageRepository.findById(2L)).thenReturn(Optional.of(otherMessage));
-            when(guildRepository.findByIdAndIsActiveTrue(2L)).thenReturn(Optional.of(otherGuild));
+            when(guildQueryFacadeService.isMaster(2L, otherUserId)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> guildChatService.deleteMessage(2L, 2L, otherUserId))
@@ -400,7 +376,7 @@ class GuildChatServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
             Page<GuildChatMessage> messagePage = new PageImpl<>(List.of(testMessage), pageable, 1);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.searchMessages(1L, "테스트", pageable)).thenReturn(messagePage);
 
             // when
@@ -423,7 +399,7 @@ class GuildChatServiceTest {
             GuildChatReadStatus readStatus = GuildChatReadStatus.create(1L, testUserId);
             setId(readStatus, 1L);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findById(1L)).thenReturn(Optional.of(testMessage));
             when(readStatusRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.of(readStatus));
@@ -439,7 +415,7 @@ class GuildChatServiceTest {
         @DisplayName("읽음 상태가 없으면 새로 생성한다")
         void markAsRead_createNewStatus() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findById(1L)).thenReturn(Optional.of(testMessage));
             when(readStatusRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.empty());
@@ -460,7 +436,7 @@ class GuildChatServiceTest {
             GuildChatMessage otherMessage = GuildChatMessage.createTextMessage(2L, testUserId, testNickname, "다른 메시지");
             setId(otherMessage, 2L);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findById(2L)).thenReturn(Optional.of(otherMessage));
 
             // when & then
@@ -473,7 +449,7 @@ class GuildChatServiceTest {
         @DisplayName("읽음 상태를 초기화한다")
         void initializeReadStatus_success() {
             // given
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(readStatusRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.empty());
             when(readStatusRepository.save(any(GuildChatReadStatus.class)))
@@ -505,8 +481,8 @@ class GuildChatServiceTest {
         @DisplayName("채팅방에 입장한다")
         void joinChat_success() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(participantRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.empty());
             when(participantRepository.save(any(GuildChatParticipant.class)))
@@ -542,8 +518,8 @@ class GuildChatServiceTest {
                 testUserId, "프로필닉네임", null, 1, null, null, null
             );
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(userProfileCacheService.getUserProfile(testUserId)).thenReturn(profile);
             when(participantRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.empty());
@@ -579,10 +555,10 @@ class GuildChatServiceTest {
             GuildChatParticipant participant = GuildChatParticipant.create(1L, testUserId, testNickname);
             setId(participant, 1L);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(participantRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.of(participant));
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(chatMessageRepository.save(any(GuildChatMessage.class)))
                 .thenAnswer(inv -> {
                     GuildChatMessage msg = inv.getArgument(0);
@@ -601,7 +577,7 @@ class GuildChatServiceTest {
         @DisplayName("참여 여부를 확인한다")
         void isParticipating_true() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(participantRepository.isParticipating(1L, testUserId)).thenReturn(true);
 
             // when
@@ -615,7 +591,7 @@ class GuildChatServiceTest {
         @DisplayName("참여자가 없으면 false 반환")
         void isParticipating_false() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(participantRepository.isParticipating(1L, testUserId)).thenReturn(false);
 
             // when
@@ -632,7 +608,7 @@ class GuildChatServiceTest {
             GuildChatParticipant participant = GuildChatParticipant.create(1L, testUserId, testNickname);
             setId(participant, 1L);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(participantRepository.findActiveParticipants(1L))
                 .thenReturn(List.of(participant));
 
@@ -647,7 +623,7 @@ class GuildChatServiceTest {
         @DisplayName("참여자 수를 조회한다")
         void getParticipantCount_success() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(participantRepository.countActiveParticipants(1L)).thenReturn(5L);
 
             // when
@@ -701,7 +677,7 @@ class GuildChatServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
             Page<GuildChatMessage> messagePage = new PageImpl<>(List.of(testMessage), pageable, 1);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findMessagesBeforeId(eq(1L), eq(100L), any(Pageable.class)))
                 .thenReturn(messagePage);
 
@@ -721,7 +697,7 @@ class GuildChatServiceTest {
         @DisplayName("멤버 강퇴 알림을 전송한다")
         void notifyMemberKick_success() {
             // given
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -745,7 +721,7 @@ class GuildChatServiceTest {
         @DisplayName("참조를 포함한 시스템 메시지를 전송한다")
         void sendSystemMessage_withReference_success() {
             // given
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
                 setId(msg, 1L);
@@ -775,9 +751,9 @@ class GuildChatServiceTest {
             GuildChatReadStatus readStatus = GuildChatReadStatus.create(1L, testUserId);
             setId(readStatus, 1L);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(memberRepository.countActiveMembers(1L)).thenReturn(10L);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.getGuildBasicInfo(1L)).thenReturn(new GuildBasicInfo(1L, "테스트길드", null, 1));
+            when(guildQueryFacadeService.getActiveMemberCount(1L)).thenReturn(10);
             when(participantRepository.countActiveParticipants(1L)).thenReturn(5L);
             when(readStatusRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.of(readStatus));
@@ -797,9 +773,9 @@ class GuildChatServiceTest {
         @DisplayName("읽음 상태가 없으면 전체 메시지가 안읽은 상태로 표시된다")
         void getChatRoomInfo_noReadStatus_allUnread() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(memberRepository.countActiveMembers(1L)).thenReturn(10L);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.getGuildBasicInfo(1L)).thenReturn(new GuildBasicInfo(1L, "테스트길드", null, 1));
+            when(guildQueryFacadeService.getActiveMemberCount(1L)).thenReturn(10);
             when(participantRepository.countActiveParticipants(1L)).thenReturn(5L);
             when(readStatusRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.empty());
@@ -825,7 +801,7 @@ class GuildChatServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
             Page<GuildChatMessage> messagePage = new PageImpl<>(List.of(testMessage), pageable, 1);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findByGuildIdOrderByCreatedAtDesc(1L, pageable))
                 .thenReturn(messagePage);
             when(participantRepository.countActiveParticipants(1L)).thenReturn(10L);
@@ -852,7 +828,7 @@ class GuildChatServiceTest {
             Pageable pageable = PageRequest.of(0, 20);
             Page<GuildChatMessage> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findByGuildIdOrderByCreatedAtDesc(1L, pageable))
                 .thenReturn(emptyPage);
             when(participantRepository.countActiveParticipants(1L)).thenReturn(10L);
@@ -880,9 +856,9 @@ class GuildChatServiceTest {
                 testUserId, "프로필닉네임", null, 1, null, null, null
             );
 
-            when(guildRepository.findByIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testGuild));
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(memberRepository.findActiveMembers(1L)).thenReturn(java.util.Collections.emptyList());
+            when(guildQueryFacadeService.getGuildBasicInfo(1L)).thenReturn(new GuildBasicInfo(1L, "테스트길드", null, 1));
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.getActiveMemberUserIds(1L)).thenReturn(java.util.Collections.emptyList());
             when(userProfileCacheService.getUserProfile(testUserId)).thenReturn(profile);
             when(chatMessageRepository.save(any(GuildChatMessage.class))).thenAnswer(inv -> {
                 GuildChatMessage msg = inv.getArgument(0);
@@ -908,10 +884,10 @@ class GuildChatServiceTest {
                 testUserId, "프로필닉네임", null, 1, null, null, null
             );
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(participantRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.of(participant));
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(userProfileCacheService.getUserProfile(testUserId)).thenReturn(profile);
             when(chatMessageRepository.save(any(GuildChatMessage.class)))
                 .thenAnswer(inv -> {
@@ -940,8 +916,8 @@ class GuildChatServiceTest {
             leftParticipant.leave();  // 먼저 퇴장
             setId(leftParticipant, 1L);
 
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
-            when(guildRepository.existsByIdAndIsActiveTrue(1L)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.guildExists(1L)).thenReturn(true);
             when(participantRepository.findByGuildIdAndUserId(1L, testUserId))
                 .thenReturn(Optional.of(leftParticipant));
             when(chatMessageRepository.save(any(GuildChatMessage.class)))
@@ -973,7 +949,7 @@ class GuildChatServiceTest {
         @DisplayName("존재하지 않는 메시지 읽음 처리 시 예외 발생")
         void markAsRead_messageNotFound_fail() {
             // given
-            when(memberRepository.isActiveMember(1L, testUserId)).thenReturn(true);
+            when(guildQueryFacadeService.isActiveMember(1L, testUserId)).thenReturn(true);
             when(chatMessageRepository.findById(999L)).thenReturn(Optional.empty());
 
             // when & then
