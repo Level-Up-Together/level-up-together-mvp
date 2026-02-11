@@ -3,9 +3,8 @@ package io.pinkspider.leveluptogethermvp.missionservice.saga.steps;
 import io.pinkspider.global.saga.SagaStep;
 import io.pinkspider.global.saga.SagaStepResult;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.global.enums.GuildExpSourceType;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import java.util.function.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class GrantGuildExperienceStep implements SagaStep<MissionCompletionContext> {
 
     private final GuildExperienceService guildExperienceService;
-    private final GuildRepository guildRepository;
+    private final GuildQueryFacadeService guildQueryFacadeService;
 
     @Override
     public String getName() {
@@ -58,18 +57,18 @@ public class GrantGuildExperienceStep implements SagaStep<MissionCompletionConte
 
         try {
             // 현재 상태 저장 (보상용)
-            Guild guild = guildRepository.findById(guildId).orElse(null);
-            if (guild == null) {
+            GuildQueryFacadeService.GuildExpInfo guildExpInfo = guildQueryFacadeService.getGuildExpInfo(guildId);
+            if (guildExpInfo == null) {
                 log.warn("Guild not found: {}", guildId);
                 return SagaStepResult.failure("길드를 찾을 수 없습니다: " + guildId);
             }
 
             context.addCompensationData(
                 MissionCompletionContext.CompensationKeys.GUILD_EXP_BEFORE,
-                guild.getCurrentExp());
+                guildExpInfo.currentExp());
             context.addCompensationData(
                 MissionCompletionContext.CompensationKeys.GUILD_LEVEL_BEFORE,
-                guild.getCurrentLevel());
+                guildExpInfo.currentLevel());
 
             // 길드 경험치 지급
             guildExperienceService.addExperience(

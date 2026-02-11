@@ -10,8 +10,9 @@ import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInq
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryFeignClient;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryPageApiResponse;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryTypesApiResponse;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
+import io.pinkspider.leveluptogethermvp.userservice.core.application.UserExistsCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,20 +23,25 @@ import org.springframework.stereotype.Service;
 public class CustomerInquiryService {
 
     private final AdminInquiryFeignClient adminInquiryFeignClient;
-    private final UserRepository userRepository;
+    private final UserExistsCacheService userExistsCacheService;
+    private final UserProfileCacheService userProfileCacheService;
 
     /**
      * 문의 등록
      */
     public InquiryResponse createInquiry(String userId, InquiryCreateRequest request) {
         try {
-            Users user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException("404", "사용자를 찾을 수 없습니다."));
+            if (!userExistsCacheService.existsById(userId)) {
+                throw new CustomException("404", "사용자를 찾을 수 없습니다.");
+            }
+
+            UserProfileCache profile = userProfileCacheService.getUserProfile(userId);
+            String email = userProfileCacheService.getUserEmail(userId);
 
             AdminInquiryApiResponse response = adminInquiryFeignClient.createInquiry(
                 userId,
-                user.getNickname(),
-                user.getEmail(),
+                profile.nickname(),
+                email,
                 request
             );
 

@@ -101,6 +101,15 @@ public class UserProfileCacheService {
         return getUserProfile(userId).nickname();
     }
 
+    /**
+     * 사용자 이메일 조회 (캐싱 없음 — 문의 등록 등 드문 호출용)
+     */
+    public String getUserEmail(String userId) {
+        return userRepository.findById(userId)
+            .map(Users::getEmail)
+            .orElse(null);
+    }
+
     @CacheEvict(value = "userProfile", key = "#userId")
     public void evictUserProfileCache(String userId) {
         log.debug("사용자 프로필 캐시 무효화: userId={}", userId);

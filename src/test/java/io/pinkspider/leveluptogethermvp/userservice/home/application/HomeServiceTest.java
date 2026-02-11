@@ -14,7 +14,7 @@ import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContent
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.global.enums.BannerType;
 import io.pinkspider.global.enums.LinkType;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
+import io.pinkspider.leveluptogethermvp.adminservice.application.HomeBannerService;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
@@ -50,7 +50,7 @@ import org.springframework.data.domain.PageRequest;
 class HomeServiceTest {
 
     @Mock
-    private HomeBannerRepository homeBannerRepository;
+    private HomeBannerService homeBannerService;
 
     @Mock
     private UserExperienceService userExperienceService;
@@ -486,7 +486,7 @@ class HomeServiceTest {
             HomeBanner banner1 = createTestBanner(1L, "배너1", BannerType.NOTICE);
             HomeBanner banner2 = createTestBanner(2L, "배너2", BannerType.EVENT);
 
-            when(homeBannerRepository.findActiveBanners(any(LocalDateTime.class)))
+            when(homeBannerService.getActiveBanners(any(LocalDateTime.class)))
                 .thenReturn(List.of(banner1, banner2));
 
             // when
@@ -503,7 +503,7 @@ class HomeServiceTest {
             // given
             HomeBanner eventBanner = createTestBanner(1L, "이벤트배너", BannerType.EVENT);
 
-            when(homeBannerRepository.findActiveBannersByType(eq(BannerType.EVENT), any(LocalDateTime.class)))
+            when(homeBannerService.getActiveBannersByType(eq(BannerType.EVENT), any(LocalDateTime.class)))
                 .thenReturn(List.of(eventBanner));
 
             // when
@@ -612,7 +612,7 @@ class HomeServiceTest {
             HomeBanner savedBanner = createTestBanner("신규 배너", BannerType.EVENT);
             setId(savedBanner, 1L);
 
-            when(homeBannerRepository.save(any(HomeBanner.class))).thenReturn(savedBanner);
+            when(homeBannerService.saveBanner(any(HomeBanner.class))).thenReturn(savedBanner);
 
             // when
             HomeBannerResponse result = homeService.createBanner(banner);
@@ -620,7 +620,7 @@ class HomeServiceTest {
             // then
             assertThat(result).isNotNull();
             assertThat(result.getTitle()).isEqualTo("신규 배너");
-            verify(homeBannerRepository).save(banner);
+            verify(homeBannerService).saveBanner(banner);
         }
 
         @Test
@@ -643,8 +643,8 @@ class HomeServiceTest {
                 .endAt(LocalDateTime.now().plusDays(10))
                 .build();
 
-            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.of(existingBanner));
-            when(homeBannerRepository.save(any(HomeBanner.class))).thenReturn(existingBanner);
+            when(homeBannerService.findById(bannerId)).thenReturn(Optional.of(existingBanner));
+            when(homeBannerService.saveBanner(any(HomeBanner.class))).thenReturn(existingBanner);
 
             // when
             HomeBannerResponse result = homeService.updateBanner(bannerId, updateData);
@@ -667,7 +667,7 @@ class HomeServiceTest {
             Long bannerId = 999L;
             HomeBanner updateData = HomeBanner.builder().title("수정").build();
 
-            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.empty());
+            when(homeBannerService.findById(bannerId)).thenReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> homeService.updateBanner(bannerId, updateData))
@@ -685,7 +685,7 @@ class HomeServiceTest {
             homeService.deleteBanner(bannerId);
 
             // then
-            verify(homeBannerRepository).deleteById(bannerId);
+            verify(homeBannerService).deleteById(bannerId);
         }
 
         @Test
@@ -696,8 +696,8 @@ class HomeServiceTest {
             HomeBanner banner = createTestBanner("활성 배너", BannerType.EVENT);
             setId(banner, bannerId);
 
-            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.of(banner));
-            when(homeBannerRepository.save(any(HomeBanner.class))).thenReturn(banner);
+            when(homeBannerService.findById(bannerId)).thenReturn(Optional.of(banner));
+            when(homeBannerService.saveBanner(any(HomeBanner.class))).thenReturn(banner);
 
             // when
             HomeBannerResponse result = homeService.deactivateBanner(bannerId);
@@ -705,7 +705,7 @@ class HomeServiceTest {
             // then
             assertThat(result).isNotNull();
             assertThat(banner.getIsActive()).isFalse();
-            verify(homeBannerRepository).save(banner);
+            verify(homeBannerService).saveBanner(banner);
         }
 
         @Test
@@ -714,7 +714,7 @@ class HomeServiceTest {
             // given
             Long bannerId = 999L;
 
-            when(homeBannerRepository.findById(bannerId)).thenReturn(Optional.empty());
+            when(homeBannerService.findById(bannerId)).thenReturn(Optional.empty());
 
             // when & then
             assertThatThrownBy(() -> homeService.deactivateBanner(bannerId))

@@ -3,7 +3,7 @@ package io.pinkspider.leveluptogethermvp.userservice.home.application;
 import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.adminservice.domain.entity.HomeBanner;
 import io.pinkspider.global.enums.BannerType;
-import io.pinkspider.leveluptogethermvp.adminservice.infrastructure.HomeBannerRepository;
+import io.pinkspider.leveluptogethermvp.adminservice.application.HomeBannerService;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildWithMemberCount;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
@@ -41,7 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class HomeService {
 
-    private final HomeBannerRepository homeBannerRepository;
+    private final HomeBannerService homeBannerService;
     private final UserExperienceService userExperienceService;
     private final TitleService titleService;
     private final UserRepository userRepository;
@@ -54,7 +54,7 @@ public class HomeService {
      */
     public List<HomeBannerResponse> getActiveBanners() {
         LocalDateTime now = LocalDateTime.now();
-        List<HomeBanner> banners = homeBannerRepository.findActiveBanners(now);
+        List<HomeBanner> banners = homeBannerService.getActiveBanners(now);
         return banners.stream()
             .map(HomeBannerResponse::from)
             .collect(Collectors.toList());
@@ -65,7 +65,7 @@ public class HomeService {
      */
     public List<HomeBannerResponse> getActiveBannersByType(BannerType bannerType) {
         LocalDateTime now = LocalDateTime.now();
-        List<HomeBanner> banners = homeBannerRepository.findActiveBannersByType(bannerType, now);
+        List<HomeBanner> banners = homeBannerService.getActiveBannersByType(bannerType, now);
         return banners.stream()
             .map(HomeBannerResponse::from)
             .collect(Collectors.toList());
@@ -334,7 +334,7 @@ public class HomeService {
      */
     @Transactional(transactionManager = "adminTransactionManager")
     public HomeBannerResponse createBanner(HomeBanner banner) {
-        HomeBanner saved = homeBannerRepository.save(banner);
+        HomeBanner saved = homeBannerService.saveBanner(banner);
         log.info("Banner created: id={}, type={}, title={}", saved.getId(), saved.getBannerType(), saved.getTitle());
         return HomeBannerResponse.from(saved);
     }
@@ -344,7 +344,7 @@ public class HomeService {
      */
     @Transactional(transactionManager = "adminTransactionManager")
     public HomeBannerResponse updateBanner(Long bannerId, HomeBanner updateData) {
-        HomeBanner banner = homeBannerRepository.findById(bannerId)
+        HomeBanner banner = homeBannerService.findById(bannerId)
             .orElseThrow(() -> new IllegalArgumentException("배너를 찾을 수 없습니다: " + bannerId));
 
         if (updateData.getTitle() != null) {
@@ -375,7 +375,7 @@ public class HomeService {
             banner.setEndAt(updateData.getEndAt());
         }
 
-        HomeBanner saved = homeBannerRepository.save(banner);
+        HomeBanner saved = homeBannerService.saveBanner(banner);
         log.info("Banner updated: id={}", saved.getId());
         return HomeBannerResponse.from(saved);
     }
@@ -385,7 +385,7 @@ public class HomeService {
      */
     @Transactional(transactionManager = "adminTransactionManager")
     public void deleteBanner(Long bannerId) {
-        homeBannerRepository.deleteById(bannerId);
+        homeBannerService.deleteById(bannerId);
         log.info("Banner deleted: id={}", bannerId);
     }
 
@@ -394,11 +394,11 @@ public class HomeService {
      */
     @Transactional(transactionManager = "adminTransactionManager")
     public HomeBannerResponse deactivateBanner(Long bannerId) {
-        HomeBanner banner = homeBannerRepository.findById(bannerId)
+        HomeBanner banner = homeBannerService.findById(bannerId)
             .orElseThrow(() -> new IllegalArgumentException("배너를 찾을 수 없습니다: " + bannerId));
 
         banner.setIsActive(false);
-        HomeBanner saved = homeBannerRepository.save(banner);
+        HomeBanner saved = homeBannerService.saveBanner(banner);
         log.info("Banner deactivated: id={}", saved.getId());
         return HomeBannerResponse.from(saved);
     }

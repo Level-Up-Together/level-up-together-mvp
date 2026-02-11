@@ -19,10 +19,10 @@ import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInq
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryFeignClient;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryPageApiResponse;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryTypesApiResponse;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
-import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
+import io.pinkspider.leveluptogethermvp.userservice.core.application.UserExistsCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,20 +38,21 @@ class CustomerInquiryServiceTest {
     private AdminInquiryFeignClient adminInquiryFeignClient;
 
     @Mock
-    private UserRepository userRepository;
+    private UserExistsCacheService userExistsCacheService;
+
+    @Mock
+    private UserProfileCacheService userProfileCacheService;
 
     @InjectMocks
     private CustomerInquiryService customerInquiryService;
 
     private static final String TEST_USER_ID = "test-user-123";
 
-    private Users createTestUser() {
-        return Users.builder()
-            .nickname("테스트유저")
-            .email("test@example.com")
-            .provider("GOOGLE")
-            .build();
+    private UserProfileCache createTestProfile() {
+        return new UserProfileCache(TEST_USER_ID, "테스트유저", null, 1, null, null, null);
     }
+
+    private static final String TEST_EMAIL = "test@example.com";
 
     private InquiryResponse createTestInquiryResponse(Long id) {
         return InquiryResponse.builder()
@@ -79,14 +80,16 @@ class CustomerInquiryServiceTest {
         @DisplayName("문의를 성공적으로 등록한다")
         void createInquiry_success() {
             // given
-            Users user = createTestUser();
+            UserProfileCache profile = createTestProfile();
             InquiryCreateRequest request = createTestRequest();
             InquiryResponse inquiryResponse = createTestInquiryResponse(1L);
             AdminInquiryApiResponse apiResponse = new AdminInquiryApiResponse("0000", "success", inquiryResponse);
 
-            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+            when(userExistsCacheService.existsById(TEST_USER_ID)).thenReturn(true);
+            when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(profile);
+            when(userProfileCacheService.getUserEmail(TEST_USER_ID)).thenReturn(TEST_EMAIL);
             when(adminInquiryFeignClient.createInquiry(
-                eq(TEST_USER_ID), eq(user.getNickname()), eq(user.getEmail()), any(InquiryCreateRequest.class)
+                eq(TEST_USER_ID), eq(profile.nickname()), eq(TEST_EMAIL), any(InquiryCreateRequest.class)
             )).thenReturn(apiResponse);
 
             // when
@@ -104,7 +107,7 @@ class CustomerInquiryServiceTest {
             // given
             InquiryCreateRequest request = createTestRequest();
 
-            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.empty());
+            when(userExistsCacheService.existsById(TEST_USER_ID)).thenReturn(false);
 
             // when & then
             assertThatThrownBy(() -> customerInquiryService.createInquiry(TEST_USER_ID, request))
@@ -116,10 +119,12 @@ class CustomerInquiryServiceTest {
         @DisplayName("API 응답이 null이면 예외 발생")
         void createInquiry_nullResponse_throwsException() {
             // given
-            Users user = createTestUser();
+            UserProfileCache profile = createTestProfile();
             InquiryCreateRequest request = createTestRequest();
 
-            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+            when(userExistsCacheService.existsById(TEST_USER_ID)).thenReturn(true);
+            when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(profile);
+            when(userProfileCacheService.getUserEmail(TEST_USER_ID)).thenReturn(TEST_EMAIL);
             when(adminInquiryFeignClient.createInquiry(anyString(), anyString(), anyString(), any()))
                 .thenReturn(null);
 
@@ -133,10 +138,12 @@ class CustomerInquiryServiceTest {
         @DisplayName("API 호출 중 예외 발생 시 CustomException으로 변환")
         void createInquiry_apiException_throwsCustomException() {
             // given
-            Users user = createTestUser();
+            UserProfileCache profile = createTestProfile();
             InquiryCreateRequest request = createTestRequest();
 
-            when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+            when(userExistsCacheService.existsById(TEST_USER_ID)).thenReturn(true);
+            when(userProfileCacheService.getUserProfile(TEST_USER_ID)).thenReturn(profile);
+            when(userProfileCacheService.getUserEmail(TEST_USER_ID)).thenReturn(TEST_EMAIL);
             when(adminInquiryFeignClient.createInquiry(anyString(), anyString(), anyString(), any()))
                 .thenThrow(new RuntimeException("API 연결 실패"));
 

@@ -14,9 +14,8 @@ import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.saga.SagaStepResult;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildExperienceService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
+import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
 import io.pinkspider.global.enums.GuildExpSourceType;
-import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
@@ -27,7 +26,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisib
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import java.time.LocalDate;
-import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -45,7 +44,7 @@ class GrantGuildExperienceStepTest {
     private GuildExperienceService guildExperienceService;
 
     @Mock
-    private GuildRepository guildRepository;
+    private GuildQueryFacadeService guildQueryFacadeService;
 
     @InjectMocks
     private GrantGuildExperienceStep grantGuildExperienceStep;
@@ -59,7 +58,7 @@ class GrantGuildExperienceStepTest {
     private MissionParticipant participant;
     private MissionExecution execution;
     private MissionCompletionContext context;
-    private Guild guild;
+    private GuildQueryFacadeService.GuildExpInfo guildExpInfo;
 
     @BeforeEach
     void setUp() {
@@ -101,13 +100,7 @@ class GrantGuildExperienceStepTest {
         context.setGuildExpEarned(GUILD_EXP);
         // isGuildMission() is computed from mission entity (type=GUILD + guildId set)
 
-        guild = Guild.builder()
-            .name("테스트 길드")
-            .currentLevel(5)
-            .currentExp(1000)
-            .totalExp(5000)
-            .build();
-        setId(guild, GUILD_ID);
+        guildExpInfo = new GuildQueryFacadeService.GuildExpInfo(1000, 5);
     }
 
     @Test
@@ -179,7 +172,7 @@ class GrantGuildExperienceStepTest {
         @DisplayName("정상적으로 길드 경험치를 지급한다")
         void execute_success() {
             // given
-            when(guildRepository.findById(GUILD_ID)).thenReturn(Optional.of(guild));
+            when(guildQueryFacadeService.getGuildExpInfo(GUILD_ID)).thenReturn(guildExpInfo);
 
             // when
             SagaStepResult result = grantGuildExperienceStep.execute(context);
@@ -200,7 +193,7 @@ class GrantGuildExperienceStepTest {
         @DisplayName("길드를 찾을 수 없으면 실패한다")
         void execute_guildNotFound_fails() {
             // given
-            when(guildRepository.findById(GUILD_ID)).thenReturn(Optional.empty());
+            when(guildQueryFacadeService.getGuildExpInfo(GUILD_ID)).thenReturn(null);
 
             // when
             SagaStepResult result = grantGuildExperienceStep.execute(context);
@@ -216,7 +209,7 @@ class GrantGuildExperienceStepTest {
         @DisplayName("경험치 지급 실패 시 에러를 반환한다")
         void execute_failsWhenServiceThrowsException() {
             // given
-            when(guildRepository.findById(GUILD_ID)).thenReturn(Optional.of(guild));
+            when(guildQueryFacadeService.getGuildExpInfo(GUILD_ID)).thenReturn(guildExpInfo);
             doThrow(new RuntimeException("DB 오류"))
                 .when(guildExperienceService).addExperience(
                     anyLong(), anyInt(), any(), anyLong(), anyString(), anyString());

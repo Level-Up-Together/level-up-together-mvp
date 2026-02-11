@@ -170,4 +170,14 @@ public class GuildQueryFacadeService {
             .map(post -> new GuildPostInfo(post.getGuild().getId(), post.getGuild().getMasterId()))
             .orElse(null);
     }
+
+    // ========== 경험치 정보 조회 (Saga step 등) ==========
+
+    public record GuildExpInfo(Integer currentExp, Integer currentLevel) {}
+
+    public GuildExpInfo getGuildExpInfo(Long guildId) {
+        return guildRepository.findById(guildId)
+            .map(g -> new GuildExpInfo(g.getCurrentExp(), g.getCurrentLevel()))
+            .orElse(null);
+    }
 }
