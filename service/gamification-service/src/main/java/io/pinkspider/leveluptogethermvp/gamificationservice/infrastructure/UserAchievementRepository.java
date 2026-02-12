@@ -28,4 +28,10 @@ public interface UserAchievementRepository extends JpaRepository<UserAchievement
 
     @Query("SELECT COUNT(ua) FROM UserAchievement ua WHERE ua.userId = :userId AND ua.isCompleted = true")
     long countCompletedByUserId(@Param("userId") String userId);
+
+    /**
+     * 특정 업적을 달성하고 보상을 수령한 사용자 조회 (소급 칭호 부여용)
+     */
+    @Query("SELECT ua FROM UserAchievement ua WHERE ua.achievement.id = :achievementId AND ua.isCompleted = true AND ua.isRewardClaimed = true")
+    List<UserAchievement> findByAchievementIdAndIsCompletedTrueAndIsRewardClaimedTrue(@Param("achievementId") Long achievementId);
 }

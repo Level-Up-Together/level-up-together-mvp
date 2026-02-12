@@ -2,6 +2,8 @@ package io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,6 +13,8 @@ import org.springframework.stereotype.Repository;
 public interface AchievementRepository extends JpaRepository<Achievement, Long> {
 
     List<Achievement> findByIsActiveTrue();
+
+    List<Achievement> findByIsActiveTrueOrderByIdAsc();
 
     /**
      * 카테고리 코드로 활성 업적 조회
@@ -42,4 +46,42 @@ public interface AchievementRepository extends JpaRepository<Achievement, Long> 
      */
     @Query("SELECT a FROM Achievement a WHERE a.isActive = true AND a.checkLogicDataSource IS NOT NULL")
     List<Achievement> findAllWithCheckLogicAndIsActiveTrue();
+
+    /**
+     * 카테고리 코드로 업적 조회 (카테고리 코드 캐스케이드용)
+     */
+    List<Achievement> findByCategoryCode(String categoryCode);
+
+    /**
+     * 키워드 검색 (이름/설명 기반, 페이징)
+     */
+    @Query("SELECT a FROM Achievement a WHERE " +
+        "(:keyword IS NULL OR :keyword = '' OR " +
+        "LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+        "LOWER(a.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Achievement> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * 키워드 + 카테고리 필터 검색 (페이징)
+     */
+    @Query("SELECT a FROM Achievement a WHERE " +
+        "(:keyword IS NULL OR :keyword = '' OR " +
+        "LOWER(a.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+        "LOWER(a.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+        "AND (:categoryId IS NULL OR a.category.id = :categoryId)")
+    Page<Achievement> searchByKeywordAndCategoryId(
+        @Param("keyword") String keyword,
+        @Param("categoryId") Long categoryId,
+        Pageable pageable);
+
+    /**
+     * 보상 칭호 ID로 업적 조회
+     */
+    List<Achievement> findByRewardTitleId(Long rewardTitleId);
+
+    /**
+     * 공개 업적 조회 (활성 + 비숨김, ID순)
+     */
+    @Query("SELECT a FROM Achievement a WHERE a.isActive = true AND a.isHidden = false ORDER BY a.id ASC")
+    List<Achievement> findVisibleAchievementsOrderByIdAsc();
 }

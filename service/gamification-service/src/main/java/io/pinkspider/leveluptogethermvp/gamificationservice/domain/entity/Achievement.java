@@ -128,6 +128,14 @@ public class Achievement extends LocalDateTimeBaseEntity {
     @Builder.Default
     private Boolean isHidden = false;
 
+    @Column(name = "event_id")
+    @Comment("이벤트 ID")
+    private Long eventId;
+
+    @Column(name = "event_name", length = 100)
+    @Comment("이벤트명 (비정규화)")
+    private String eventName;
+
     @NotNull
     @Column(name = "is_active", nullable = false)
     @Comment("활성 여부")
