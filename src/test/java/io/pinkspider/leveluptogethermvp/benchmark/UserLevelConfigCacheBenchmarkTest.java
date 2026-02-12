@@ -1,6 +1,6 @@
 package io.pinkspider.leveluptogethermvp.benchmark;
 
-import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import java.util.ArrayList;

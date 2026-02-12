@@ -1,10 +1,9 @@
-package io.pinkspider.leveluptogethermvp.global.event.listener;
+package io.pinkspider.leveluptogethermvp.missionservice.event.listener;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 
 import io.pinkspider.global.event.MissionStateChangedEvent;
-import io.pinkspider.global.event.listener.MissionStateHistoryEventListener;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionStateHistory;
 import io.pinkspider.global.enums.MissionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionStateHistoryRepository;

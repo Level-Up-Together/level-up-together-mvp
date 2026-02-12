@@ -1,4 +1,4 @@
-package io.pinkspider.global.cache;
+package io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.application;
 
 import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.entity.AttendanceRewardConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.attendancerewardconfig.domain.enums.AttendanceRewardType;

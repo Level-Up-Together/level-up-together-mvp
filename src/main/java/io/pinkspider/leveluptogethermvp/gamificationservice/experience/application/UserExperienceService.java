@@ -1,11 +1,10 @@
 package io.pinkspider.leveluptogethermvp.gamificationservice.experience.application;
 
-import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
 import io.pinkspider.global.event.GuildCreationEligibleEvent;
 import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
-import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.ExperienceHistory;
@@ -42,7 +41,6 @@ public class UserExperienceService {
     private final ExperienceHistoryRepository experienceHistoryRepository;
     private final UserCategoryExperienceRepository userCategoryExperienceRepository;
     private final UserLevelConfigCacheService userLevelConfigCacheService;
-    private final UserLevelConfigRepository userLevelConfigRepository; // for write operations
     private final ApplicationContext applicationContext;
     private final ApplicationEventPublisher eventPublisher;
     private final UserProfileCacheService userProfileCacheService;
@@ -383,15 +381,8 @@ public class UserExperienceService {
         userExp.setCurrentExp(Math.max(0, remainingExp));
     }
 
-    @Transactional(transactionManager = "metaTransactionManager")
     public UserLevelConfig createOrUpdateLevelConfig(Integer level, Integer requiredExp,
                                                   Integer cumulativeExp) {
-        UserLevelConfig config = userLevelConfigRepository.findByLevel(level)
-            .orElse(UserLevelConfig.builder().level(level).build());
-
-        config.setRequiredExp(requiredExp);
-        config.setCumulativeExp(cumulativeExp);
-
-        return userLevelConfigRepository.save(config);
+        return userLevelConfigCacheService.createOrUpdateLevelConfig(level, requiredExp, cumulativeExp);
     }
 }

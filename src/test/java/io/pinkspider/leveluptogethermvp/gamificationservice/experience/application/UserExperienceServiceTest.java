@@ -12,12 +12,11 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Experi
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserCategoryExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.global.enums.ExpSourceType;
-import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserCategoryExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
-import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
@@ -51,9 +50,6 @@ class UserExperienceServiceTest {
 
     @Mock
     private UserLevelConfigCacheService userLevelConfigCacheService;
-
-    @Mock
-    private UserLevelConfigRepository userLevelConfigRepository;
 
     @Mock
     private ApplicationContext applicationContext;
@@ -420,8 +416,7 @@ class UserExperienceServiceTest {
             // given
             UserLevelConfig newConfig = createUserLevelConfig(10, 500, 2000);
 
-            when(userLevelConfigRepository.findByLevel(10)).thenReturn(Optional.empty());
-            when(userLevelConfigRepository.save(any(UserLevelConfig.class))).thenReturn(newConfig);
+            when(userLevelConfigCacheService.createOrUpdateLevelConfig(10, 500, 2000)).thenReturn(newConfig);
 
             // when
             UserLevelConfig result = userExperienceService.createOrUpdateLevelConfig(
@@ -429,17 +424,16 @@ class UserExperienceServiceTest {
 
             // then
             assertThat(result).isNotNull();
-            verify(userLevelConfigRepository).save(any(UserLevelConfig.class));
+            verify(userLevelConfigCacheService).createOrUpdateLevelConfig(10, 500, 2000);
         }
 
         @Test
         @DisplayName("기존 레벨 설정을 업데이트한다")
         void createOrUpdateLevelConfig_update() {
             // given
-            UserLevelConfig existingConfig = createUserLevelConfig(5, 300, 700);
+            UserLevelConfig updatedConfig = createUserLevelConfig(5, 350, 750);
 
-            when(userLevelConfigRepository.findByLevel(5)).thenReturn(Optional.of(existingConfig));
-            when(userLevelConfigRepository.save(any(UserLevelConfig.class))).thenReturn(existingConfig);
+            when(userLevelConfigCacheService.createOrUpdateLevelConfig(5, 350, 750)).thenReturn(updatedConfig);
 
             // when
             UserLevelConfig result = userExperienceService.createOrUpdateLevelConfig(
@@ -447,7 +441,7 @@ class UserExperienceServiceTest {
 
             // then
             assertThat(result.getRequiredExp()).isEqualTo(350);
-            verify(userLevelConfigRepository).save(existingConfig);
+            verify(userLevelConfigCacheService).createOrUpdateLevelConfig(5, 350, 750);
         }
     }
 

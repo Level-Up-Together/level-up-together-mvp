@@ -1,4 +1,4 @@
-package io.pinkspider.global.cache;
+package io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application;
 
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +64,22 @@ public class UserLevelConfigCacheService {
     public Integer getMaxLevel() {
         List<UserLevelConfig> configs = getAllLevelConfigs();
         return configs.isEmpty() ? 0 : configs.get(configs.size() - 1).getLevel();
+    }
+
+    /**
+     * 레벨 설정 생성/수정 (Admin용, 캐시 무효화 포함)
+     */
+    @CacheEvict(value = "userLevelConfigs", allEntries = true)
+    @Transactional(transactionManager = "metaTransactionManager")
+    public UserLevelConfig createOrUpdateLevelConfig(Integer level, Integer requiredExp,
+                                                     Integer cumulativeExp) {
+        UserLevelConfig config = userLevelConfigRepository.findByLevel(level)
+            .orElse(UserLevelConfig.builder().level(level).build());
+
+        config.setRequiredExp(requiredExp);
+        config.setCumulativeExp(cumulativeExp);
+
+        return userLevelConfigRepository.save(config);
     }
 
     /**

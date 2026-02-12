@@ -1,4 +1,4 @@
-package io.pinkspider.global.cache;
+package io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.application;
 
 import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.domain.entity.GuildLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.infrastructure.GuildLevelConfigRepository;

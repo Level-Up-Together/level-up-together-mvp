@@ -1,4 +1,4 @@
-package io.pinkspider.global.cache;
+package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.AchievementCategory;

@@ -1,7 +1,7 @@
 package io.pinkspider.leveluptogethermvp.guildservice.application;
 
-import io.pinkspider.global.cache.GuildLevelConfigCacheService;
-import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.guildlevelconfig.application.GuildLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
 import io.pinkspider.global.event.GuildLevelUpEvent;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildExperienceResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;

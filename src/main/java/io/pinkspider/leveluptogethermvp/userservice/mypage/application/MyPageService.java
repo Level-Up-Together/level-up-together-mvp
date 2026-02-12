@@ -1,6 +1,6 @@
 package io.pinkspider.leveluptogethermvp.userservice.mypage.application;
 
-import io.pinkspider.global.cache.UserLevelConfigCacheService;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
