@@ -19,8 +19,25 @@
 
 ## 아키텍처
 
-Multi-Service Monolith 구조로, 단일 배포 단위 내에서 서비스별로 독립된 데이터베이스를 사용합니다.
-MSA 전환을 대비하여 각 서비스가 자체 데이터베이스와 트랜잭션 매니저를 가지고 있습니다.
+Gradle Multi-Module 기반 Multi-Service Monolith 구조로, 5개 Gradle 모듈로 구성됩니다.
+단일 배포 단위 내에서 서비스별로 독립된 데이터베이스를 사용하며, MSA 전환을 대비하여 각 서비스가 자체 트랜잭션 매니저를 가지고 있습니다.
+
+### Gradle Multi-Module 구조 (5 modules)
+
+```
+level-up-together-mvp/
+├── platform/
+│   ├── kernel/    ← 순수 타입, audit entities, enums, events (~80 files)
+│   ├── infra/     ← Spring 인프라, security, Redis, DataSourceConfigs (~130 files)
+│   └── saga/      ← Saga 프레임워크 (mission-service만 사용, ~16 files)
+├── service/       ← 12 서비스 통합 모듈 (multi-srcDirs, 순환 의존 때문)
+│   ├── user-service/src/main/java/
+│   ├── guild-service/src/main/java/
+│   └── ... (12 directories)
+└── app/           ← Bootstrap, 설정 파일, DGS codegen, JaCoCo
+```
+
+> **서비스 모듈이 하나인 이유**: user↔guild, user↔gamification 등 4쌍의 순환 의존이 있어 독립 Gradle 모듈로 분리 불가. 디렉토리로 논리적 경계를 유지하되 단일 컴파일 단위로 구성.
 
 **주요 아키텍처 특징:**
 - **Event-Driven**: Spring Events를 활용한 서비스 간 느슨한 결합
@@ -318,14 +335,24 @@ erDiagram
 # 빌드
 ./gradlew clean build
 
-# 테스트 실행
+# 전체 테스트 실행 (1831 tests)
 ./gradlew test
 
-# 단일 테스트 클래스 실행
-./gradlew test --tests "io.pinkspider.leveluptogethermvp.userservice.oauth.api.Oauth2ControllerTest"
+# 모듈별 테스트 실행
+./gradlew :platform:kernel:test     # 39 tests
+./gradlew :platform:infra:test      # 168 tests
+./gradlew :platform:saga:test       # 29 tests
+./gradlew :service:test             # 1583 tests
+./gradlew :app:test                 # 12 tests
+
+# 단일 테스트 클래스 실행 (모듈 지정)
+./gradlew :service:test --tests "*.Oauth2ControllerTest"
 
 # 단일 테스트 메서드 실행
-./gradlew test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+./gradlew :service:test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+
+# 병렬 빌드
+./gradlew test --parallel
 
 # 애플리케이션 실행 (기본 포트: 8443)
 ./gradlew bootRun
@@ -354,7 +381,7 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 # 테스트 실행 후 커버리지 리포트 생성
 ./gradlew test jacocoTestReport
 
-# 리포트 위치: build/reports/jacoco/html/index.html
+# 리포트 위치: app/build/reports/jacoco/html/index.html
 ```
 
 ## 주요 기능
@@ -498,6 +525,10 @@ Redis를 활용한 캐싱으로 서비스 간 호출을 최소화하고 성능�
 ```bash
 ./gradlew clean compileJava
 ```
+
+### Spring Cloud Config 오류 (service 모듈 테스트)
+
+`ConfigDataMissingEnvironmentPostProcessor$ImportException` 발생 시, `service/shared-test/src/test/resources/application.yml`에 `spring.cloud.config.enabled: false` 설정이 있는지 확인.
 
 ### 트랜잭션 매니저 미지정 오류
 

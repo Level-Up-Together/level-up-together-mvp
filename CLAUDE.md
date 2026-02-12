@@ -8,14 +8,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build
 ./gradlew clean build
 
-# Run tests
+# Run ALL tests (1831 tests across 5 modules)
 ./gradlew test
 
-# Run single test class
-./gradlew test --tests "io.pinkspider.leveluptogethermvp.userservice.oauth.api.Oauth2ControllerTest"
+# Run tests by module
+./gradlew :platform:kernel:test     # 39 tests (util)
+./gradlew :platform:infra:test      # 168 tests (resolver, validation, profanity, crypto)
+./gradlew :platform:saga:test       # 29 tests (saga framework)
+./gradlew :service:test             # 1583 tests (all service tests)
+./gradlew :app:test                 # 12 tests (application context, benchmark)
+
+# Run single test class (must specify module)
+./gradlew :service:test --tests "*.Oauth2ControllerTest"
+./gradlew :platform:infra:test --tests "*.TranslationServiceTest"
 
 # Run single test method
-./gradlew test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+./gradlew :service:test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+
+# Parallel build
+./gradlew test --parallel
 
 # Run application
 ./gradlew bootRun                                    # Default (port 8443)
@@ -29,14 +40,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Test coverage report (minimum 70%)
 ./gradlew test jacocoTestReport
-# Report: build/reports/jacoco/html/index.html
+# Report: app/build/reports/jacoco/html/index.html
 ```
 
 ## Architecture Overview
 
-**Multi-Service Monolith**: Spring Boot 3.4.5 application with service modules sharing a single deployment unit but using separate databases per service. Designed for future MSA migration with Saga pattern.
+**Multi-Service Monolith**: Spring Boot 3.4.5 application organized as a Gradle multi-module project (5 modules). Services share a single deployment unit but use separate databases per service. Designed for future MSA migration with Saga pattern.
 
-### Service Modules (`src/main/java/io/pinkspider/leveluptogethermvp/`)
+### Gradle Multi-Module Structure
+
+```
+level-up-together-mvp/
+├── settings.gradle                    # 5 modules: kernel, infra, saga, service, app
+├── build.gradle                       # Root: common settings, BOM, -parameters flag
+├── platform/
+│   ├── kernel/build.gradle            # Pure types, audit entities, API result, enums
+│   ├── infra/build.gradle             # Spring infra, security, Redis, Firebase, profanity
+│   └── saga/build.gradle              # Saga framework + SagaDataSourceConfig
+├── service/build.gradle               # ALL 12 services (single compilation, multi-srcDirs)
+│   ├── shared-test/src/test/          # Shared test utils (ControllerTestConfig, MockUtil)
+│   ├── user-service/src/main/java/
+│   ├── guild-service/src/main/java/
+│   ├── ... (12 directories)
+│   └── support-service/src/main/java/
+└── app/build.gradle                   # Bootstrap + DGS codegen + JaCoCo
+    ├── src/main/java/                 # LevelUpTogetherMvpApplication.java
+    ├── src/main/resources/            # All config files, schemas, keystores
+    └── src/test/java/                 # @SpringBootTest tests only (3 files)
+```
+
+**Dependency flow**: `kernel ← infra ← saga`, all three ← `service` ← `app`
+
+**Why single service module**: Circular dependencies between services (user↔guild, user↔gamification, user↔support, guild↔gamification) prevent independent Gradle modules. Directories are separated for logical boundaries, compiled as one unit via `sourceSets.main.java.srcDirs`.
+
+### Service Modules (`service/{name}/src/main/java/io/pinkspider/leveluptogethermvp/`)
 
 | Service | Database | Purpose |
 |---------|----------|---------|
@@ -50,23 +87,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `adminservice` | admin_db | Home banners, featured content (players, guilds, feeds) |
 | `gamificationservice` | gamification_db | Titles, achievements, user stats, experience/levels, attendance tracking, events, seasons |
 | `bffservice` | - | Backend-for-Frontend API aggregation, unified search |
-| `loggerservice` | MongoDB | Event logging with MongoDB and Kafka |
 | `noticeservice` | - | Notice/announcement management (layered: api, application, core, domain) |
-| `profanity` | - | Profanity detection and validation (used across services) |
 | `supportservice` | - | Customer support and report handling (api, application, core, report) |
 
-### Global Infrastructure (`src/main/java/io/pinkspider/global/`)
+### Global Infrastructure (`platform/kernel/` + `platform/infra/` + `platform/saga/`)
 
-- **Multi-datasource**: Separate databases with Hikari pooling (`io.pinkspider.global.config.datasource`)
+**platform/kernel** (pure types, no Spring infra):
+- **API**: `ApiResult`, `ApiStatus` — response wrapper
+- **Domain**: Base audit entities, shared DTOs, enums (13)
+- **Events**: Domain events (33) — `io.pinkspider.global.event`
+- **Exception**: `CustomException` + common exceptions (17)
+- **Utils**: StringUtils, DateUtils, converters, constants
+
+**platform/infra** (Spring infrastructure):
+- **Multi-datasource**: All 9 DataSourceProperties + DataSourceConfigs (`global.config.datasource`)
 - **Security**: JWT filter (`JwtAuthenticationFilter`), OAuth2 providers
 - **Caching**: Redis with Lettuce client (two templates: `redisTemplateForString`, `redisTemplateForObject`)
-- **Messaging**: Kafka topics (loggerTopic, httpLoggerTopic, alimTalkTopic, appPushTopic, emailTopic, userCommunicationTopic)
-- **Events**: Spring Events for cross-service communication (`io.pinkspider.global.event`)
-- **Exception Handling**: Extend `CustomException` from `io.pinkspider.global.exception`
-- **Saga Pattern**: `io.pinkspider.global.saga` - 분산 트랜잭션 관리 (MSA 전환 대비)
+- **Messaging**: Redis Streams config, producer, consumer
 - **Rate Limiting**: Resilience4j rate limiter (`io.pinkspider.global.config.RateLimiterConfig`)
 - **Translation**: Google Translation API integration (`io.pinkspider.global.translation`)
+- **Profanity**: Profanity detection and validation (`leveluptogethermvp/profanity/`)
 - **Monitoring**: Actuator at `/showmethemoney`
+
+**platform/saga** (opt-in, mission-service only):
+- **Saga Pattern**: `io.pinkspider.global.saga` — 분산 트랜잭션 관리 (MSA 전환 대비)
+- **SagaDataSourceConfig**: saga_db DataSource
 
 ### Transaction Manager (Critical)
 
@@ -188,13 +233,29 @@ public class YourServiceException extends CustomException {
 
 ## Testing
 
+### Test Distribution (1831 tests across 5 modules)
+
+| Module | Tests | Content |
+|--------|-------|---------|
+| `platform:kernel` | 39 | util tests |
+| `platform:infra` | 168 | resolver, validation, profanity, crypto, translation |
+| `platform:saga` | 29 | saga framework tests |
+| `service` | 1583 | all service unit + controller tests (multi-srcDirs) |
+| `app` | 12 | ApplicationTests, benchmark, TestDataSourceConfig |
+
+### Shared Test Utilities
+
+- `kernel/src/testFixtures/` → `TestReflectionUtils` (shared via `java-test-fixtures` plugin)
+- `service/shared-test/src/test/java/` → `TestApplication`, `ControllerTestConfig`, `BaseTestController`, `MockUtil`
+- `service/shared-test/src/test/resources/application.yml` → `spring.cloud.config.enabled: false`
+
 ### Test Fixtures
-JSON fixtures in `src/test/resources/fixture/{servicename}/` loaded via `MockUtil`:
+JSON fixtures in `service/{name}/src/test/resources/fixture/{servicename}/` loaded via `MockUtil`:
 ```java
 MockUtil.readJsonFileToClass("fixture/userservice/oauth/mockCreateJwtResponseDto.json", CreateJwtResponseDto.class);
 ```
 
-### Controller Tests
+### Controller Tests (in `:service` module)
 ```java
 @WebMvcTest(controllers = YourController.class, excludeAutoConfiguration = {...})
 @Import(ControllerTestConfig.class)
@@ -203,7 +264,7 @@ MockUtil.readJsonFileToClass("fixture/userservice/oauth/mockCreateJwtResponseDto
 @ActiveProfiles("test")
 ```
 
-### Unit Tests (Service Layer)
+### Unit Tests (Service Layer, in `:service` module)
 ```java
 @ExtendWith(MockitoExtension.class)
 class YourServiceTest {
@@ -226,7 +287,7 @@ class YourServiceTest {
 }
 ```
 
-### Integration Tests
+### Integration Tests (in `:app` module — needs full application context)
 ```java
 @SpringBootTest
 @ActiveProfiles("test")
@@ -392,7 +453,7 @@ public class YourStep extends AbstractSagaStep<YourContext> {
 | `application-local.yml` | Config server integration |
 | `application-dev.yml` / `application-prod.yml` | Environment-specific |
 
-Note: Config files are located in `src/main/resources/config/`, not the root of `resources/`.
+Note: Config files are located in `app/src/main/resources/config/`, not the root of `resources/`.
 
 ## 관련 프로젝트
 
