@@ -1,4 +1,5 @@
 apply plugin: 'java-library'
+apply plugin: 'java-test-fixtures'
 
 jar { enabled = true }
 
@@ -28,4 +29,7 @@ dependencies {
     // Apache Commons
     api 'org.apache.commons:commons-lang3:3.13.0'
     api 'commons-codec:commons-codec'
+
+    // Test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
