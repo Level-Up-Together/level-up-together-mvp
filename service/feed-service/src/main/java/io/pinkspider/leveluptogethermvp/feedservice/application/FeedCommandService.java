@@ -367,4 +367,16 @@ public class FeedCommandService {
     public int updateFeedTitles(String userId, String titleName, TitleRarity titleRarity, String titleColorCode) {
         return activityFeedRepository.updateUserTitleByUserId(userId, titleName, titleRarity, titleColorCode);
     }
+
+    /**
+     * Admin에 의한 피드 삭제 (내부 API)
+     */
+    @Transactional(transactionManager = "feedTransactionManager")
+    public void deleteFeedByAdmin(Long id, String reason, String adminInfo) {
+        ActivityFeed feed = activityFeedRepository.findById(id)
+            .orElseThrow(() -> new CustomException(ApiStatus.CLIENT_ERROR.getResultCode(), "피드를 찾을 수 없습니다"));
+
+        log.info("Admin 피드 삭제: feedId={}, adminInfo={}, reason={}", id, adminInfo, reason);
+        activityFeedRepository.delete(feed);
+    }
 }

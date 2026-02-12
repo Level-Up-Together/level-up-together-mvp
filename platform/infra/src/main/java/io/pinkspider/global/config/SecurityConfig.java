@@ -98,6 +98,9 @@ public class SecurityConfig {
                     // 내부 캐시 관리 API (운영용)
                     .requestMatchers("/api/v1/bff/season/cache").permitAll()
 
+                    // 내부 서비스 간 API (Admin Backend → MVP)
+                    .requestMatchers("/api/internal/**").permitAll()
+
                     // 관리자 전용 API
                     .requestMatchers("/api/v1/users/experience/levels").hasRole("ADMIN")
                     .requestMatchers("/api/v1/attendance/init").hasRole("ADMIN")

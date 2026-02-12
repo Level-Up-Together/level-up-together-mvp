@@ -9,6 +9,9 @@ import io.pinkspider.global.translation.enums.SupportedLocale;
 import io.pinkspider.leveluptogethermvp.adminservice.application.FeaturedContentQueryService;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.admin.FeedAdminPageResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.admin.FeedAdminResponse;
+import io.pinkspider.leveluptogethermvp.feedservice.api.dto.admin.FeedAdminStatsResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
@@ -32,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Sort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -550,5 +554,59 @@ public class FeedQueryService {
             comment.getContent(),
             targetLocale
         );
+    }
+
+    // ===== Admin 내부 API용 메서드 =====
+
+    /**
+     * Admin 피드 검색 (내부 API)
+     */
+    public FeedAdminPageResponse searchFeedsForAdmin(
+            String activityType, String visibility, String userId,
+            Long categoryId, String keyword, int page, int size,
+            String sortBy, String sortDirection) {
+
+        Sort sort = "ASC".equalsIgnoreCase(sortDirection)
+            ? Sort.by(sortBy != null ? sortBy : "id").ascending()
+            : Sort.by(sortBy != null ? sortBy : "id").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        ActivityType activityTypeEnum = activityType != null ? ActivityType.valueOf(activityType) : null;
+        FeedVisibility visibilityEnum = visibility != null ? FeedVisibility.valueOf(visibility) : null;
+
+        Page<ActivityFeed> feedPage = activityFeedRepository.searchFeedsForAdmin(
+            activityTypeEnum, visibilityEnum, userId, categoryId, keyword, pageable);
+
+        Page<FeedAdminResponse> responsePage = feedPage.map(FeedAdminResponse::from);
+        return FeedAdminPageResponse.from(responsePage);
+    }
+
+    /**
+     * Admin 피드 상세 조회 (내부 API)
+     */
+    public FeedAdminResponse getFeedForAdmin(Long id) {
+        ActivityFeed feed = activityFeedRepository.findById(id)
+            .orElseThrow(() -> new CustomException(ApiStatus.CLIENT_ERROR.getResultCode(), "피드를 찾을 수 없습니다"));
+        return FeedAdminResponse.from(feed);
+    }
+
+    /**
+     * Admin 피드 통계 (내부 API)
+     * reportedCount는 admin_db 소유이므로 admin backend에서 enrichment
+     */
+    public FeedAdminStatsResponse getFeedStats() {
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+
+        long totalCount = activityFeedRepository.count();
+        long publicCount = activityFeedRepository.countByVisibility(FeedVisibility.PUBLIC);
+        long todayNewCount = activityFeedRepository.countByCreatedAtSince(startOfToday);
+        long missionSharedCount = activityFeedRepository.countByActivityType(ActivityType.MISSION_SHARED);
+
+        return FeedAdminStatsResponse.builder()
+            .totalCount(totalCount)
+            .publicCount(publicCount)
+            .todayNewCount(todayNewCount)
+            .missionSharedCount(missionSharedCount)
+            .build();
     }
 }

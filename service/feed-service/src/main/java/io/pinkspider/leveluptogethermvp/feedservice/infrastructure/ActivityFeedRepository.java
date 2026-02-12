@@ -140,4 +140,31 @@ public interface ActivityFeedRepository extends JpaRepository<ActivityFeed, Long
         @Param("nickname") String nickname,
         @Param("profileImageUrl") String profileImageUrl,
         @Param("level") Integer level);
+
+    // ===== Admin 내부 API용 쿼리 =====
+
+    // Admin 피드 검색 (optional 필터 + 페이징)
+    @Query("SELECT f FROM ActivityFeed f " +
+           "WHERE (:activityType IS NULL OR f.activityType = :activityType) " +
+           "AND (:visibility IS NULL OR f.visibility = :visibility) " +
+           "AND (:userId IS NULL OR f.userId = :userId) " +
+           "AND (:categoryId IS NULL OR f.categoryId = :categoryId) " +
+           "AND (:keyword IS NULL OR f.title LIKE %:keyword% OR f.description LIKE %:keyword% OR f.userNickname LIKE %:keyword%)")
+    Page<ActivityFeed> searchFeedsForAdmin(
+        @Param("activityType") ActivityType activityType,
+        @Param("visibility") FeedVisibility visibility,
+        @Param("userId") String userId,
+        @Param("categoryId") Long categoryId,
+        @Param("keyword") String keyword,
+        Pageable pageable);
+
+    // Admin 통계: 공개 범위별 카운트
+    long countByVisibility(FeedVisibility visibility);
+
+    // Admin 통계: 활동 타입별 카운트
+    long countByActivityType(ActivityType activityType);
+
+    // Admin 통계: 특정 시간 이후 생성된 피드 카운트
+    @Query("SELECT COUNT(f) FROM ActivityFeed f WHERE f.createdAt >= :since")
+    long countByCreatedAtSince(@Param("since") LocalDateTime since);
 }
