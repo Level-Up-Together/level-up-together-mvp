@@ -100,19 +100,11 @@ spring:
           max-idle: 10
           min-idle: 2
 
-  # Kafka (실제 서버 연결)
-  kafka:
-    bootstrap-servers: 121.136.108.44:9092
-    app-push:
-      topic: appPushTopic
-      group-id: appPushTestGroup  # 테스트용 별도 그룹
-      auto-offset-reset: earliest
 
 logging:
   level:
-    io.pinkspider.global.kafka: DEBUG
+    io.pinkspider.global.messaging: DEBUG
     io.pinkspider.leveluptogethermvp.notificationservice: DEBUG
-    org.apache.kafka: WARN
 
 # Firebase 푸시 알림 설정 - 활성화!
 firebase:

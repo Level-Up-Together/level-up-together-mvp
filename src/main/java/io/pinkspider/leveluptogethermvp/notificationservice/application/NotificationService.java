@@ -1,7 +1,7 @@
 package io.pinkspider.leveluptogethermvp.notificationservice.application;
 
-import io.pinkspider.global.kafka.dto.AppPushMessageDto;
-import io.pinkspider.global.kafka.producer.KafkaAppPushProducer;
+import io.pinkspider.global.messaging.dto.AppPushMessageDto;
+import io.pinkspider.global.messaging.producer.AppPushMessageProducer;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.NotificationPreferenceRequest;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.NotificationPreferenceResponse;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.NotificationResponse;
@@ -30,7 +30,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationPreferenceRepository preferenceRepository;
-    private final KafkaAppPushProducer kafkaAppPushProducer;
+    private final AppPushMessageProducer appPushMessageProducer;
 
     // 알림 생성
     @Transactional(transactionManager = "notificationTransactionManager")
@@ -89,7 +89,7 @@ public class NotificationService {
     }
 
     /**
-     * 푸시 알림 전송 (Kafka 통해 비동기 처리)
+     * 푸시 알림 전송 (Redis Stream 통해 비동기 처리)
      */
     private void sendPushNotification(String userId, String title, String body,
                                       String notificationType, String referenceType,
@@ -109,8 +109,8 @@ public class NotificationService {
                 ))
                 .build();
 
-            kafkaAppPushProducer.sendMessage(pushMessage);
-            log.debug("푸시 알림 Kafka 전송: userId={}, title={}", userId, title);
+            appPushMessageProducer.sendMessage(pushMessage);
+            log.debug("푸시 알림 전송: userId={}, title={}", userId, title);
         } catch (Exception e) {
             log.warn("푸시 알림 전송 실패: userId={}, error={}", userId, e.getMessage());
         }

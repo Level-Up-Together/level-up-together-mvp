@@ -1,35 +1,35 @@
-package io.pinkspider.global.kafka.consumer;
+package io.pinkspider.global.messaging.consumer;
 
-import io.pinkspider.global.kafka.dto.AppPushMessageDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.pinkspider.global.messaging.dto.AppPushMessageDto;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.FcmPushService;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.PushMessageRequest;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.stream.StreamListener;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 /**
- * 푸시 알림 Kafka Consumer
- * Kafka 메시지를 받아서 FCM으로 실제 푸시 알림 전송
+ * 푸시 알림 Redis Stream Consumer
+ * Redis Stream 메시지를 받아서 FCM으로 실제 푸시 알림 전송
  */
 @Component
 @Slf4j
 @RequiredArgsConstructor
-public class KafkaAppPushConsumer {
+public class AppPushMessageConsumer implements StreamListener<String, MapRecord<String, String, String>> {
 
     private final FcmPushService fcmPushService;
+    private final ObjectMapper objectMapper;
 
-    @KafkaListener(
-            topics = "${spring.kafka.app-push.topic}",
-            groupId = "${spring.kafka.app-push.group-id:app-push-consumer-group}",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
-    public void consume(AppPushMessageDto message) {
-        log.info("Received push message: {}", message);
-
+    @Override
+    public void onMessage(MapRecord<String, String, String> record) {
         try {
+            String payload = record.getValue().get("payload");
+            AppPushMessageDto message = objectMapper.readValue(payload, AppPushMessageDto.class);
+            log.info("Redis Stream 메시지 수신: id={}, message={}", record.getId(), message);
+
             PushMessageRequest pushRequest = PushMessageRequest.full(
                     message.getTitle(),
                     message.getBody(),
@@ -57,7 +57,7 @@ public class KafkaAppPushConsumer {
             }
 
         } catch (Exception e) {
-            log.error("Failed to process push message: {}", message, e);
+            log.error("푸시 메시지 처리 실패: record={}", record.getId(), e);
         }
     }
 }

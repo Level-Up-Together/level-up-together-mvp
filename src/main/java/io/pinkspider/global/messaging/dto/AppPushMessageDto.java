@@ -1,4 +1,4 @@
-package io.pinkspider.global.kafka.dto;
+package io.pinkspider.global.messaging.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

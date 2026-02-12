@@ -17,7 +17,7 @@ import io.pinkspider.leveluptogethermvp.notificationservice.domain.dto.Notificat
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.entity.Notification;
 import io.pinkspider.leveluptogethermvp.notificationservice.domain.entity.NotificationPreference;
 import io.pinkspider.global.enums.NotificationType;
-import io.pinkspider.global.kafka.producer.KafkaAppPushProducer;
+import io.pinkspider.global.messaging.producer.AppPushMessageProducer;
 import io.pinkspider.leveluptogethermvp.notificationservice.infrastructure.NotificationPreferenceRepository;
 import io.pinkspider.leveluptogethermvp.notificationservice.infrastructure.NotificationRepository;
 import java.time.LocalDateTime;
@@ -46,7 +46,7 @@ class NotificationServiceTest {
     private NotificationPreferenceRepository preferenceRepository;
 
     @Mock
-    private KafkaAppPushProducer kafkaAppPushProducer;
+    private AppPushMessageProducer appPushMessageProducer;
 
     @InjectMocks
     private NotificationService notificationService;

@@ -26,7 +26,7 @@ public enum ApiStatus {
     OK("000000", "Success", "정상처리"),
     SYSTEM_ERROR("000500", "System Error", "시스템 내 오류"),
     CLIENT_ERROR("000600", "Client Error", "사용자 오류"),
-    KAFKA_MESSAGE_ERROR("000601", "Client Error", "사용자 오류"),
+    MESSAGING_SEND_FAIL("000601", "Client Error", "사용자 오류"),
     EXTERNAL_API_ERROR("000610", "External Api Error", "외부 API 오류"),
     FEIGN_CLIENT_CALL_ERROR("000611", "External Api Error", "외부 API 오류"),
     FEIGN_EXCEPTION("000612", "Feign Exception", "외부 API 오류"),

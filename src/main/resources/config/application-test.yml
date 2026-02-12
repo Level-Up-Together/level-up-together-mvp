@@ -146,38 +146,11 @@ spring:
       password: "ajslanqm"
       port: 27017
       database: logger_service
-  kafka:
-    bootstrap-servers: 121.136.108.44:9092 # ${spring.embedded.kafka.brokers} #
-    logger:
-      topic: loggerTopic
-      group-id: loggerGroup
-      auto-offset-reset: earliest
-    http-logger:
-      topic: httpLoggerTopic
-      group-id: httpLoggerGroup
-      auto-offset-reset: earliest
-    alim-talk:
-      topic: alimTalkTopic
-      group-id: alimTalkGroup
-      auto-offset-reset: earliest
-    app-push:
-      topic: appPushTopic
-      group-id: appPushGroup
-      auto-offset-reset: earliest
-    email:
-      topic: emailTopic
-      group-id: emailGroup
-      auto-offset-reset: earliest
-    user-communication:
-      topic: userCommunicationTopic
-      group-id: userCommunicationGroup
-      auto-offset-reset: earliest
 
 logging:
   config: classpath:slf4j/logback-local.xml
   level:
     org.apache: OFF
-    kafka: OFF
 
 feign:
   httpclient:
