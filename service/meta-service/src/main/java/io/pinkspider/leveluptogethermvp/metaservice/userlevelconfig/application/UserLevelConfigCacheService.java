@@ -1,14 +1,20 @@
 package io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application;
 
+import io.pinkspider.global.exception.CustomException;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.dto.UserLevelConfigPageResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.dto.UserLevelConfigRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.dto.UserLevelConfigResponse;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastructure.UserLevelConfigRepository;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,6 +86,101 @@ public class UserLevelConfigCacheService {
         config.setCumulativeExp(cumulativeExp);
 
         return userLevelConfigRepository.save(config);
+    }
+
+    // ========== Admin Internal API용 CRUD 메서드 ==========
+
+    /**
+     * 모든 레벨 설정 Response 조회 (레벨 오름차순)
+     */
+    public List<UserLevelConfigResponse> getAllLevelConfigResponses() {
+        return userLevelConfigRepository.findAllByOrderByLevelAsc().stream()
+            .map(UserLevelConfigResponse::from)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 레벨 설정 검색 (페이징)
+     */
+    public UserLevelConfigPageResponse searchLevelConfigs(String keyword, Pageable pageable) {
+        return UserLevelConfigPageResponse.from(
+            userLevelConfigRepository.searchByKeyword(keyword, pageable)
+                .map(UserLevelConfigResponse::from));
+    }
+
+    /**
+     * ID로 레벨 설정 조회
+     */
+    public UserLevelConfigResponse getLevelConfigById(Long id) {
+        UserLevelConfig config = userLevelConfigRepository.findById(id)
+            .orElseThrow(() -> new CustomException("404", "레벨 설정을 찾을 수 없습니다."));
+        return UserLevelConfigResponse.from(config);
+    }
+
+    /**
+     * 레벨 번호로 레벨 설정 조회
+     */
+    public UserLevelConfigResponse getLevelConfigResponseByLevel(Integer level) {
+        UserLevelConfig config = userLevelConfigRepository.findByLevel(level)
+            .orElseThrow(() -> new CustomException("404", "해당 레벨 설정을 찾을 수 없습니다."));
+        return UserLevelConfigResponse.from(config);
+    }
+
+    /**
+     * 레벨 설정 생성
+     */
+    @CacheEvict(value = "userLevelConfigs", allEntries = true)
+    @Transactional(transactionManager = "metaTransactionManager")
+    public UserLevelConfigResponse createLevelConfig(UserLevelConfigRequest request) {
+        if (userLevelConfigRepository.existsByLevel(request.getLevel())) {
+            throw new CustomException("400", "이미 존재하는 레벨입니다.");
+        }
+
+        UserLevelConfig config = UserLevelConfig.builder()
+            .level(request.getLevel())
+            .requiredExp(request.getRequiredExp())
+            .cumulativeExp(request.getCumulativeExp())
+            .build();
+
+        UserLevelConfig saved = userLevelConfigRepository.save(config);
+        log.info("사용자 레벨 설정 생성: level={}", saved.getLevel());
+        return UserLevelConfigResponse.from(saved);
+    }
+
+    /**
+     * 레벨 설정 수정
+     */
+    @CacheEvict(value = "userLevelConfigs", allEntries = true)
+    @Transactional(transactionManager = "metaTransactionManager")
+    public UserLevelConfigResponse updateLevelConfig(Long id, UserLevelConfigRequest request) {
+        UserLevelConfig config = userLevelConfigRepository.findById(id)
+            .orElseThrow(() -> new CustomException("404", "레벨 설정을 찾을 수 없습니다."));
+
+        if (!config.getLevel().equals(request.getLevel())
+            && userLevelConfigRepository.existsByLevel(request.getLevel())) {
+            throw new CustomException("400", "이미 존재하는 레벨입니다.");
+        }
+
+        config.setLevel(request.getLevel());
+        config.setRequiredExp(request.getRequiredExp());
+        config.setCumulativeExp(request.getCumulativeExp());
+
+        UserLevelConfig saved = userLevelConfigRepository.save(config);
+        log.info("사용자 레벨 설정 수정: id={}, level={}", id, saved.getLevel());
+        return UserLevelConfigResponse.from(saved);
+    }
+
+    /**
+     * 레벨 설정 삭제
+     */
+    @CacheEvict(value = "userLevelConfigs", allEntries = true)
+    @Transactional(transactionManager = "metaTransactionManager")
+    public void deleteLevelConfig(Long id) {
+        if (!userLevelConfigRepository.existsById(id)) {
+            throw new CustomException("404", "레벨 설정을 찾을 수 없습니다.");
+        }
+        userLevelConfigRepository.deleteById(id);
+        log.info("사용자 레벨 설정 삭제: id={}", id);
     }
 
     /**

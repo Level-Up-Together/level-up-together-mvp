@@ -293,7 +293,11 @@ class MissionCategoryControllerTest {
                         .description("미션 카테고리 생성 (Admin용)")
                         .requestFields(
                             fieldWithPath("name").type(JsonFieldType.STRING).description("카테고리 이름"),
+                            fieldWithPath("name_en").type(JsonFieldType.STRING).description("카테고리 이름 (영어)").optional(),
+                            fieldWithPath("name_ar").type(JsonFieldType.STRING).description("카테고리 이름 (아랍어)").optional(),
                             fieldWithPath("description").type(JsonFieldType.STRING).description("카테고리 설명").optional(),
+                            fieldWithPath("description_en").type(JsonFieldType.STRING).description("카테고리 설명 (영어)").optional(),
+                            fieldWithPath("description_ar").type(JsonFieldType.STRING).description("카테고리 설명 (아랍어)").optional(),
                             fieldWithPath("icon").type(JsonFieldType.STRING).description("카테고리 아이콘").optional(),
                             fieldWithPath("display_order").type(JsonFieldType.NUMBER).description("표시 순서").optional()
                         )
@@ -366,7 +370,11 @@ class MissionCategoryControllerTest {
                         )
                         .requestFields(
                             fieldWithPath("name").type(JsonFieldType.STRING).description("카테고리 이름").optional(),
+                            fieldWithPath("name_en").type(JsonFieldType.STRING).description("카테고리 이름 (영어)").optional(),
+                            fieldWithPath("name_ar").type(JsonFieldType.STRING).description("카테고리 이름 (아랍어)").optional(),
                             fieldWithPath("description").type(JsonFieldType.STRING).description("카테고리 설명").optional(),
+                            fieldWithPath("description_en").type(JsonFieldType.STRING).description("카테고리 설명 (영어)").optional(),
+                            fieldWithPath("description_ar").type(JsonFieldType.STRING).description("카테고리 설명 (아랍어)").optional(),
                             fieldWithPath("icon").type(JsonFieldType.STRING).description("카테고리 아이콘").optional(),
                             fieldWithPath("display_order").type(JsonFieldType.NUMBER).description("표시 순서").optional(),
                             fieldWithPath("is_active").type(JsonFieldType.BOOLEAN).description("활성화 여부").optional()

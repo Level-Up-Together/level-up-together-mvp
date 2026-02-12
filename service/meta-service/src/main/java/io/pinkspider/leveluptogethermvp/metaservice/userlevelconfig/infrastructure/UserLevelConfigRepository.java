@@ -3,6 +3,8 @@ package io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.infrastruct
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,4 +23,11 @@ public interface UserLevelConfigRepository extends JpaRepository<UserLevelConfig
 
     @Query("SELECT MAX(lc.level) FROM UserLevelConfig lc")
     Integer findMaxLevel();
+
+    boolean existsByLevel(Integer level);
+
+    @Query("SELECT lc FROM UserLevelConfig lc WHERE " +
+           "(:keyword IS NULL OR CAST(lc.level AS string) LIKE %:keyword% " +
+           "OR CAST(lc.requiredExp AS string) LIKE %:keyword%)")
+    Page<UserLevelConfig> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
 }

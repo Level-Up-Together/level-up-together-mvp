@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +37,11 @@ public class MissionCategoryService {
 
         MissionCategory category = MissionCategory.builder()
             .name(request.getName())
+            .nameEn(request.getNameEn())
+            .nameAr(request.getNameAr())
             .description(request.getDescription())
+            .descriptionEn(request.getDescriptionEn())
+            .descriptionAr(request.getDescriptionAr())
             .icon(request.getIcon())
             .displayOrder(request.getDisplayOrder())
             .isActive(true)
@@ -65,8 +71,24 @@ public class MissionCategoryService {
             category.setName(request.getName());
         }
 
+        if (request.getNameEn() != null) {
+            category.setNameEn(request.getNameEn());
+        }
+
+        if (request.getNameAr() != null) {
+            category.setNameAr(request.getNameAr());
+        }
+
         if (request.getDescription() != null) {
             category.setDescription(request.getDescription());
+        }
+
+        if (request.getDescriptionEn() != null) {
+            category.setDescriptionEn(request.getDescriptionEn());
+        }
+
+        if (request.getDescriptionAr() != null) {
+            category.setDescriptionAr(request.getDescriptionAr());
         }
 
         if (request.getIcon() != null) {
@@ -168,6 +190,47 @@ public class MissionCategoryService {
     @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
     public MissionCategory findById(Long categoryId) {
         return missionCategoryRepository.findById(categoryId).orElse(null);
+    }
+
+    /**
+     * 카테고리 활성화 토글 (Admin용)
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", key = "#categoryId"),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public MissionCategoryResponse toggleActive(Long categoryId) {
+        MissionCategory category = missionCategoryRepository.findById(categoryId)
+            .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+
+        if (Boolean.TRUE.equals(category.getIsActive())) {
+            category.deactivate();
+        } else {
+            category.activate();
+        }
+
+        MissionCategory saved = missionCategoryRepository.save(category);
+        log.info("Mission category toggled: id={}, isActive={}", categoryId, saved.getIsActive());
+        return MissionCategoryResponse.from(saved);
+    }
+
+    /**
+     * 카테고리 검색 (Admin용 - 페이징 + 키워드)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public Page<MissionCategoryResponse> searchCategories(String keyword, Pageable pageable) {
+        return missionCategoryRepository.searchByKeyword(keyword, pageable)
+            .map(MissionCategoryResponse::from);
+    }
+
+    /**
+     * 카테고리 배치 조회 (크로스서비스 enrichment용)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public List<MissionCategoryResponse> getCategoriesByIds(List<Long> ids) {
+        return missionCategoryRepository.findAllByIdIn(ids).stream()
+            .map(MissionCategoryResponse::from)
+            .collect(Collectors.toList());
     }
 
     /**

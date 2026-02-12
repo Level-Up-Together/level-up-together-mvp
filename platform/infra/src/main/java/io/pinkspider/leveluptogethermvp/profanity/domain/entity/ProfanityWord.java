@@ -17,20 +17,20 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.Immutable;
 
 /**
- * 비속어/금칙어 엔티티 (읽기 전용)
- * MVP 백엔드에서는 조회만 가능하며, 관리는 Admin 백엔드에서만 수행
+ * 비속어/금칙어 엔티티
+ * Admin Internal API를 통해 CRUD 관리
  */
 @Entity
 @Getter
+@Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-@Immutable
 @Table(name = "profanity_word",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_profanity_word_word",
