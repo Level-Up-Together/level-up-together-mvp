@@ -140,6 +140,11 @@ public class GuildPost extends LocalDateTimeBaseEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
+    public void restore() {
+        this.isDeleted = false;
+        this.deletedAt = null;
+    }
+
     public void update(String title, String content) {
         this.title = title;
         this.content = content;

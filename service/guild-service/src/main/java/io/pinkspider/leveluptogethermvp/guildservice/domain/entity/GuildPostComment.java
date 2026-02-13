@@ -93,6 +93,11 @@ public class GuildPostComment extends LocalDateTimeBaseEntity {
         this.deletedAt = LocalDateTime.now();
     }
 
+    public void restore() {
+        this.isDeleted = false;
+        this.deletedAt = null;
+    }
+
     public void update(String content) {
         this.content = content;
     }

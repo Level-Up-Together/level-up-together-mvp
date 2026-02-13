@@ -2,6 +2,7 @@ package io.pinkspider.leveluptogethermvp.guildservice.infrastructure;
 
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibility;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -74,4 +75,40 @@ public interface GuildRepository extends JpaRepository<Guild, Long> {
         """)
     List<Guild> findPublicGuildsByCategoryOrderByMemberCount(
         @Param("categoryId") Long categoryId, Pageable pageable);
+
+    // ========== Admin Internal API 쿼리 ==========
+
+    @Query("SELECT g FROM Guild g WHERE " +
+           "(:keyword IS NULL OR :keyword = '' OR LOWER(g.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(g.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:categoryId IS NULL OR g.categoryId = :categoryId) " +
+           "AND (:isActive IS NULL OR g.isActive = :isActive) " +
+           "AND (:visibility IS NULL OR g.visibility = :visibility)")
+    Page<Guild> searchGuildsForAdmin(
+        @Param("keyword") String keyword,
+        @Param("categoryId") Long categoryId,
+        @Param("isActive") Boolean isActive,
+        @Param("visibility") GuildVisibility visibility,
+        Pageable pageable
+    );
+
+    long countByIsActiveTrue();
+
+    long countByIsActiveFalse();
+
+    long countByVisibility(GuildVisibility visibility);
+
+    @Query("SELECT COUNT(g) FROM Guild g WHERE g.createdAt >= :date")
+    long countByCreatedAtAfter(@Param("date") LocalDateTime date);
+
+    @Query("SELECT g.categoryId, COUNT(g) FROM Guild g WHERE g.isActive = true GROUP BY g.categoryId")
+    List<Object[]> countGuildsByCategory();
+
+    @Query("SELECT CAST(g.createdAt AS date), COUNT(g) FROM Guild g " +
+           "WHERE g.createdAt BETWEEN :startDate AND :endDate " +
+           "GROUP BY CAST(g.createdAt AS date) " +
+           "ORDER BY CAST(g.createdAt AS date)")
+    List<Object[]> countDailyNewGuilds(
+        @Param("startDate") LocalDateTime startDate,
+        @Param("endDate") LocalDateTime endDate
+    );
 }

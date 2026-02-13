@@ -40,4 +40,27 @@ public interface GuildPostCommentRepository extends JpaRepository<GuildPostComme
     @Transactional(transactionManager = "guildTransactionManager")
     @Query("UPDATE GuildPostComment c SET c.authorNickname = :nickname WHERE c.authorId = :userId")
     int updateAuthorNicknameByUserId(@Param("userId") String userId, @Param("nickname") String nickname);
+
+    // ========== Admin Internal API 쿼리 ==========
+
+    @Query("SELECT c FROM GuildPostComment c WHERE c.post.id = :postId ORDER BY c.createdAt ASC")
+    Page<GuildPostComment> findByPostIdOrderByCreatedAtAsc(@Param("postId") Long postId, Pageable pageable);
+
+    @Query("SELECT c FROM GuildPostComment c WHERE c.post.id = :postId AND c.isDeleted = false ORDER BY c.createdAt ASC")
+    Page<GuildPostComment> findByPostIdAndNotDeletedPaged(@Param("postId") Long postId, Pageable pageable);
+
+    @Query("SELECT c FROM GuildPostComment c WHERE c.post.id = :postId AND c.isDeleted = true ORDER BY c.deletedAt DESC")
+    Page<GuildPostComment> findDeletedByPostId(@Param("postId") Long postId, Pageable pageable);
+
+    @Query("SELECT c FROM GuildPostComment c WHERE c.post.id = :postId AND c.id = :commentId")
+    Optional<GuildPostComment> findByIdAndPostId(@Param("commentId") Long commentId, @Param("postId") Long postId);
+
+    @Query("SELECT c FROM GuildPostComment c JOIN c.post p WHERE p.guild.id = :guildId ORDER BY c.createdAt DESC")
+    Page<GuildPostComment> findAllByGuildId(@Param("guildId") Long guildId, Pageable pageable);
+
+    @Query("SELECT COUNT(c) FROM GuildPostComment c WHERE c.post.id = :postId AND c.isDeleted = false")
+    long countByPostIdAndNotDeleted(@Param("postId") Long postId);
+
+    @Query("SELECT COUNT(c) FROM GuildPostComment c JOIN c.post p WHERE p.guild.id = :guildId AND c.isDeleted = false")
+    long countByGuildIdAndNotDeleted(@Param("guildId") Long guildId);
 }
