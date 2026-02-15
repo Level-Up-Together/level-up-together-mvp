@@ -4,8 +4,11 @@ plugins {
 
 rootProject.name = 'level-up-together-mvp'
 
-// Platform — MVP-specific infra only (shared code is in external lut-platform-* artifacts)
-include ':platform:infra'
+// Platform shared library (IDE에서 소스 편집 가능하도록 composite build)
+def platformDir = file('../level-up-together-platform')
+if (platformDir.exists()) {
+    includeBuild '../level-up-together-platform'
+}
 
 // Service module (single compilation unit — services share circular deps)
 include ':service'

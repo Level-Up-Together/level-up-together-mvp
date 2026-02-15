@@ -7,6 +7,7 @@ jar { enabled = true }
 // 디렉토리 분리는 유지하여 논리적 서비스 경계를 표현
 sourceSets {
     main.java.srcDirs = [
+        'src/main/java',
         'user-service/src/main/java',
         'guild-service/src/main/java',
         'mission-service/src/main/java',
@@ -20,6 +21,7 @@ sourceSets {
         'support-service/src/main/java',
     ]
     test.java.srcDirs = [
+        'src/test/java',
         'shared-test/src/test/java',
         'user-service/src/test/java',
         'guild-service/src/test/java',
@@ -54,8 +56,32 @@ dependencies {
     api 'io.pinkspider:lut-platform-kernel:1.0.0-SNAPSHOT'
     api 'io.pinkspider:lut-platform-infra:1.0.0-SNAPSHOT'
     implementation 'io.pinkspider:lut-platform-saga:1.0.0-SNAPSHOT'
-    // Platform MVP-specific (local module)
-    api project(':platform:infra')
+
+    // Spring starters (MVP-specific)
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    api 'org.springframework.boot:spring-boot-starter-websocket'
+    api 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Firebase Admin SDK
+    api 'com.google.firebase:firebase-admin:9.2.0'
+
+    // Resilience4j
+    api 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-reactor'
+
+    // Netflix DGS GraphQL
+    api 'com.netflix.graphql.dgs:graphql-dgs-spring-boot-starter'
+    api 'com.netflix.graphql.dgs:graphql-dgs-extended-scalars'
+
+    // Slack SDK
+    implementation 'com.slack.api:slack-api-client:1.39.0'
+
+    // Reactor
+    implementation 'io.projectreactor:reactor-core:3.4.19'
+
+    // Gson
+    implementation 'com.google.code.gson:gson'
 
     // QueryDSL
     implementation "com.querydsl:querydsl-jpa:${queryDslVersion}:jakarta"
