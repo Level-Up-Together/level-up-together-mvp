@@ -1,249 +1,30 @@
-# 시즌 순위별 보상 칭호 시스템 구현 계획
+# PLAN.md
 
-## 개요
-시즌 관리에서 순위별 보상 칭호를 설정하고, 시즌 종료 시 자동으로 칭호를 부여하는 기능
+> Source of Truth: [Notion - Platform 분리 + Admin 멀티모듈 + BFF 구성 플랜](https://www.notion.so/linkpark/Platform-Admin-BFF-3068c64c554381558c91ea67edf37a1d)
 
-## 핵심 요구사항
-1. **칭호 생성**: 시즌 모달에서 새 칭호를 직접 생성 (기존 칭호 선택 X)
-2. **희귀도 필수**: 칭호 생성 시 희귀도(Rarity) 선택 필수
-3. **랭킹 구분**: 전체 랭킹 + 카테고리별 랭킹 지원
-4. **순위 범위**: 단일(1위) 또는 범위(3-10위) 설정 가능
-5. **자동 부여**: 시즌 종료 시 자동 칭호 부여 + 알림 발송
+## 완료된 작업
 
-## 1단계: 데이터베이스 스키마 변경
+- **Phase 1**: Platform 별도 레포지토리 분리 (2026-02-12)
+- **platform/infra 모듈 제거**: 76개 파일 `service/src/`로 통합 + `includeBuild` 설정 (2026-02-15)
 
-### Admin DB - season_rank_reward 테이블 수정
-```sql
-ALTER TABLE season_rank_reward
-ADD COLUMN category_id BIGINT NULL,
-ADD COLUMN category_name VARCHAR(100) NULL;
+## 다음 작업
 
-COMMENT ON COLUMN season_rank_reward.category_id IS 'NULL이면 전체 랭킹, 값이 있으면 해당 카테고리 랭킹';
-```
+### Phase 3: MVP 서비스 간 순환 의존 제거
 
-### Product DB - season_rank_reward 테이블 수정
-```sql
-ALTER TABLE season_rank_reward
-ADD COLUMN category_id BIGINT NULL,
-ADD COLUMN category_name VARCHAR(100) NULL;
-```
+4개 순환 쌍을 제거하여 향후 서비스 모듈을 독립 Gradle 모듈로 분리할 수 있는 기반 마련.
 
-### Product DB - season_reward_history 테이블 수정
-```sql
-ALTER TABLE season_reward_history
-ADD COLUMN category_id BIGINT NULL,
-ADD COLUMN category_name VARCHAR(100) NULL;
-```
+| 순환 쌍 | A → B | B → A | 핵심 원인 |
+|---------|-------|-------|----------|
+| user ↔ guild | 3파일 (HomeService, MyPageService, UserAdminInternalService) | 4파일 (GuildInvitationService, GuildMemberService, GuildAdminInternalService, GuildQueryService) | user에서 길드 조회 / guild에서 유저 프로필 조회 |
+| user ↔ gamification | 8파일 (UserProfileCacheService, MyPageService, HomeService 등) | 5파일 (UserExperienceService, SeasonRankingService 등) | user에서 레벨/칭호/스탯 조회 / gamification에서 유저 프로필 캐시 사용 |
+| user ↔ support | 1파일 (MyPageService) | 2파일 (CustomerInquiryService, ReportService) | user에서 신고 상태 확인 / support에서 유저 정보 조회 |
+| guild ↔ gamification | 3파일 (GuildService, GuildMemberService, GuildQueryService) | 2파일 (SeasonRankingService, GuildServiceCheckStrategy) | guild에서 레벨/칭호 조회 / gamification에서 길드 랭킹 조회 |
 
-## 2단계: Admin Backend 변경
+**핵심 패턴**: `UserProfileCacheService` 중심 순환
+- `UserProfileCacheService` → `TitleService`, `UserExperienceService` (레벨/칭호 캐시)
+- `UserExperienceService` → `UserProfileCacheService` (레벨업 시 캐시 무효화)
 
-### 2.1 SeasonRankReward 엔티티 수정
-파일: `level-up-together-mvp-admin/src/.../adminservice/seasonrankreward/domain/SeasonRankReward.java`
-
-```java
-@Column(name = "category_id")
-private Long categoryId;  // null이면 전체 랭킹
-
-@Column(name = "category_name")
-private String categoryName;  // 카테고리명 (조회 편의)
-```
-
-### 2.2 시즌 보상 칭호 생성 Request DTO
-파일: `CreateSeasonRankRewardRequest.java`
-
-```java
-public record CreateSeasonRankRewardRequest(
-    @NotNull Long seasonId,
-    @NotNull Integer rankStart,
-    @NotNull Integer rankEnd,
-    Long categoryId,           // null이면 전체 랭킹
-    String categoryName,
-    // 새 칭호 생성 정보
-    @NotNull String titleName,
-    @NotNull TitleRarity titleRarity,  // COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHIC
-    @NotNull TitlePositionType titlePositionType  // LEFT, RIGHT
-) {}
-```
-
-### 2.3 벌크 생성 API
-파일: `SeasonRankRewardController.java`
-
-```java
-@PostMapping("/bulk")
-public ApiResult<List<SeasonRankRewardResponse>> createBulk(
-    @Valid @RequestBody List<CreateSeasonRankRewardRequest> requests
-) {
-    return ApiResult.ok(service.createBulk(requests));
-}
-```
-
-### 2.4 SeasonRankRewardService 수정
-- createBulk() 메서드: Title 생성 → SeasonRankReward 생성을 한 트랜잭션에서 처리
-- Title 생성 시 acquisitionType = SEASON 설정
-
-## 3단계: Product Backend 변경
-
-### 3.1 SeasonRankReward 엔티티 수정
-파일: `level-up-together-mvp/src/.../gamificationservice/seasonrankreward/domain/SeasonRankReward.java`
-
-동일하게 categoryId, categoryName 필드 추가
-
-### 3.2 SeasonRewardHistory 엔티티 수정
-파일: `SeasonRewardHistory.java`
-
-```java
-@Column(name = "category_id")
-private Long categoryId;
-
-@Column(name = "category_name")
-private String categoryName;
-```
-
-### 3.3 SeasonRewardProcessorService 수정 (핵심)
-파일: `SeasonRewardProcessorService.java`
-
-```java
-@Transactional
-public void processSeasonEnd(Season season) {
-    List<SeasonRankReward> rewards = rewardRepository.findBySeasonId(season.getId());
-
-    // 전체 랭킹 보상 처리
-    List<SeasonRankReward> overallRewards = rewards.stream()
-        .filter(r -> r.getCategoryId() == null)
-        .toList();
-    processOverallRankingRewards(season, overallRewards);
-
-    // 카테고리별 랭킹 보상 처리
-    Map<Long, List<SeasonRankReward>> categoryRewards = rewards.stream()
-        .filter(r -> r.getCategoryId() != null)
-        .collect(Collectors.groupingBy(SeasonRankReward::getCategoryId));
-
-    categoryRewards.forEach((categoryId, catRewards) ->
-        processCategoryRankingRewards(season, categoryId, catRewards)
-    );
-}
-
-private void processCategoryRankingRewards(Season season, Long categoryId, List<SeasonRankReward> rewards) {
-    String categoryName = rewards.get(0).getCategoryName();
-
-    // 카테고리별 경험치 랭킹 조회
-    List<Object[]> rankings = experienceHistoryRepository
-        .findTopExpGainersByCategoryAndPeriod(
-            categoryName,
-            season.getStartDate().atStartOfDay(),
-            season.getEndDate().atTime(23, 59, 59),
-            PageRequest.of(0, getMaxRank(rewards))
-        );
-
-    // 순위에 맞는 보상 부여
-    for (int rank = 1; rank <= rankings.size(); rank++) {
-        Long userId = (Long) rankings.get(rank - 1)[0];
-        grantRewardForRank(userId, rank, rewards, season, categoryId, categoryName);
-    }
-}
-```
-
-## 4단계: Admin Frontend 변경
-
-### 4.1 SeasonFormModal 수정
-파일: `level-up-together-admin-frontend/src/app/(afterLogin)/season/page.tsx`
-
-```tsx
-// 보상 목록 상태
-const [rewards, setRewards] = useState<SeasonRewardForm[]>([]);
-
-interface SeasonRewardForm {
-  id?: number;
-  rankType: 'overall' | 'category';  // 전체 or 카테고리별
-  categoryId?: number;
-  categoryName?: string;
-  rankStart: number;
-  rankEnd: number;
-  // 칭호 생성 정보
-  titleName: string;
-  titleRarity: TitleRarity;
-  titlePositionType: TitlePositionType;
-}
-
-// 희귀도 선택 UI (드롭다운)
-<select value={reward.titleRarity} onChange={...}>
-  <option value="COMMON">일반 (Common)</option>
-  <option value="UNCOMMON">고급 (Uncommon)</option>
-  <option value="RARE">희귀 (Rare)</option>
-  <option value="EPIC">영웅 (Epic)</option>
-  <option value="LEGENDARY">전설 (Legendary)</option>
-  <option value="MYTHIC">신화 (Mythic)</option>
-</select>
-```
-
-### 4.2 보상 추가 UI
-```tsx
-// 동적 보상 추가 폼
-<button onClick={addReward}>+ 보상 추가</button>
-
-{rewards.map((reward, index) => (
-  <div key={index} className="reward-item">
-    {/* 랭킹 타입 선택 */}
-    <select value={reward.rankType}>
-      <option value="overall">전체 랭킹</option>
-      <option value="category">카테고리별 랭킹</option>
-    </select>
-
-    {/* 카테고리 선택 (카테고리별일 때만) */}
-    {reward.rankType === 'category' && (
-      <select value={reward.categoryId}>
-        {categories.map(cat => (
-          <option key={cat.id} value={cat.id}>{cat.name}</option>
-        ))}
-      </select>
-    )}
-
-    {/* 순위 범위 */}
-    <input type="number" value={reward.rankStart} placeholder="시작 순위" />
-    <input type="number" value={reward.rankEnd} placeholder="종료 순위" />
-
-    {/* 칭호 정보 */}
-    <input type="text" value={reward.titleName} placeholder="칭호명" />
-
-    {/* 희귀도 선택 (필수) */}
-    <select value={reward.titleRarity} required>
-      <option value="">희귀도 선택</option>
-      <option value="COMMON">일반</option>
-      <option value="UNCOMMON">고급</option>
-      <option value="RARE">희귀</option>
-      <option value="EPIC">영웅</option>
-      <option value="LEGENDARY">전설</option>
-      <option value="MYTHIC">신화</option>
-    </select>
-
-    {/* 위치 선택 */}
-    <select value={reward.titlePositionType}>
-      <option value="LEFT">이름 앞</option>
-      <option value="RIGHT">이름 뒤</option>
-    </select>
-
-    <button onClick={() => removeReward(index)}>삭제</button>
-  </div>
-))}
-```
-
-## 5단계: 테스트 코드 작성
-
-### 5.1 Admin Backend 테스트
-- SeasonRankRewardServiceTest: 벌크 생성, 칭호 생성 연동 테스트
-
-### 5.2 Product Backend 테스트
-- SeasonRewardProcessorServiceTest: 전체/카테고리별 보상 처리 테스트
-
-## 구현 순서
-1. DB 마이그레이션 SQL 작성 및 실행
-2. Admin Backend - 엔티티, DTO, Service, Controller 수정
-3. Product Backend - 엔티티, Service 수정
-4. Admin Frontend - SeasonFormModal 보상 관리 UI 추가
-5. 테스트 코드 작성
-6. 통합 테스트
-
-## 주의사항
-- 희귀도(TitleRarity)는 칭호 생성 시 **필수 입력**
-- 카테고리별 랭킹 조회 시 categoryName으로 조회 (ExperienceHistory에 categoryName 저장됨)
-- 트랜잭션 매니저: Admin은 adminTransactionManager, Product은 gamificationTransactionManager 사용
+**해결 전략 (계획 중)**:
+- 인터페이스 추출: 공통 조회 인터페이스를 platform 모듈에 정의, 각 서비스에서 구현
+- 이벤트 기반: 레벨업/칭호변경 시 이벤트 발행 → 캐시 무효화
+- Facade 패턴 강화: 기존 `GuildQueryFacadeService` 패턴 확대

@@ -11,8 +11,8 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExe
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import java.time.LocalDate;
@@ -34,7 +34,7 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
     private final MissionImageStorageService missionImageStorageService;
     private final FeedCommandService feedCommandService;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager")
@@ -193,7 +193,7 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
         Mission mission = participant.getMission();
 
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(userId);
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(userId);
             Integer durationMinutes = execution.calculateExpByDuration();
             Long categoryId = mission.getCategoryId();
 

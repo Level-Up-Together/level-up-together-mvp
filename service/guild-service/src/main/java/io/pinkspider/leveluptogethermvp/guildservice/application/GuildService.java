@@ -17,7 +17,7 @@ import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildMasterAssignedEvent;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
@@ -41,13 +41,13 @@ public class GuildService {
     private final ApplicationEventPublisher eventPublisher;
     private final GuildHeadquartersService guildHeadquartersService;
     private final GuildImageStorageService guildImageStorageService;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
     private final GuildHelper guildHelper;
 
     @Transactional(transactionManager = "guildTransactionManager")
     public GuildResponse createGuild(String userId, GuildCreateRequest request) {
         // 레벨 체크: 길드 창설은 레벨 20 이상부터 가능
-        int userLevel = gamificationQueryFacadeService.getOrCreateUserExperience(userId).getCurrentLevel();
+        int userLevel = gamificationQueryFacadeService.getOrCreateUserExperience(userId).currentLevel();
         if (userLevel < GUILD_CREATION_MIN_LEVEL) {
             throw new IllegalStateException(
                 String.format("길드 창설은 레벨 %d 이상부터 가능합니다. (현재 레벨: %d)",

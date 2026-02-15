@@ -18,8 +18,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserS
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.LevelRankingResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.RankingResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -48,7 +48,7 @@ class RankingServiceTest {
     private UserExperienceRepository userExperienceRepository;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private ExperienceHistoryRepository experienceHistoryRepository;
@@ -286,7 +286,7 @@ class RankingServiceTest {
 
             when(userExperienceRepository.countTotalUsers()).thenReturn(100L);
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID))
-                .thenReturn(new UserProfileCache(TEST_USER_ID, "테스트닉네임", null, 15, null, null, null));
+                .thenReturn(new UserProfileInfo(TEST_USER_ID, "테스트닉네임", null, 15, null, null, null));
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(exp));
             when(userExperienceRepository.calculateLevelRank(15, 5000)).thenReturn(10L);
 
@@ -305,7 +305,7 @@ class RankingServiceTest {
             // given
             when(userExperienceRepository.countTotalUsers()).thenReturn(100L);
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID))
-                .thenReturn(new UserProfileCache(TEST_USER_ID, "사용자", null, 1, null, null, null));
+                .thenReturn(new UserProfileInfo(TEST_USER_ID, "사용자", null, 1, null, null, null));
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.empty());
 
             // when
@@ -351,7 +351,7 @@ class RankingServiceTest {
 
             when(experienceHistoryRepository.countUsersByCategory(category)).thenReturn(10L);
             when(experienceHistoryRepository.findUserExpRankingByCategory(category, pageable)).thenReturn(rankingPage);
-            when(userQueryFacadeService.getUserProfiles(List.of("user1"))).thenReturn(java.util.Map.of("user1", new UserProfileCache("user1", "테스트유저", null, 10, null, null, null)));
+            when(userQueryFacadeService.getUserProfiles(List.of("user1"))).thenReturn(java.util.Map.of("user1", new UserProfileInfo("user1", "테스트유저", null, 10, null, null, null)));
             when(userExperienceRepository.findByUserId("user1")).thenReturn(Optional.of(exp));
             when(userTitleRepository.findEquippedTitlesByUserId("user1")).thenReturn(Collections.emptyList());
 
@@ -376,7 +376,7 @@ class RankingServiceTest {
 
             when(experienceHistoryRepository.countUsersByCategory(category)).thenReturn(5L);
             when(experienceHistoryRepository.findUserExpRankingByCategory(category, pageable)).thenReturn(rankingPage);
-            when(userQueryFacadeService.getUserProfiles(List.of("user2"))).thenReturn(java.util.Map.of("user2", new UserProfileCache("user2", "테스트유저2", null, 1, null, null, null)));
+            when(userQueryFacadeService.getUserProfiles(List.of("user2"))).thenReturn(java.util.Map.of("user2", new UserProfileInfo("user2", "테스트유저2", null, 1, null, null, null)));
             when(userExperienceRepository.findByUserId("user2")).thenReturn(Optional.empty());
             when(userTitleRepository.findEquippedTitlesByUserId("user2")).thenReturn(Collections.emptyList());
 
@@ -405,7 +405,7 @@ class RankingServiceTest {
 
             when(userExperienceRepository.countTotalUsers()).thenReturn(100L);
             when(userExperienceRepository.findAllByOrderByCurrentLevelDescTotalExpDesc(pageable)).thenReturn(expPage);
-            when(userQueryFacadeService.getUserProfiles(List.of("user1", "user2"))).thenReturn(java.util.Map.of("user1", new UserProfileCache("user1", "유저1", null, 20, null, null, null), "user2", new UserProfileCache("user2", "유저2", null, 15, null, null, null)));
+            when(userQueryFacadeService.getUserProfiles(List.of("user1", "user2"))).thenReturn(java.util.Map.of("user1", new UserProfileInfo("user1", "유저1", null, 20, null, null, null), "user2", new UserProfileInfo("user2", "유저2", null, 15, null, null, null)));
             when(userTitleRepository.findEquippedTitlesByUserId(anyString())).thenReturn(Collections.emptyList());
 
             // when
@@ -533,7 +533,7 @@ class RankingServiceTest {
             UserExperience exp = createTestUserExperience(1L, TEST_USER_ID, 15, 5000);
 
             when(userExperienceRepository.countTotalUsers()).thenReturn(100L);
-            when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileCache(TEST_USER_ID, "테스트닉네임", null, 15, null, null, null));
+            when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileInfo(TEST_USER_ID, "테스트닉네임", null, 15, null, null, null));
             when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(exp));
             when(userExperienceRepository.calculateLevelRank(15, 5000)).thenReturn(10L);
@@ -554,7 +554,7 @@ class RankingServiceTest {
             UserExperience exp = createTestUserExperience(1L, TEST_USER_ID, 15, 5000);
 
             when(userExperienceRepository.countTotalUsers()).thenReturn(100L);
-            when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileCache(TEST_USER_ID, "사용자", null, 1, null, null, null));
+            when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileInfo(TEST_USER_ID, "사용자", null, 1, null, null, null));
             when(userTitleRepository.findEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(userExperienceRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(exp));
             when(userExperienceRepository.calculateLevelRank(15, 5000)).thenReturn(10L);

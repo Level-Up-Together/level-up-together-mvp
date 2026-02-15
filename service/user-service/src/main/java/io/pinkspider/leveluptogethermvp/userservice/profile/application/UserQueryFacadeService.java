@@ -1,9 +1,10 @@
 package io.pinkspider.leveluptogethermvp.userservice.profile.application;
 
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.leveluptogethermvp.userservice.core.application.UserExistsCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.friend.application.FriendService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.time.LocalDate;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @RequiredArgsConstructor
 @Transactional(readOnly = true, transactionManager = "userTransactionManager")
-public class UserQueryFacadeService {
+public class UserQueryFacadeService implements UserQueryFacade {
 
     private final UserProfileCacheService userProfileCacheService;
     private final UserExistsCacheService userExistsCacheService;
@@ -32,11 +33,11 @@ public class UserQueryFacadeService {
 
     // ========== 프로필 조회 (캐시) ==========
 
-    public UserProfileCache getUserProfile(String userId) {
+    public UserProfileInfo getUserProfile(String userId) {
         return userProfileCacheService.getUserProfile(userId);
     }
 
-    public Map<String, UserProfileCache> getUserProfiles(List<String> userIds) {
+    public Map<String, UserProfileInfo> getUserProfiles(List<String> userIds) {
         return userProfileCacheService.getUserProfiles(userIds);
     }
 

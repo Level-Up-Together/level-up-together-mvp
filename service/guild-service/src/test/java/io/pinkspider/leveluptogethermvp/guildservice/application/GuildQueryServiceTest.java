@@ -29,8 +29,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibilit
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildJoinRequestRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
@@ -64,10 +64,10 @@ class GuildQueryServiceTest {
     private AdminInternalFeignClient adminInternalFeignClient;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @Mock
     private ReportService reportService;

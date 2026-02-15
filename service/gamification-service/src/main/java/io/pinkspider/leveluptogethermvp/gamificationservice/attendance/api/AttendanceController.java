@@ -6,7 +6,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.applicati
 import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.AttendanceCheckInResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.attendance.domain.dto.MonthlyAttendanceResponse;
 import io.pinkspider.global.annotation.CurrentUser;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
+import io.pinkspider.global.facade.UserQueryFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AttendanceController {
 
     private final AttendanceService attendanceService;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
 
     // 출석 체크 (Rate Limit: 사용자당 1분에 5회)
     @PostMapping("/check-in")

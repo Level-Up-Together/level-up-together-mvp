@@ -15,7 +15,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCreateRequest;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionTemplateResponse;
@@ -65,7 +65,7 @@ class MissionServiceTest {
     private MissionParticipantService missionParticipantService;
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -1182,8 +1182,8 @@ class MissionServiceTest {
             setId(mission, missionId);
             TestReflectionUtils.setField(mission, "source", MissionSource.USER);
 
-            io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildPermissionCheck permissionCheck =
-                new io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildPermissionCheck(
+            io.pinkspider.global.facade.dto.GuildPermissionCheck permissionCheck =
+                new io.pinkspider.global.facade.dto.GuildPermissionCheck(
                     true, true, false
                 );
 

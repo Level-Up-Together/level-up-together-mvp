@@ -3,9 +3,9 @@ package io.pinkspider.leveluptogethermvp.missionservice.saga.steps;
 import io.pinkspider.global.saga.SagaStep;
 import io.pinkspider.global.saga.SagaStepResult;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import io.pinkspider.global.enums.ExpSourceType;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
+import io.pinkspider.global.facade.dto.UserExperienceDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GrantUserExperienceStep implements SagaStep<MissionCompletionContext> {
 
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
 
     @Override
     public String getName() {
@@ -47,14 +47,14 @@ public class GrantUserExperienceStep implements SagaStep<MissionCompletionContex
 
         try {
             // 현재 상태 저장 (보상용)
-            UserExperience currentExp = gamificationQueryFacadeService.getOrCreateUserExperience(userId);
+            UserExperienceDto currentExp = gamificationQueryFacadeService.getOrCreateUserExperience(userId);
             context.addCompensationData(
                 MissionCompletionContext.CompensationKeys.USER_EXP_BEFORE,
-                currentExp.getCurrentExp());
+                currentExp.currentExp());
             context.addCompensationData(
                 MissionCompletionContext.CompensationKeys.USER_LEVEL_BEFORE,
-                currentExp.getCurrentLevel());
-            context.setUserLevelBefore(currentExp.getCurrentLevel());
+                currentExp.currentLevel());
+            context.setUserLevelBefore(currentExp.currentLevel());
 
             // 카테고리 정보 및 설명 (일반/고정 분기)
             Long categoryId;
@@ -83,8 +83,8 @@ public class GrantUserExperienceStep implements SagaStep<MissionCompletionContex
             );
 
             // 지급 후 레벨 확인
-            UserExperience afterExp = gamificationQueryFacadeService.getOrCreateUserExperience(userId);
-            context.setUserLevelAfter(afterExp.getCurrentLevel());
+            UserExperienceDto afterExp = gamificationQueryFacadeService.getOrCreateUserExperience(userId);
+            context.setUserLevelAfter(afterExp.currentLevel());
 
             log.info("User experience granted: userId={}, exp={}, level: {} -> {}, pinned={}",
                 userId, expToGrant, context.getUserLevelBefore(), context.getUserLevelAfter(), context.isPinned());

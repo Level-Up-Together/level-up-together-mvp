@@ -2,11 +2,11 @@ package io.pinkspider.leveluptogethermvp.userservice.unit.user.application;
 
 import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.global.util.CryptoUtils;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserAchievementResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.UserGuildAdminInfo;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.UserAchievementDto;
+import io.pinkspider.global.facade.dto.UserTitleDto;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.UserGuildAdminInfo;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.dto.admin.BlacklistListItemAdminResponse;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.dto.admin.UserAchievementAdminResponse;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.dto.admin.UserAdminPageResponse;
@@ -50,8 +50,8 @@ public class UserAdminInternalService {
 
     private final UserRepository userRepository;
     private final UserBlacklistRepository userBlacklistRepository;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
 
     // ========== 유저 검색/조회 ==========
 
@@ -334,40 +334,38 @@ public class UserAdminInternalService {
     // ========== private helpers ==========
 
     private List<UserTitleAdminResponse> buildTitleResponses(String userId) {
-        List<UserTitle> titles = gamificationQueryFacadeService.getUserTitleEntitiesWithTitle(userId);
+        List<UserTitleDto> titles = gamificationQueryFacadeService.getUserTitlesWithTitleInfo(userId);
         return titles.stream()
             .map(ut -> UserTitleAdminResponse.builder()
-                .id(ut.getId())
-                .titleId(ut.getTitle() != null ? ut.getTitle().getId() : null)
-                .titleName(ut.getTitle() != null ? ut.getTitle().getName() : null)
-                .titleRarity(ut.getTitle() != null && ut.getTitle().getRarity() != null
-                    ? ut.getTitle().getRarity().name() : null)
-                .titlePositionType(ut.getTitle() != null && ut.getTitle().getPositionType() != null
-                    ? ut.getTitle().getPositionType().name() : null)
-                .titleColorCode(ut.getTitle() != null ? ut.getTitle().getColorCode() : null)
-                .acquiredAt(ut.getAcquiredAt())
-                .isEquipped(ut.getIsEquipped())
-                .equippedPosition(ut.getEquippedPosition() != null
-                    ? ut.getEquippedPosition().name() : null)
+                .id(ut.id())
+                .titleId(ut.titleId())
+                .titleName(ut.titleName())
+                .titleRarity(ut.titleRarity() != null ? ut.titleRarity().name() : null)
+                .titlePositionType(ut.titlePositionType() != null ? ut.titlePositionType().name() : null)
+                .titleColorCode(ut.titleColorCode())
+                .acquiredAt(ut.acquiredAt())
+                .isEquipped(ut.isEquipped())
+                .equippedPosition(ut.equippedPosition() != null
+                    ? ut.equippedPosition().name() : null)
                 .build())
             .toList();
     }
 
     private List<UserAchievementAdminResponse> buildAchievementResponses(String userId) {
-        List<UserAchievementResponse> achievements = gamificationQueryFacadeService.getUserAchievements(userId);
+        List<UserAchievementDto> achievements = gamificationQueryFacadeService.getUserAchievements(userId);
         return achievements.stream()
             .map(ua -> UserAchievementAdminResponse.builder()
-                .id(ua.getId())
-                .achievementId(ua.getAchievementId())
-                .achievementName(ua.getName())
-                .achievementCategoryCode(ua.getCategoryCode())
-                .achievementIconUrl(ua.getIconUrl())
-                .currentCount(ua.getCurrentCount())
-                .requiredCount(ua.getRequiredCount())
-                .progressPercent(ua.getProgressPercent())
-                .isCompleted(ua.getIsCompleted())
-                .completedAt(ua.getCompletedAt())
-                .isRewardClaimed(ua.getIsRewardClaimed())
+                .id(ua.id())
+                .achievementId(ua.achievementId())
+                .achievementName(ua.name())
+                .achievementCategoryCode(ua.categoryCode())
+                .achievementIconUrl(ua.iconUrl())
+                .currentCount(ua.currentCount())
+                .requiredCount(ua.requiredCount())
+                .progressPercent(ua.progressPercent())
+                .isCompleted(ua.isCompleted())
+                .completedAt(ua.completedAt())
+                .isRewardClaimed(ua.isRewardClaimed())
                 .build())
             .toList();
     }

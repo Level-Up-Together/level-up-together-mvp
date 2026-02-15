@@ -2,8 +2,8 @@ package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.strateg
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.enums.ComparisonOperator;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildMembershipInfo;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildMembershipInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,7 +19,7 @@ import java.util.List;
 @Slf4j
 public class GuildServiceCheckStrategy implements AchievementCheckStrategy {
 
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
 
     @Override
     public String getDataSource() {

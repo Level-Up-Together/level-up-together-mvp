@@ -6,9 +6,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.TitleInfoDto;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.util.Optional;
@@ -28,7 +28,7 @@ class UserProfileCacheServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @InjectMocks
     private UserProfileCacheService userProfileCacheService;
@@ -48,14 +48,14 @@ class UserProfileCacheServiceTest {
                 .build();
             setId(user, userId);
 
-            TitleInfo titleInfo = new TitleInfo("전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700");
+            TitleInfoDto titleInfo = new TitleInfoDto("전설적인 모험가", TitleRarity.LEGENDARY, "#FFD700");
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
             when(gamificationQueryFacadeService.getUserLevel(userId)).thenReturn(15);
             when(gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId)).thenReturn(titleInfo);
 
             // when
-            UserProfileCache result = userProfileCacheService.getUserProfile(userId);
+            UserProfileInfo result = userProfileCacheService.getUserProfile(userId);
 
             // then
             assertThat(result.userId()).isEqualTo(userId);
@@ -74,7 +74,7 @@ class UserProfileCacheServiceTest {
             when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
             // when
-            UserProfileCache result = userProfileCacheService.getUserProfile(userId);
+            UserProfileInfo result = userProfileCacheService.getUserProfile(userId);
 
             // then
             assertThat(result.userId()).isEqualTo(userId);
@@ -95,14 +95,14 @@ class UserProfileCacheServiceTest {
                 .build();
             setId(user, userId);
 
-            TitleInfo titleInfo = new TitleInfo(null, null, null);
+            TitleInfoDto titleInfo = new TitleInfoDto(null, null, null);
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
             when(gamificationQueryFacadeService.getUserLevel(userId)).thenReturn(1);
             when(gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId)).thenReturn(titleInfo);
 
             // when
-            UserProfileCache result = userProfileCacheService.getUserProfile(userId);
+            UserProfileInfo result = userProfileCacheService.getUserProfile(userId);
 
             // then
             assertThat(result.level()).isEqualTo(1);
@@ -118,14 +118,14 @@ class UserProfileCacheServiceTest {
                 .build();
             setId(user, userId);
 
-            TitleInfo titleInfo = new TitleInfo(null, null, null);
+            TitleInfoDto titleInfo = new TitleInfoDto(null, null, null);
 
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
             when(gamificationQueryFacadeService.getUserLevel(userId)).thenReturn(5);
             when(gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId)).thenReturn(titleInfo);
 
             // when
-            UserProfileCache result = userProfileCacheService.getUserProfile(userId);
+            UserProfileInfo result = userProfileCacheService.getUserProfile(userId);
 
             // then
             assertThat(result.titleName()).isNull();
@@ -135,7 +135,7 @@ class UserProfileCacheServiceTest {
 
     @Nested
     @DisplayName("evictUserProfileCache 테스트")
-    class EvictUserProfileCacheTest {
+    class EvictUserProfileInfoTest {
 
         @Test
         @DisplayName("캐시 무효화 호출 성공")

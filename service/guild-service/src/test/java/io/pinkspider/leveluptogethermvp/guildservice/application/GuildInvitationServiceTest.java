@@ -27,8 +27,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -58,7 +58,7 @@ class GuildInvitationServiceTest {
     private GuildMemberRepository guildMemberRepository;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private MissionCategoryService missionCategoryService;
@@ -748,8 +748,8 @@ class GuildInvitationServiceTest {
                 .thenReturn(List.of(invitation1, invitation2));
             when(userQueryFacadeService.getUserProfiles(List.of(testMasterId, "another-master")))
                 .thenReturn(java.util.Map.of(
-                    testMasterId, new UserProfileCache(testMasterId, "마스터", null, 1, null, null, null),
-                    "another-master", new UserProfileCache("another-master", "다른마스터", null, 1, null, null, null)
+                    testMasterId, new UserProfileInfo(testMasterId, "마스터", null, 1, null, null, null),
+                    "another-master", new UserProfileInfo("another-master", "다른마스터", null, 1, null, null, null)
                 ));
             when(userQueryFacadeService.getUserNickname(testInviteeId)).thenReturn("초대받는사람");
 
@@ -783,7 +783,7 @@ class GuildInvitationServiceTest {
                 .thenReturn(List.of(validInvitation, expiredInvitation));
             when(userQueryFacadeService.getUserProfiles(List.of(testMasterId)))
                 .thenReturn(java.util.Map.of(
-                    testMasterId, new UserProfileCache(testMasterId, "마스터", null, 1, null, null, null)
+                    testMasterId, new UserProfileInfo(testMasterId, "마스터", null, 1, null, null, null)
                 ));
             when(userQueryFacadeService.getUserNickname(testInviteeId)).thenReturn("초대받는사람");
 
@@ -827,8 +827,8 @@ class GuildInvitationServiceTest {
                 .thenReturn(List.of(invitation));
             when(userQueryFacadeService.getUserProfiles(List.of(testMasterId, testInviteeId)))
                 .thenReturn(java.util.Map.of(
-                    testMasterId, new UserProfileCache(testMasterId, "마스터", null, 1, null, null, null),
-                    testInviteeId, new UserProfileCache(testInviteeId, "초대받는사람", null, 1, null, null, null)
+                    testMasterId, new UserProfileInfo(testMasterId, "마스터", null, 1, null, null, null),
+                    testInviteeId, new UserProfileInfo(testInviteeId, "초대받는사람", null, 1, null, null, null)
                 ));
 
             // when
@@ -853,8 +853,8 @@ class GuildInvitationServiceTest {
                 .thenReturn(List.of(invitation));
             when(userQueryFacadeService.getUserProfiles(List.of(testInviterId, testInviteeId)))
                 .thenReturn(java.util.Map.of(
-                    testInviterId, new UserProfileCache(testInviterId, "초대자", null, 1, null, null, null),
-                    testInviteeId, new UserProfileCache(testInviteeId, "초대받는사람", null, 1, null, null, null)
+                    testInviterId, new UserProfileInfo(testInviterId, "초대자", null, 1, null, null, null),
+                    testInviteeId, new UserProfileInfo(testInviteeId, "초대받는사람", null, 1, null, null, null)
                 ));
 
             // when

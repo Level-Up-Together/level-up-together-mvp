@@ -18,8 +18,8 @@ import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.dto.TitleInfoDto;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedLike;
@@ -29,8 +29,8 @@ import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedR
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedCommentRepository;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedLikeRepository;
 import io.pinkspider.global.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -54,13 +54,13 @@ class FeedCommandServiceTest {
     private FeedCommentRepository feedCommentRepository;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @InjectMocks
     private FeedCommandService feedCommandService;
@@ -138,9 +138,9 @@ class FeedCommandServiceTest {
             CreateFeedRequest request = createTestFeedRequest();
 
             when(userQueryFacadeService.userExistsById(TEST_USER_ID)).thenReturn(true);
-            when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileCache(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 5, null, null, null));
+            when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileInfo(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 5, null, null, null));
             when(gamificationQueryFacadeService.getCombinedEquippedTitleInfo(TEST_USER_ID))
-                .thenReturn(new TitleInfo("초보 모험가", TitleRarity.COMMON, "#FFFFFF"));
+                .thenReturn(new TitleInfoDto("초보 모험가", TitleRarity.COMMON, "#FFFFFF"));
             when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(savedFeed);
 
             // when
@@ -244,7 +244,7 @@ class FeedCommandServiceTest {
             // given
             Long feedId = 1L;
             ActivityFeed feed = createTestFeed(feedId, OTHER_USER_ID);
-            UserProfileCache userProfile = new UserProfileCache(
+            UserProfileInfo userProfile = new UserProfileInfo(
                 TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg",
                 5, null, null, null
             );
@@ -553,7 +553,7 @@ class FeedCommandServiceTest {
             // given
             Long feedId = 1L;
             ActivityFeed feed = createTestFeed(feedId, TEST_USER_ID); // 작성자가 본인
-            UserProfileCache userProfile = new UserProfileCache(
+            UserProfileInfo userProfile = new UserProfileInfo(
                 TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg",
                 5, null, null, null
             );

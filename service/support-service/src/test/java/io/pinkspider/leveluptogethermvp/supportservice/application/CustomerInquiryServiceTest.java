@@ -19,8 +19,8 @@ import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInq
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryFeignClient;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryPageApiResponse;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryTypesApiResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -37,15 +37,15 @@ class CustomerInquiryServiceTest {
     private AdminInquiryFeignClient adminInquiryFeignClient;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @InjectMocks
     private CustomerInquiryService customerInquiryService;
 
     private static final String TEST_USER_ID = "test-user-123";
 
-    private UserProfileCache createTestProfile() {
-        return new UserProfileCache(TEST_USER_ID, "테스트유저", null, 1, null, null, null);
+    private UserProfileInfo createTestProfile() {
+        return new UserProfileInfo(TEST_USER_ID, "테스트유저", null, 1, null, null, null);
     }
 
     private static final String TEST_EMAIL = "test@example.com";
@@ -76,7 +76,7 @@ class CustomerInquiryServiceTest {
         @DisplayName("문의를 성공적으로 등록한다")
         void createInquiry_success() {
             // given
-            UserProfileCache profile = createTestProfile();
+            UserProfileInfo profile = createTestProfile();
             InquiryCreateRequest request = createTestRequest();
             InquiryResponse inquiryResponse = createTestInquiryResponse(1L);
             AdminInquiryApiResponse apiResponse = new AdminInquiryApiResponse("0000", "success", inquiryResponse);
@@ -115,7 +115,7 @@ class CustomerInquiryServiceTest {
         @DisplayName("API 응답이 null이면 예외 발생")
         void createInquiry_nullResponse_throwsException() {
             // given
-            UserProfileCache profile = createTestProfile();
+            UserProfileInfo profile = createTestProfile();
             InquiryCreateRequest request = createTestRequest();
 
             when(userQueryFacadeService.userExistsById(TEST_USER_ID)).thenReturn(true);
@@ -134,7 +134,7 @@ class CustomerInquiryServiceTest {
         @DisplayName("API 호출 중 예외 발생 시 CustomException으로 변환")
         void createInquiry_apiException_throwsCustomException() {
             // given
-            UserProfileCache profile = createTestProfile();
+            UserProfileInfo profile = createTestProfile();
             InquiryCreateRequest request = createTestRequest();
 
             when(userQueryFacadeService.userExistsById(TEST_USER_ID)).thenReturn(true);

@@ -10,8 +10,8 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExe
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -27,14 +27,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionContext> {
 
     private final FeedCommandService feedCommandService;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final MissionExecutionRepository executionRepository;
     private final DailyMissionInstanceRepository instanceRepository;
     private final CreateFeedFromMissionStep self;
 
     public CreateFeedFromMissionStep(
             FeedCommandService feedCommandService,
-            UserQueryFacadeService userQueryFacadeService,
+            UserQueryFacade userQueryFacadeService,
             MissionExecutionRepository executionRepository,
             DailyMissionInstanceRepository instanceRepository,
             @Lazy CreateFeedFromMissionStep self) {
@@ -80,7 +80,7 @@ public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionCont
             userId, execution.getId(), mission.getId());
 
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(userId);
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(userId);
 
             Integer durationMinutes = execution.calculateExpByDuration();
             Long categoryId = mission.getCategoryId();
@@ -128,7 +128,7 @@ public class CreateFeedFromMissionStep implements SagaStep<MissionCompletionCont
         log.debug("Creating feed for pinned mission: userId={}, instanceId={}", userId, instance.getId());
 
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(userId);
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(userId);
 
             Integer durationMinutes = instance.getDurationMinutes();
 

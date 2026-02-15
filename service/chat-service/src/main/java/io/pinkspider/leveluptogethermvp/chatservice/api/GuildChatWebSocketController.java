@@ -4,7 +4,7 @@ import io.pinkspider.leveluptogethermvp.chatservice.application.GuildChatService
 import io.pinkspider.leveluptogethermvp.chatservice.domain.dto.ChatMessageRequest;
 import io.pinkspider.leveluptogethermvp.chatservice.domain.dto.ChatMessageResponse;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatParticipantRepository;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
+import io.pinkspider.global.facade.UserQueryFacade;
 import java.security.Principal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,14 +20,14 @@ public class GuildChatWebSocketController {
 
     private final GuildChatService chatService;
     private final GuildChatParticipantRepository participantRepository;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final SimpMessagingTemplate messagingTemplate;
 
     @Autowired
     public GuildChatWebSocketController(
             GuildChatService chatService,
             GuildChatParticipantRepository participantRepository,
-            UserQueryFacadeService userQueryFacadeService,
+            UserQueryFacade userQueryFacadeService,
             @Autowired(required = false) SimpMessagingTemplate messagingTemplate) {
         this.chatService = chatService;
         this.participantRepository = participantRepository;

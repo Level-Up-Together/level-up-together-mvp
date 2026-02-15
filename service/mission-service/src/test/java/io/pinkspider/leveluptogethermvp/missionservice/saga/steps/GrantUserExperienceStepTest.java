@@ -21,10 +21,10 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+
 import io.pinkspider.global.enums.ExpSourceType;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
+import io.pinkspider.global.facade.dto.UserExperienceDto;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,7 +40,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GrantUserExperienceStepTest {
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @InjectMocks
     private GrantUserExperienceStep grantUserExperienceStep;
@@ -53,7 +53,7 @@ class GrantUserExperienceStepTest {
     private MissionParticipant participant;
     private MissionExecution execution;
     private MissionCompletionContext context;
-    private UserExperience userExperience;
+    private UserExperienceDto userExperience;
 
     @BeforeEach
     void setUp() {
@@ -92,12 +92,7 @@ class GrantUserExperienceStepTest {
         context.setMission(mission);
         context.setUserExpEarned(EXP_TO_GRANT);
 
-        userExperience = UserExperience.builder()
-            .userId(TEST_USER_ID)
-            .currentLevel(5)
-            .currentExp(100)
-            .totalExp(500)
-            .build();
+        userExperience = new UserExperienceDto(null, TEST_USER_ID, 5, 100, 500, null, null, null);
     }
 
     @Test
@@ -126,19 +121,9 @@ class GrantUserExperienceStepTest {
         @DisplayName("정상적으로 사용자 경험치를 지급한다")
         void execute_success() {
             // given
-            UserExperience afterExp = UserExperience.builder()
-                .userId(TEST_USER_ID)
-                .currentLevel(6) // 레벨업
-                .currentExp(50)
-                .totalExp(550)
-                .build();
+            UserExperienceDto afterExp = new UserExperienceDto(null, TEST_USER_ID, 6, 50, 550, null, null, null);
 
-            UserExperienceResponse mockResponse = UserExperienceResponse.builder()
-                .userId(TEST_USER_ID)
-                .currentLevel(6)
-                .currentExp(50)
-                .totalExp(550)
-                .build();
+            UserExperienceDto mockResponse = new UserExperienceDto(null, TEST_USER_ID, 6, 50, 550, null, null, null);
 
             when(gamificationQueryFacadeService.getOrCreateUserExperience(TEST_USER_ID))
                 .thenReturn(userExperience)  // 첫 번째 호출 (before)
@@ -194,12 +179,7 @@ class GrantUserExperienceStepTest {
         @DisplayName("정상적으로 경험치를 환수한다")
         void compensate_success() {
             // given
-            UserExperienceResponse mockResponse = UserExperienceResponse.builder()
-                .userId(TEST_USER_ID)
-                .currentLevel(5)
-                .currentExp(100)
-                .totalExp(500)
-                .build();
+            UserExperienceDto mockResponse = new UserExperienceDto(null, TEST_USER_ID, 5, 100, 500, null, null, null);
 
             when(gamificationQueryFacadeService.subtractExperience(
                 anyString(), anyInt(), any(ExpSourceType.class), anyLong(), anyString(), any(), anyString()))

@@ -7,9 +7,9 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.Seaso
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.entity.Season;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.infrastructure.SeasonRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.dto.SeasonMyRankingResponse;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildMembershipInfo;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildWithMemberCount;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildMembershipInfo;
+import io.pinkspider.global.facade.dto.GuildWithMemberCount;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
@@ -19,8 +19,8 @@ import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.global.translation.LocaleUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +30,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.pinkspider.global.facade.dto.SeasonDto;
+import io.pinkspider.global.facade.dto.SeasonMvpDataDto;
+import io.pinkspider.global.facade.dto.SeasonMvpGuildDto;
+import io.pinkspider.global.facade.dto.SeasonMvpPlayerDto;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -46,8 +50,8 @@ public class SeasonRankingService {
 
     private final SeasonRepository seasonRepository;
     private final ExperienceHistoryRepository experienceHistoryRepository;
-    private final GuildQueryFacadeService guildQueryFacadeService;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final UserExperienceRepository userExperienceRepository;
     private final UserTitleRepository userTitleRepository;
     private final MissionCategoryService missionCategoryService;
@@ -89,6 +93,34 @@ public class SeasonRankingService {
     }
 
     /**
+     * 시즌 MVP 데이터를 DTO로 변환하여 반환 (cross-service 용)
+     */
+    public Optional<SeasonMvpDataDto> getSeasonMvpDataDto(String locale) {
+        return getSeasonMvpData(locale).map(data -> new SeasonMvpDataDto(
+            new SeasonDto(
+                data.currentSeason().id(),
+                data.currentSeason().title(),
+                data.currentSeason().description(),
+                data.currentSeason().startAt(),
+                data.currentSeason().endAt(),
+                data.currentSeason().rewardTitleId(),
+                data.currentSeason().rewardTitleName(),
+                data.currentSeason().status().name(),
+                data.currentSeason().statusName()
+            ),
+            data.seasonMvpPlayers().stream().map(p -> new SeasonMvpPlayerDto(
+                p.userId(), p.nickname(), p.profileImageUrl(), p.level(),
+                p.title(), p.titleRarity(), p.leftTitle(), p.leftTitleRarity(),
+                p.rightTitle(), p.rightTitleRarity(), p.seasonExp(), p.rank()
+            )).toList(),
+            data.seasonMvpGuilds().stream().map(g -> new SeasonMvpGuildDto(
+                g.guildId(), g.name(), g.imageUrl(), g.level(),
+                g.memberCount(), g.seasonExp(), g.rank()
+            )).toList()
+        ));
+    }
+
+    /**
      * 시즌 MVP 데이터 캐시 조회 (내부용 - null 허용)
      */
     @Cacheable(value = "seasonMvpData", key = "#locale ?: 'ko'", cacheManager = "redisCacheManager", unless = "#result == null")
@@ -125,7 +157,7 @@ public class SeasonRankingService {
             .collect(Collectors.toList());
 
         // 2. 배치 조회: 사용자 프로필 (캐시)
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         // 3. 배치 조회: 레벨 정보
         Map<String, Integer> levelMap = userExperienceRepository.findByUserIdIn(userIds).stream()
@@ -143,7 +175,7 @@ public class SeasonRankingService {
             String odayUserId = (String) row[0];
             Long earnedExp = ((Number) row[1]).longValue();
 
-            UserProfileCache profile = profileMap.get(odayUserId);
+            UserProfileInfo profile = profileMap.get(odayUserId);
 
             Integer level = levelMap.getOrDefault(odayUserId, 1);
             TitleInfo titleInfo = buildTitleInfoFromList(titleMap.get(odayUserId), locale);
@@ -420,7 +452,7 @@ public class SeasonRankingService {
             .map(row -> (String) row[0])
             .collect(Collectors.toList());
 
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         Map<String, Integer> levelMap = userExperienceRepository.findByUserIdIn(userIds).stream()
             .collect(Collectors.toMap(UserExperience::getUserId, UserExperience::getCurrentLevel));
@@ -435,7 +467,7 @@ public class SeasonRankingService {
             String odayUserId = (String) row[0];
             Long earnedExp = ((Number) row[1]).longValue();
 
-            UserProfileCache profile = profileMap.get(odayUserId);
+            UserProfileInfo profile = profileMap.get(odayUserId);
 
             Integer level = levelMap.getOrDefault(odayUserId, 1);
             TitleInfo titleInfo = buildTitleInfoFromList(titleMap.get(odayUserId), locale);

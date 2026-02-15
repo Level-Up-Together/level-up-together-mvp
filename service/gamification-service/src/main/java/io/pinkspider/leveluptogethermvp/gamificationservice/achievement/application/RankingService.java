@@ -11,8 +11,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserT
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.ExperienceHistoryRepository;
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserExperienceRepository;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,7 +35,7 @@ public class RankingService {
     private final UserStatsRepository userStatsRepository;
     private final UserTitleRepository userTitleRepository;
     private final UserExperienceRepository userExperienceRepository;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final ExperienceHistoryRepository experienceHistoryRepository;
 
     // 종합 랭킹 (랭킹 포인트 기준)
@@ -141,7 +141,7 @@ public class RankingService {
         long totalUsers = userExperienceRepository.countTotalUsers();
 
         // 사용자 정보 조회 (닉네임, 프로필 이미지)
-        UserProfileCache profile = userQueryFacadeService.getUserProfile(userId);
+        UserProfileInfo profile = userQueryFacadeService.getUserProfile(userId);
         String nickname = profile.nickname();
         String profileImageUrl = profile.picture();
 
@@ -179,7 +179,7 @@ public class RankingService {
             .collect(Collectors.toList());
 
         // 사용자 정보 일괄 조회 (캐시)
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         // 장착된 칭호 일괄 조회 (LEFT + RIGHT 조합, 등급, 색상 코드 포함)
         Map<String, TitleInfo> titleInfoMap = new HashMap<>();
@@ -191,7 +191,7 @@ public class RankingService {
         long startRank = pageable.getOffset() + 1;
 
         for (UserExperience exp : expPage.getContent()) {
-            UserProfileCache profile = profileMap.get(exp.getUserId());
+            UserProfileInfo profile = profileMap.get(exp.getUserId());
             String nickname = profile != null ? profile.nickname() : null;
             String profileImageUrl = profile != null ? profile.picture() : null;
             TitleInfo titleInfo = titleInfoMap.get(exp.getUserId());
@@ -229,7 +229,7 @@ public class RankingService {
             .collect(Collectors.toList());
 
         // 사용자 정보 일괄 조회 (캐시)
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         // 사용자 경험치 정보 일괄 조회
         // Collectors.toMap()은 null 값을 허용하지 않으므로 HashMap 직접 사용
@@ -251,7 +251,7 @@ public class RankingService {
             String odayUserId = (String) row[0];
             Long categoryExp = ((Number) row[1]).longValue();
 
-            UserProfileCache profile = profileMap.get(odayUserId);
+            UserProfileInfo profile = profileMap.get(odayUserId);
             UserExperience userExp = expMap.get(odayUserId);
             TitleInfo titleInfo = titleInfoMap.get(odayUserId);
 

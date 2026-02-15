@@ -2,7 +2,8 @@ package io.pinkspider.leveluptogethermvp.missionservice.saga.steps;
 
 import io.pinkspider.global.saga.SagaStep;
 import io.pinkspider.global.saga.SagaStepResult;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildExpInfo;
 import io.pinkspider.global.enums.GuildExpSourceType;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import java.util.function.Predicate;
@@ -20,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class GrantGuildExperienceStep implements SagaStep<MissionCompletionContext> {
 
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
 
     @Override
     public String getName() {
@@ -55,7 +56,7 @@ public class GrantGuildExperienceStep implements SagaStep<MissionCompletionConte
 
         try {
             // 현재 상태 저장 (보상용)
-            GuildQueryFacadeService.GuildExpInfo guildExpInfo = guildQueryFacadeService.getGuildExpInfo(guildId);
+            GuildExpInfo guildExpInfo = guildQueryFacadeService.getGuildExpInfo(guildId);
             if (guildExpInfo == null) {
                 log.warn("Guild not found: {}", guildId);
                 return SagaStepResult.failure("길드를 찾을 수 없습니다: " + guildId);

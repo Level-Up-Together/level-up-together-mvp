@@ -24,8 +24,8 @@ import io.pinkspider.leveluptogethermvp.supportservice.report.application.Report
 import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.ActivityFeedResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,7 +59,7 @@ class FeedQueryServiceTest {
     private AdminInternalFeignClient adminInternalFeignClient;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private TranslationService translationService;
@@ -537,7 +537,7 @@ class FeedQueryServiceTest {
 
             when(feedCommentRepository.findByFeedId(eq(feedId), any(Pageable.class))).thenReturn(commentPage);
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID))
-                .thenReturn(new UserProfileCache(TEST_USER_ID, "테스트유저", null, 5, null, null, null));
+                .thenReturn(new UserProfileInfo(TEST_USER_ID, "테스트유저", null, 5, null, null, null));
             when(reportService.isUnderReviewBatch(any(), anyList())).thenReturn(Collections.emptyMap());
 
             // when

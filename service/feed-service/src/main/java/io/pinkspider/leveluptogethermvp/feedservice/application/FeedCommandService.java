@@ -11,7 +11,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
+import io.pinkspider.global.facade.dto.TitleInfoDto;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedLike;
@@ -20,9 +20,9 @@ import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.ActivityFeedRepository;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedCommentRepository;
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedLikeRepository;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,9 +38,9 @@ public class FeedCommandService {
     private final ActivityFeedRepository activityFeedRepository;
     private final FeedLikeRepository feedLikeRepository;
     private final FeedCommentRepository feedCommentRepository;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final ApplicationEventPublisher eventPublisher;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
 
     /**
      * 시스템에서 자동 생성되는 활동 피드
@@ -91,10 +91,10 @@ public class FeedCommandService {
         }
 
         // 사용자 프로필 조회 (캐시)
-        UserProfileCache userProfile = userQueryFacadeService.getUserProfile(userId);
+        UserProfileInfo userProfile = userQueryFacadeService.getUserProfile(userId);
 
         // 사용자 장착 칭호 정보 조회
-        TitleInfo titleInfo = gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId);
+        TitleInfoDto titleInfo = gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId);
         String userTitle = titleInfo.name();
         TitleRarity userTitleRarity = titleInfo.rarity();
         String userTitleColorCode = titleInfo.colorCode();
@@ -173,7 +173,7 @@ public class FeedCommandService {
             .orElseThrow(() -> new CustomException(ApiStatus.CLIENT_ERROR.getResultCode(), "피드를 찾을 수 없습니다"));
 
         // 사용자 프로필 정보 조회 (캐시)
-        UserProfileCache userProfile = userQueryFacadeService.getUserProfile(userId);
+        UserProfileInfo userProfile = userQueryFacadeService.getUserProfile(userId);
 
         FeedComment comment = FeedComment.builder()
             .feed(feed)

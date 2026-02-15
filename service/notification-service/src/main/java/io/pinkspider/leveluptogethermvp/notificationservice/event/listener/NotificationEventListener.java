@@ -16,7 +16,7 @@ import io.pinkspider.global.event.GuildInvitationEvent;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.MissionCommentEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.global.enums.NotificationType;
 import java.util.List;
@@ -38,7 +38,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class NotificationEventListener {
 
     private final NotificationService notificationService;
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
 
     // ==================== 헬퍼 메서드 ====================
 

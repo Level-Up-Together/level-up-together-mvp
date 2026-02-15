@@ -3,7 +3,7 @@ package io.pinkspider.leveluptogethermvp.userservice.profile.event.listener;
 import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,7 +28,7 @@ public class UserLevelUpProfileSyncListener {
     public void handleUserLevelUp(UserLevelUpEvent event) {
         userProfileCacheService.evictUserProfileCache(event.userId());
         try {
-            UserProfileCache profile = userProfileCacheService.getUserProfile(event.userId());
+            UserProfileInfo profile = userProfileCacheService.getUserProfile(event.userId());
             eventPublisher.publishEvent(new UserProfileChangedEvent(
                 event.userId(), profile.nickname(), profile.picture(), event.newLevel()));
         } catch (Exception e) {

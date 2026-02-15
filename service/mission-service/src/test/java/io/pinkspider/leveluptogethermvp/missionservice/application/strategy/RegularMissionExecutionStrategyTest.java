@@ -27,7 +27,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionPar
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
+import io.pinkspider.global.facade.UserQueryFacade;
 import java.time.LocalDate;
 import org.springframework.context.ApplicationEventPublisher;
 import java.time.LocalDateTime;
@@ -64,7 +64,7 @@ class RegularMissionExecutionStrategyTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @InjectMocks
     private RegularMissionExecutionStrategy strategy;

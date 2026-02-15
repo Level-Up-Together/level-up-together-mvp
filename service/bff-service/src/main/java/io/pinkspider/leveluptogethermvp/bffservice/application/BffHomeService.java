@@ -2,7 +2,7 @@ package io.pinkspider.leveluptogethermvp.bffservice.application;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.event.api.dto.EventResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.event.application.EventService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
+import io.pinkspider.global.facade.dto.SeasonMvpDataDto;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.application.SeasonRankingService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse;
@@ -233,9 +233,9 @@ public class BffHomeService {
             }
         }, bffExecutor);
 
-        CompletableFuture<Optional<SeasonMvpData>> seasonMvpFuture = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<Optional<SeasonMvpDataDto>> seasonMvpFuture = CompletableFuture.supplyAsync(() -> {
             try {
-                return seasonRankingService.getSeasonMvpData(locale);
+                return seasonRankingService.getSeasonMvpDataDto(locale);
             } catch (Exception e) {
                 log.error("Failed to fetch season MVP data", e);
                 return Optional.empty();
@@ -248,7 +248,7 @@ public class BffHomeService {
             myGuildsFuture, publicGuildsFuture, noticesFuture, eventsFuture, seasonMvpFuture
         ).join();
 
-        Optional<SeasonMvpData> seasonMvpData = seasonMvpFuture.join();
+        Optional<SeasonMvpDataDto> seasonMvpData = seasonMvpFuture.join();
 
         HomeDataResponse response = HomeDataResponse.builder()
             .feeds(feedsFuture.join())
@@ -259,9 +259,9 @@ public class BffHomeService {
             .publicGuilds(publicGuildsFuture.join())
             .notices(noticesFuture.join())
             .events(eventsFuture.join())
-            .currentSeason(seasonMvpData.map(SeasonMvpData::currentSeason).orElse(null))
-            .seasonMvpPlayers(seasonMvpData.map(SeasonMvpData::seasonMvpPlayers).orElse(Collections.emptyList()))
-            .seasonMvpGuilds(seasonMvpData.map(SeasonMvpData::seasonMvpGuilds).orElse(Collections.emptyList()))
+            .currentSeason(seasonMvpData.map(SeasonMvpDataDto::currentSeason).orElse(null))
+            .seasonMvpPlayers(seasonMvpData.map(SeasonMvpDataDto::seasonMvpPlayers).orElse(Collections.emptyList()))
+            .seasonMvpGuilds(seasonMvpData.map(SeasonMvpDataDto::seasonMvpGuilds).orElse(Collections.emptyList()))
             .build();
 
         log.info("BFF getHomeData completed: userId={}, categoryId={}, hasActiveSeason={}", userId, categoryId, seasonMvpData.isPresent());

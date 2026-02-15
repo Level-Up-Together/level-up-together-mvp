@@ -28,8 +28,8 @@ import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionExe
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.feedservice.application.FeedCommandService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,7 +49,7 @@ class CreateFeedFromMissionStepTest {
     private FeedCommandService feedCommandService;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private MissionExecutionRepository executionRepository;
@@ -70,7 +70,7 @@ class CreateFeedFromMissionStepTest {
     private MissionParticipant participant;
     private MissionExecution execution;
     private MissionCompletionContext context;
-    private UserProfileCache userProfile;
+    private UserProfileInfo userProfile;
     private ActivityFeed activityFeed;
 
     @BeforeEach
@@ -122,7 +122,7 @@ class CreateFeedFromMissionStepTest {
         context.setParticipant(participant);
         context.setMission(mission);
 
-        userProfile = new UserProfileCache(
+        userProfile = new UserProfileInfo(
             TEST_USER_ID,
             "테스트유저",
             "https://example.com/profile.jpg",

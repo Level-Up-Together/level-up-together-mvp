@@ -13,8 +13,8 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserE
 import io.pinkspider.leveluptogethermvp.gamificationservice.infrastructure.UserTitleRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -39,7 +39,7 @@ public class DailyMvpHistoryService {
     private final DailyMvpHistoryRepository historyRepository;
     private final DailyMvpCategoryStatsRepository categoryStatsRepository;
     private final ExperienceHistoryRepository experienceHistoryRepository;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final UserExperienceRepository userExperienceRepository;
     private final UserTitleRepository userTitleRepository;
     private final MissionCategoryService missionCategoryService;
@@ -84,7 +84,7 @@ public class DailyMvpHistoryService {
             .toList();
 
         // 3. 배치 조회: 사용자 프로필 (캐시)
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         // 4. 배치 조회: 레벨 정보
         Map<String, Integer> levelMap = userExperienceRepository.findByUserIdIn(userIds).stream()
@@ -116,7 +116,7 @@ public class DailyMvpHistoryService {
             String odayUserId = (String) row[0];
             Long earnedExp = ((Number) row[1]).longValue();
 
-            UserProfileCache profile = profileMap.get(odayUserId);
+            UserProfileInfo profile = profileMap.get(odayUserId);
             Integer level = levelMap.getOrDefault(odayUserId, 1);
             TitleInfo titleInfo = buildTitleInfo(titleMap.get(odayUserId));
 
@@ -183,7 +183,7 @@ public class DailyMvpHistoryService {
             .map(row -> (String) row[0])
             .toList();
 
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         Map<String, Integer> levelMap = userExperienceRepository.findByUserIdIn(userIds).stream()
             .collect(Collectors.toMap(UserExperience::getUserId, UserExperience::getCurrentLevel));
@@ -210,7 +210,7 @@ public class DailyMvpHistoryService {
             String odayUserId = (String) row[0];
             Long earnedExp = ((Number) row[1]).longValue();
 
-            UserProfileCache profile = profileMap.get(odayUserId);
+            UserProfileInfo profile = profileMap.get(odayUserId);
             Integer level = levelMap.getOrDefault(odayUserId, 1);
             TitleInfo titleInfo = buildTitleInfo(titleMap.get(odayUserId));
             CategoryInfo topCategory = getTopCategory(categoryStatsMap.get(odayUserId), categoryNameToIdMap);

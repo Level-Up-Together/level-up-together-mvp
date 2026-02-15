@@ -2,8 +2,8 @@ package io.pinkspider.leveluptogethermvp.missionservice.application;
 
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.MissionStateChangedEvent;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildPermissionCheck;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildPermissionCheck;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionCreateRequest;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.MissionTemplateResponse;
@@ -43,7 +43,7 @@ public class MissionService {
     private final MissionParticipantRepository participantRepository;
     private final MissionCategoryService missionCategoryService;
     private final MissionParticipantService missionParticipantService;
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
     private final ApplicationEventPublisher eventPublisher;
     private final ReportService reportService;
 

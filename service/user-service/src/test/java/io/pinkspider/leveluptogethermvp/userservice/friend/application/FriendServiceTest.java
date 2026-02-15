@@ -16,7 +16,7 @@ import io.pinkspider.global.event.FriendRequestAcceptedEvent;
 import io.pinkspider.global.event.FriendRequestEvent;
 import io.pinkspider.global.event.FriendRequestProcessedEvent;
 import io.pinkspider.global.event.FriendRequestRejectedEvent;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.dto.FriendRequestResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.dto.FriendResponse;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
@@ -56,7 +56,7 @@ class FriendServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @InjectMocks
     private FriendService friendService;

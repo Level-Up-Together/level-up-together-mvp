@@ -18,8 +18,8 @@ import io.pinkspider.global.test.TestReflectionUtils;
 
 import io.pinkspider.global.saga.SagaResult;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionSaga;
@@ -73,7 +73,7 @@ class DailyMissionInstanceServiceTest {
     private ApplicationEventPublisher eventPublisher;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private MissionImageStorageService missionImageStorageService;
@@ -926,7 +926,7 @@ class DailyMissionInstanceServiceTest {
             when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
                 .thenReturn(Optional.of(instance));
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID))
-                .thenReturn(new UserProfileCache(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 10, "테스트 칭호", TitleRarity.COMMON, "#FFFFFF"));
+                .thenReturn(new UserProfileInfo(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 10, "테스트 칭호", TitleRarity.COMMON, "#FFFFFF"));
             when(feedCommandService.createMissionSharedFeed(any(), any(), any(), any(), any(), any(), any(),
                     any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(feed);

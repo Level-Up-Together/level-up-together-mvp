@@ -3,14 +3,14 @@ package io.pinkspider.leveluptogethermvp.userservice.mypage.application;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.global.exception.CustomException;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildMembershipInfo;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildMembershipInfo;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleChangeResult;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.TitleChangeResultDto;
+import io.pinkspider.global.facade.dto.UserExperienceDto;
+import io.pinkspider.global.facade.dto.UserStatsDto;
+import io.pinkspider.global.facade.dto.UserTitleDto;
 import io.pinkspider.global.enums.TitlePosition;
 import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
@@ -29,9 +29,9 @@ import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.TitleChang
 import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.TitleChangeResponse;
 import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.UserTitleListResponse;
 import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.UserTitleListResponse.UserTitleItem;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.global.domain.ContentReviewChecker;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
@@ -55,12 +55,12 @@ import org.springframework.web.multipart.MultipartFile;
 public class MyPageService {
 
     private final UserRepository userRepository;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
     private final FriendshipRepository friendshipRepository;
     private final UserLevelConfigCacheService userLevelConfigCacheService;
     private final ProfileImageStorageService profileImageStorageService;
     private final ImageModerationService imageModerationService;
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
     private final ContentReviewChecker contentReviewChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final UserProfileCacheService userProfileCacheService;
@@ -89,14 +89,14 @@ public class MyPageService {
         Users user = findUserOrThrow(targetUserId);
 
         // 장착된 칭호 조회
-        List<UserTitle> equippedTitles = gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(targetUserId);
+        List<UserTitleDto> equippedTitles = gamificationQueryFacadeService.getEquippedTitlesByUserId(targetUserId);
         PublicProfileResponse.EquippedTitleInfo leftTitle = null;
         PublicProfileResponse.EquippedTitleInfo rightTitle = null;
 
-        for (UserTitle ut : equippedTitles) {
-            if (ut.getEquippedPosition() == TitlePosition.LEFT) {
+        for (UserTitleDto ut : equippedTitles) {
+            if (ut.equippedPosition() == TitlePosition.LEFT) {
                 leftTitle = toPublicEquippedTitleInfo(ut);
-            } else if (ut.getEquippedPosition() == TitlePosition.RIGHT) {
+            } else if (ut.equippedPosition() == TitlePosition.RIGHT) {
                 rightTitle = toPublicEquippedTitleInfo(ut);
             }
         }
@@ -105,7 +105,7 @@ public class MyPageService {
         int level = gamificationQueryFacadeService.getUserLevel(targetUserId);
 
         // 통계 정보
-        UserStats stats = gamificationQueryFacadeService.getOrCreateUserStats(targetUserId);
+        UserStatsDto stats = gamificationQueryFacadeService.getOrCreateUserStats(targetUserId);
 
         LocalDate startDate = user.getCreatedAt() != null
             ? user.getCreatedAt().toLocalDate()
@@ -176,7 +176,7 @@ public class MyPageService {
             .level(level)
             .startDate(startDate)
             .daysSinceJoined(daysSinceJoined)
-            .clearedMissionsCount(stats.getTotalMissionCompletions())
+            .clearedMissionsCount(stats.totalMissionCompletions())
             .acquiredTitlesCount((int) titlesCount)
             .guilds(guilds)
             .isOwner(isOwner)
@@ -283,17 +283,17 @@ public class MyPageService {
      * 보유 칭호 목록 조회
      */
     public UserTitleListResponse getUserTitles(String userId) {
-        List<UserTitle> userTitles = gamificationQueryFacadeService.getUserTitleEntitiesWithTitle(userId);
+        List<UserTitleDto> userTitles = gamificationQueryFacadeService.getUserTitlesWithTitleInfo(userId);
 
         Long equippedLeftId = null;
         Long equippedRightId = null;
 
-        for (UserTitle ut : userTitles) {
-            if (ut.getIsEquipped() && ut.getEquippedPosition() != null) {
-                if (ut.getEquippedPosition() == TitlePosition.LEFT) {
-                    equippedLeftId = ut.getId();
-                } else if (ut.getEquippedPosition() == TitlePosition.RIGHT) {
-                    equippedRightId = ut.getId();
+        for (UserTitleDto ut : userTitles) {
+            if (ut.isEquipped() && ut.equippedPosition() != null) {
+                if (ut.equippedPosition() == TitlePosition.LEFT) {
+                    equippedLeftId = ut.id();
+                } else if (ut.equippedPosition() == TitlePosition.RIGHT) {
+                    equippedRightId = ut.id();
                 }
             }
         }
@@ -396,7 +396,7 @@ public class MyPageService {
      * 칭호 변경 (좌측/우측 동시 변경) — TitleService에 위임
      */
     public TitleChangeResponse changeTitles(String userId, TitleChangeRequest request) {
-        TitleChangeResult result = gamificationQueryFacadeService.changeTitles(
+        TitleChangeResultDto result = gamificationQueryFacadeService.changeTitles(
             userId, request.getLeftUserTitleId(), request.getRightUserTitleId());
 
         return TitleChangeResponse.builder()
@@ -441,15 +441,15 @@ public class MyPageService {
 
     private ProfileInfo buildProfileInfo(Users user, String userId) {
         // 장착된 칭호 조회
-        List<UserTitle> equippedTitles = gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(userId);
+        List<UserTitleDto> equippedTitles = gamificationQueryFacadeService.getEquippedTitlesByUserId(userId);
 
         EquippedTitleInfo leftTitle = null;
         EquippedTitleInfo rightTitle = null;
 
-        for (UserTitle ut : equippedTitles) {
-            if (ut.getEquippedPosition() == TitlePosition.LEFT) {
+        for (UserTitleDto ut : equippedTitles) {
+            if (ut.equippedPosition() == TitlePosition.LEFT) {
                 leftTitle = toEquippedTitleInfo(ut);
-            } else if (ut.getEquippedPosition() == TitlePosition.RIGHT) {
+            } else if (ut.equippedPosition() == TitlePosition.RIGHT) {
                 rightTitle = toEquippedTitleInfo(ut);
             }
         }
@@ -470,21 +470,21 @@ public class MyPageService {
     }
 
     private ExperienceInfo buildExperienceInfo(String userId) {
-        UserExperience userExp = gamificationQueryFacadeService.getOrCreateUserExperience(userId);
+        UserExperienceDto userExp = gamificationQueryFacadeService.getOrCreateUserExperience(userId);
 
-        Integer nextLevelRequiredExp = getNextLevelRequiredExp(userExp.getCurrentLevel());
+        Integer nextLevelRequiredExp = getNextLevelRequiredExp(userExp.currentLevel());
 
         // EXP 퍼센테이지 계산: (totalExp 마지막 3자리 / 다음 레벨 필요 경험치) * 100
         // 요구사항: 누적 경험치 하위 3자리 / 다음 레벨에 필요한 경험치 * 100 = 퍼센트
-        int expForPercentage = userExp.getTotalExp() % 1000;  // 마지막 3자리
+        int expForPercentage = userExp.totalExp() % 1000;  // 마지막 3자리
         double expPercentage = nextLevelRequiredExp != null && nextLevelRequiredExp > 0
             ? (double) expForPercentage / nextLevelRequiredExp * 100
             : 0;
 
         return ExperienceInfo.builder()
-            .currentLevel(userExp.getCurrentLevel())
-            .currentExp(userExp.getCurrentExp())
-            .totalExp(userExp.getTotalExp())
+            .currentLevel(userExp.currentLevel())
+            .currentExp(userExp.currentExp())
+            .totalExp(userExp.totalExp())
             .nextLevelRequiredExp(nextLevelRequiredExp)
             .expPercentage(Math.min(100, expPercentage))
             .expForPercentage(expForPercentage)
@@ -492,7 +492,7 @@ public class MyPageService {
     }
 
     private UserInfo buildUserInfo(Users user, String userId) {
-        UserStats stats = gamificationQueryFacadeService.getOrCreateUserStats(userId);
+        UserStatsDto stats = gamificationQueryFacadeService.getOrCreateUserStats(userId);
 
         // 가입일 (createdAt)
         LocalDate startDate = user.getCreatedAt() != null
@@ -503,7 +503,7 @@ public class MyPageService {
         long daysSinceJoined = ChronoUnit.DAYS.between(startDate, LocalDate.now()) + 1;
 
         // 랭킹 퍼센타일 계산 (상위 X%)
-        Double rankingPercentile = gamificationQueryFacadeService.calculateRankingPercentile(stats.getRankingPoints());
+        Double rankingPercentile = gamificationQueryFacadeService.calculateRankingPercentile(stats.rankingPoints());
 
         // 보유 칭호 수
         long titlesCount = gamificationQueryFacadeService.countUserTitles(userId);
@@ -511,40 +511,38 @@ public class MyPageService {
         return UserInfo.builder()
             .startDate(startDate)
             .daysSinceJoined(daysSinceJoined)
-            .clearedMissionsCount(stats.getTotalMissionCompletions())
-            .clearedMissionBooksCount(stats.getTotalMissionFullCompletions())
+            .clearedMissionsCount(stats.totalMissionCompletions())
+            .clearedMissionBooksCount(stats.totalMissionFullCompletions())
             .rankingPercentile(rankingPercentile)
             .acquiredTitlesCount((int) titlesCount)
-            .rankingPoints(stats.getRankingPoints())
+            .rankingPoints(stats.rankingPoints())
             .build();
     }
 
-    private EquippedTitleInfo toEquippedTitleInfo(UserTitle userTitle) {
-        Title title = userTitle.getTitle();
+    private EquippedTitleInfo toEquippedTitleInfo(UserTitleDto userTitle) {
         return EquippedTitleInfo.builder()
-            .userTitleId(userTitle.getId())
-            .titleId(title.getId())
-            .name(title.getName())
-            .nameEn(title.getNameEn())
-            .nameAr(title.getNameAr())
-            .displayName(title.getDisplayName())
-            .rarity(title.getRarity().name())
-            .colorCode(title.getColorCode())
-            .iconUrl(title.getIconUrl())
+            .userTitleId(userTitle.id())
+            .titleId(userTitle.titleId())
+            .name(userTitle.titleName())
+            .nameEn(userTitle.titleNameEn())
+            .nameAr(userTitle.titleNameAr())
+            .displayName(userTitle.titleName())
+            .rarity(userTitle.titleRarity() != null ? userTitle.titleRarity().name() : null)
+            .colorCode(userTitle.titleColorCode())
+            .iconUrl(userTitle.titleIconUrl())
             .build();
     }
 
-    private PublicProfileResponse.EquippedTitleInfo toPublicEquippedTitleInfo(UserTitle userTitle) {
-        Title title = userTitle.getTitle();
+    private PublicProfileResponse.EquippedTitleInfo toPublicEquippedTitleInfo(UserTitleDto userTitle) {
         return PublicProfileResponse.EquippedTitleInfo.builder()
-            .titleId(title.getId())
-            .name(title.getName())
-            .nameEn(title.getNameEn())
-            .nameAr(title.getNameAr())
-            .displayName(title.getDisplayName())
-            .rarity(title.getRarity().name())
-            .colorCode(title.getColorCode())
-            .iconUrl(title.getIconUrl())
+            .titleId(userTitle.titleId())
+            .name(userTitle.titleName())
+            .nameEn(userTitle.titleNameEn())
+            .nameAr(userTitle.titleNameAr())
+            .displayName(userTitle.titleName())
+            .rarity(userTitle.titleRarity() != null ? userTitle.titleRarity().name() : null)
+            .colorCode(userTitle.titleColorCode())
+            .iconUrl(userTitle.titleIconUrl())
             .build();
     }
 
@@ -558,27 +556,26 @@ public class MyPageService {
             .build();
     }
 
-    private UserTitleItem toUserTitleItem(UserTitle userTitle) {
-        Title title = userTitle.getTitle();
+    private UserTitleItem toUserTitleItem(UserTitleDto userTitle) {
         return UserTitleItem.builder()
-            .userTitleId(userTitle.getId())
-            .titleId(title.getId())
-            .name(title.getName())
-            .nameEn(title.getNameEn())
-            .nameAr(title.getNameAr())
-            .displayName(title.getDisplayName())
-            .description(title.getDescription())
-            .descriptionEn(title.getDescriptionEn())
-            .descriptionAr(title.getDescriptionAr())
-            .rarity(title.getRarity().name())
-            .positionType(title.getPositionType().name())
-            .colorCode(title.getColorCode())
-            .iconUrl(title.getIconUrl())
-            .isEquipped(userTitle.getIsEquipped())
-            .equippedPosition(userTitle.getEquippedPosition() != null
-                ? userTitle.getEquippedPosition().name()
+            .userTitleId(userTitle.id())
+            .titleId(userTitle.titleId())
+            .name(userTitle.titleName())
+            .nameEn(userTitle.titleNameEn())
+            .nameAr(userTitle.titleNameAr())
+            .displayName(userTitle.titleName())
+            .description(userTitle.titleDescription())
+            .descriptionEn(userTitle.titleDescriptionEn())
+            .descriptionAr(userTitle.titleDescriptionAr())
+            .rarity(userTitle.titleRarity() != null ? userTitle.titleRarity().name() : null)
+            .positionType(userTitle.titlePositionType() != null ? userTitle.titlePositionType().name() : null)
+            .colorCode(userTitle.titleColorCode())
+            .iconUrl(userTitle.titleIconUrl())
+            .isEquipped(userTitle.isEquipped())
+            .equippedPosition(userTitle.equippedPosition() != null
+                ? userTitle.equippedPosition().name()
                 : null)
-            .acquiredAt(userTitle.getAcquiredAt())
+            .acquiredAt(userTitle.acquiredAt())
             .build();
     }
 

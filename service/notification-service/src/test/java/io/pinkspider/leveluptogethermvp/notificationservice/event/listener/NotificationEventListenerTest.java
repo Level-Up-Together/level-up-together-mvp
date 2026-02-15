@@ -25,7 +25,7 @@ import io.pinkspider.global.event.GuildInvitationEvent;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
 import io.pinkspider.global.event.MissionCommentEvent;
 import io.pinkspider.global.event.TitleAcquiredEvent;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.global.enums.NotificationType;
 import java.time.LocalDateTime;
@@ -47,7 +47,7 @@ class NotificationEventListenerTest {
     private NotificationService notificationService;
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @InjectMocks
     private NotificationEventListener eventListener;
@@ -360,7 +360,7 @@ class NotificationEventListenerTest {
             Long guildId = 100L;
             ContentReportedEvent event = new ContentReportedEvent(
                 REPORTER_ID, "GUILD_NOTICE", String.valueOf(postId), TARGET_USER_ID, "길드 공지", LocalDateTime.now());
-            var postInfo = new GuildQueryFacadeService.GuildPostInfo(guildId, GUILD_MASTER_ID);
+            var postInfo = new io.pinkspider.global.facade.dto.GuildPostInfo(guildId, GUILD_MASTER_ID);
             when(guildQueryFacadeService.getGuildInfoByPostId(postId)).thenReturn(postInfo);
             eventListener.handleContentReported(event);
             verify(notificationService).notifyContentReported(TARGET_USER_ID, "길드 공지");

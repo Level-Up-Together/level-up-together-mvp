@@ -21,8 +21,8 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionCommentRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionRepository;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -49,7 +49,7 @@ class MissionCommentServiceTest {
     private MissionRepository missionRepository;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -93,8 +93,8 @@ class MissionCommentServiceTest {
         return comment;
     }
 
-    private UserProfileCache createTestUserProfile() {
-        return new UserProfileCache(
+    private UserProfileInfo createTestUserProfile() {
+        return new UserProfileInfo(
             TEST_USER_ID,
             "테스트유저",
             "https://example.com/profile.jpg",
@@ -117,7 +117,7 @@ class MissionCommentServiceTest {
             MissionCommentRequest request = MissionCommentRequest.builder()
                 .content("새로운 댓글입니다")
                 .build();
-            UserProfileCache userProfile = createTestUserProfile();
+            UserProfileInfo userProfile = createTestUserProfile();
 
             when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(mission));
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(userProfile);
@@ -147,7 +147,7 @@ class MissionCommentServiceTest {
             MissionCommentRequest request = MissionCommentRequest.builder()
                 .content("새로운 댓글입니다")
                 .build();
-            UserProfileCache userProfile = createTestUserProfile();
+            UserProfileInfo userProfile = createTestUserProfile();
 
             when(missionRepository.findById(MISSION_ID)).thenReturn(Optional.of(mission));
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(userProfile);
@@ -176,7 +176,7 @@ class MissionCommentServiceTest {
             MissionCommentRequest request = MissionCommentRequest.builder()
                 .content("생성자의 댓글입니다")
                 .build();
-            UserProfileCache userProfile = new UserProfileCache(
+            UserProfileInfo userProfile = new UserProfileInfo(
                 CREATOR_USER_ID, "미션생성자", "https://example.com/creator.jpg", 10, null, null, null
             );
 

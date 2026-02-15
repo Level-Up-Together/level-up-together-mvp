@@ -15,10 +15,10 @@ import io.pinkspider.leveluptogethermvp.chatservice.domain.entity.GuildDirectCon
 import io.pinkspider.leveluptogethermvp.chatservice.domain.entity.GuildDirectMessage;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildDirectConversationRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildDirectMessageRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.FcmPushService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,10 +44,10 @@ class GuildDirectMessageServiceTest {
     private GuildDirectMessageRepository messageRepository;
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private FcmPushService fcmPushService;
@@ -268,7 +268,7 @@ class GuildDirectMessageServiceTest {
             when(conversationRepository.findAllByGuildIdAndUserId(1L, USER_ID_1))
                 .thenReturn(List.of(testConversation));
             when(userQueryFacadeService.getUserProfiles(List.of(USER_ID_2)))
-                .thenReturn(java.util.Map.of(USER_ID_2, new UserProfileCache(USER_ID_2, NICKNAME_2, null, 1, null, null, null)));
+                .thenReturn(java.util.Map.of(USER_ID_2, new UserProfileInfo(USER_ID_2, NICKNAME_2, null, 1, null, null, null)));
             when(messageRepository.countUnreadMessages(1L, USER_ID_1)).thenReturn(3);
 
             // when
@@ -402,7 +402,7 @@ class GuildDirectMessageServiceTest {
             when(guildQueryFacadeService.isActiveMember(1L, USER_ID_2)).thenReturn(true);
             when(conversationRepository.findConversation(1L, USER_ID_1, USER_ID_2))
                 .thenReturn(Optional.of(testConversation));
-            when(userQueryFacadeService.getUserProfile(USER_ID_2)).thenReturn(new UserProfileCache(USER_ID_2, NICKNAME_2, null, 1, null, null, null));
+            when(userQueryFacadeService.getUserProfile(USER_ID_2)).thenReturn(new UserProfileInfo(USER_ID_2, NICKNAME_2, null, 1, null, null, null));
             when(messageRepository.countUnreadMessages(1L, USER_ID_1)).thenReturn(0);
 
             // when
@@ -428,7 +428,7 @@ class GuildDirectMessageServiceTest {
                 setId(conv, GuildDirectConversation.class, 2L);
                 return conv;
             });
-            when(userQueryFacadeService.getUserProfile(USER_ID_2)).thenReturn(new UserProfileCache(USER_ID_2, NICKNAME_2, null, 1, null, null, null));
+            when(userQueryFacadeService.getUserProfile(USER_ID_2)).thenReturn(new UserProfileInfo(USER_ID_2, NICKNAME_2, null, 1, null, null, null));
             when(messageRepository.countUnreadMessages(anyLong(), anyString())).thenReturn(0);
 
             // when

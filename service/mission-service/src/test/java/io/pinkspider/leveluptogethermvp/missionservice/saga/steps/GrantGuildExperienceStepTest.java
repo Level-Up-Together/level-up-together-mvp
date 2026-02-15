@@ -13,7 +13,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.saga.SagaStepResult;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildExpInfo;
 import io.pinkspider.global.enums.GuildExpSourceType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
@@ -40,7 +41,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GrantGuildExperienceStepTest {
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @InjectMocks
     private GrantGuildExperienceStep grantGuildExperienceStep;
@@ -54,7 +55,7 @@ class GrantGuildExperienceStepTest {
     private MissionParticipant participant;
     private MissionExecution execution;
     private MissionCompletionContext context;
-    private GuildQueryFacadeService.GuildExpInfo guildExpInfo;
+    private GuildExpInfo guildExpInfo;
 
     @BeforeEach
     void setUp() {
@@ -96,7 +97,7 @@ class GrantGuildExperienceStepTest {
         context.setGuildExpEarned(GUILD_EXP);
         // isGuildMission() is computed from mission entity (type=GUILD + guildId set)
 
-        guildExpInfo = new GuildQueryFacadeService.GuildExpInfo(1000, 5);
+        guildExpInfo = new GuildExpInfo(1000, 5);
     }
 
     @Test

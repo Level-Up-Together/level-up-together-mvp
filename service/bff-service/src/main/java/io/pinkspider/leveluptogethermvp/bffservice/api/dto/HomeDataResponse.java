@@ -2,9 +2,9 @@ package io.pinkspider.leveluptogethermvp.bffservice.api.dto;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies.SnakeCaseStrategy;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpGuildResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpPlayerResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonResponse;
+import io.pinkspider.global.facade.dto.SeasonDto;
+import io.pinkspider.global.facade.dto.SeasonMvpGuildDto;
+import io.pinkspider.global.facade.dto.SeasonMvpPlayerDto;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import io.pinkspider.leveluptogethermvp.gamificationservice.event.api.dto.EventResponse;
@@ -72,17 +72,17 @@ public class HomeDataResponse {
     /**
      * 현재 시즌 정보 (null이면 활성 시즌 없음)
      */
-    private SeasonResponse currentSeason;
+    private SeasonDto currentSeason;
 
     /**
      * 시즌 MVP 유저 랭킹 (시즌 기간 EXP 획득 기준)
      */
-    private List<SeasonMvpPlayerResponse> seasonMvpPlayers;
+    private List<SeasonMvpPlayerDto> seasonMvpPlayers;
 
     /**
      * 시즌 MVP 길드 랭킹 (시즌 기간 EXP 획득 기준)
      */
-    private List<SeasonMvpGuildResponse> seasonMvpGuilds;
+    private List<SeasonMvpGuildDto> seasonMvpGuilds;
 
     @Getter
     @Builder

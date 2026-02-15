@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Achievement;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildMembershipInfo;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class GuildServiceCheckStrategyTest {
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @InjectMocks
     private GuildServiceCheckStrategy strategy;
@@ -64,7 +64,7 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 멤버이면 isGuildMember가 true를 반환한다")
         void fetchCurrentValue_isGuildMember_true() {
             // given
-            GuildFacadeDto.GuildMembershipInfo membership = new GuildFacadeDto.GuildMembershipInfo(
+            GuildMembershipInfo membership = new GuildMembershipInfo(
                 1L, "테스트 길드", null, 1, false, false
             );
             when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
@@ -95,7 +95,7 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 마스터이면 isGuildMaster가 true를 반환한다")
         void fetchCurrentValue_isGuildMaster_true() {
             // given
-            GuildFacadeDto.GuildMembershipInfo masterMembership = new GuildFacadeDto.GuildMembershipInfo(
+            GuildMembershipInfo masterMembership = new GuildMembershipInfo(
                 1L, "테스트 길드", null, 1, true, false
             );
             when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
@@ -112,7 +112,7 @@ class GuildServiceCheckStrategyTest {
         @DisplayName("길드 마스터가 아니면 isGuildMaster가 false를 반환한다")
         void fetchCurrentValue_isGuildMaster_false() {
             // given
-            GuildFacadeDto.GuildMembershipInfo memberMembership = new GuildFacadeDto.GuildMembershipInfo(
+            GuildMembershipInfo memberMembership = new GuildMembershipInfo(
                 1L, "테스트 길드", null, 1, false, false
             );
             when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
@@ -149,7 +149,7 @@ class GuildServiceCheckStrategyTest {
         void checkCondition_boolean_satisfied_returnsTrue() {
             // given
             Achievement achievement = createTestAchievement(1L, "isGuildMember", "EQ", 1);
-            GuildFacadeDto.GuildMembershipInfo membership = new GuildFacadeDto.GuildMembershipInfo(
+            GuildMembershipInfo membership = new GuildMembershipInfo(
                 1L, "테스트 길드", null, 1, false, false
             );
             when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))
@@ -167,7 +167,7 @@ class GuildServiceCheckStrategyTest {
         void checkCondition_boolean_notSatisfied_returnsFalse() {
             // given
             Achievement achievement = createTestAchievement(1L, "isGuildMaster", "EQ", 1);
-            GuildFacadeDto.GuildMembershipInfo memberMembership = new GuildFacadeDto.GuildMembershipInfo(
+            GuildMembershipInfo memberMembership = new GuildMembershipInfo(
                 1L, "테스트 길드", null, 1, false, false
             );
             when(guildQueryFacadeService.getUserGuildMemberships(TEST_USER_ID))

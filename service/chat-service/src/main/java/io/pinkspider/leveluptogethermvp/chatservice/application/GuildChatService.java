@@ -12,9 +12,9 @@ import io.pinkspider.leveluptogethermvp.chatservice.domain.enums.ChatMessageType
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatMessageRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatParticipantRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatReadStatusRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildBasicInfo;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildBasicInfo;
+import io.pinkspider.global.facade.UserQueryFacade;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -37,8 +37,8 @@ public class GuildChatService {
     private final GuildChatMessageRepository chatMessageRepository;
     private final GuildChatReadStatusRepository readStatusRepository;
     private final GuildChatParticipantRepository participantRepository;
-    private final GuildQueryFacadeService guildQueryFacadeService;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(transactionManager = "chatTransactionManager")

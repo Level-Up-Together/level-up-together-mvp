@@ -1,24 +1,38 @@
 package io.pinkspider.leveluptogethermvp.gamificationservice.application;
 
 import io.pinkspider.global.enums.ExpSourceType;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.DetailedTitleInfoDto;
+import io.pinkspider.global.facade.dto.SeasonDto;
+import io.pinkspider.global.facade.dto.SeasonMvpDataDto;
+import io.pinkspider.global.facade.dto.SeasonMvpGuildDto;
+import io.pinkspider.global.facade.dto.SeasonMvpPlayerDto;
+import io.pinkspider.global.facade.dto.TitleChangeResultDto;
+import io.pinkspider.global.facade.dto.TitleInfoDto;
+import io.pinkspider.global.facade.dto.UserAchievementDto;
+import io.pinkspider.global.facade.dto.UserExperienceDto;
+import io.pinkspider.global.facade.dto.UserStatsDto;
+import io.pinkspider.global.facade.dto.UserTitleDto;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.application.SeasonRankingService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.DetailedTitleInfo;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleChangeResult;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.domain.dto.UserAchievementResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
 import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
 import io.pinkspider.leveluptogethermvp.gamificationservice.experience.application.UserExperienceService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.experience.domain.dto.UserExperienceResponse;
+import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
+import io.pinkspider.leveluptogethermvp.gamificationservice.season.application.SeasonRankingService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +46,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Slf4j
 @Transactional(readOnly = true, transactionManager = "gamificationTransactionManager")
-public class GamificationQueryFacadeService {
+public class GamificationQueryFacadeService implements GamificationQueryFacade {
 
     private final TitleService titleService;
     private final UserExperienceService userExperienceService;
@@ -56,23 +70,29 @@ public class GamificationQueryFacadeService {
 
     // ========== 레벨 조회 ==========
 
+    @Override
     public int getUserLevel(String userId) {
         return userExperienceService.getUserLevel(userId);
     }
 
+    @Override
     public Map<String, Integer> getUserLevelMap(List<String> userIds) {
         return userExperienceService.getUserLevelMap(userIds);
     }
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
-    public UserExperience getOrCreateUserExperience(String userId) {
-        return userExperienceService.getOrCreateUserExperience(userId);
+    public UserExperienceDto getOrCreateUserExperience(String userId) {
+        UserExperience ue = userExperienceService.getOrCreateUserExperience(userId);
+        return toExperienceDto(ue);
     }
 
+    @Override
     public List<Object[]> findTopExpGainersByPeriod(LocalDateTime start, LocalDateTime end, Pageable pageable) {
         return userExperienceService.findTopExpGainersByPeriod(start, end, pageable);
     }
 
+    @Override
     public List<Object[]> findTopExpGainersByCategoryAndPeriod(String categoryName, LocalDateTime start,
                                                                 LocalDateTime end, Pageable pageable) {
         return userExperienceService.findTopExpGainersByCategoryAndPeriod(categoryName, start, end, pageable);
@@ -80,41 +100,68 @@ public class GamificationQueryFacadeService {
 
     // ========== 칭호 조회 ==========
 
-    public TitleInfo getCombinedEquippedTitleInfo(String userId) {
-        return titleService.getCombinedEquippedTitleInfo(userId);
+    @Override
+    public TitleInfoDto getCombinedEquippedTitleInfo(String userId) {
+        TitleInfo info = titleService.getCombinedEquippedTitleInfo(userId);
+        return new TitleInfoDto(info.name(), info.rarity(), info.colorCode());
     }
 
-    public DetailedTitleInfo getDetailedEquippedTitleInfo(String userId) {
-        return titleService.getDetailedEquippedTitleInfo(userId);
+    @Override
+    public DetailedTitleInfoDto getDetailedEquippedTitleInfo(String userId) {
+        DetailedTitleInfo info = titleService.getDetailedEquippedTitleInfo(userId);
+        return new DetailedTitleInfoDto(
+            info.combinedName(), info.highestRarity(),
+            info.leftTitle(), info.leftRarity(),
+            info.rightTitle(), info.rightRarity()
+        );
     }
 
+    @Override
     public Map<String, String> getEquippedLeftTitleNameMap(List<String> userIds) {
         return titleService.getEquippedLeftTitleNameMap(userIds);
     }
 
-    public Map<String, List<UserTitle>> getEquippedTitleEntitiesByUserIds(List<String> userIds) {
-        return titleService.getEquippedTitleEntitiesByUserIds(userIds);
+    @Override
+    public List<UserTitleDto> getEquippedTitlesByUserId(String userId) {
+        return titleService.getEquippedTitleEntitiesByUserId(userId).stream()
+            .map(this::toTitleDto)
+            .toList();
     }
 
-    public List<UserTitle> getEquippedTitleEntitiesByUserId(String userId) {
-        return titleService.getEquippedTitleEntitiesByUserId(userId);
+    @Override
+    public Map<String, List<UserTitleDto>> getEquippedTitlesByUserIds(List<String> userIds) {
+        return titleService.getEquippedTitleEntitiesByUserIds(userIds).entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> e.getValue().stream().map(this::toTitleDto).toList()
+            ));
     }
 
-    public List<UserTitle> getUserTitleEntitiesWithTitle(String userId) {
-        return titleService.getUserTitleEntitiesWithTitle(userId);
+    @Override
+    public List<UserTitleDto> getUserTitlesWithTitleInfo(String userId) {
+        return titleService.getUserTitleEntitiesWithTitle(userId).stream()
+            .map(this::toTitleDto)
+            .toList();
     }
 
+    @Override
     public long countUserTitles(String userId) {
         return titleService.countUserTitles(userId);
     }
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
-    public TitleChangeResult changeTitles(String userId, Long leftUserTitleId, Long rightUserTitleId) {
-        return titleService.changeTitles(userId, leftUserTitleId, rightUserTitleId);
+    public TitleChangeResultDto changeTitles(String userId, Long leftUserTitleId, Long rightUserTitleId) {
+        TitleChangeResult result = titleService.changeTitles(userId, leftUserTitleId, rightUserTitleId);
+        return new TitleChangeResultDto(
+            toTitleDto(result.leftTitle()),
+            toTitleDto(result.rightTitle())
+        );
     }
 
     // ========== 칭호 부여 ==========
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
     public void grantAndEquipDefaultTitles(String userId) {
         titleService.grantAndEquipDefaultTitles(userId);
@@ -122,36 +169,47 @@ public class GamificationQueryFacadeService {
 
     // ========== 스탯 조회 ==========
 
-    public UserStats getOrCreateUserStats(String userId) {
-        return userStatsService.getOrCreateUserStats(userId);
+    @Override
+    public UserStatsDto getOrCreateUserStats(String userId) {
+        UserStats us = userStatsService.getOrCreateUserStats(userId);
+        return toStatsDto(us);
     }
 
+    @Override
     public Double calculateRankingPercentile(long rankingPoints) {
         return userStatsService.calculateRankingPercentile(rankingPoints);
     }
 
     // ========== 업적 조회 ==========
 
-    public List<UserAchievementResponse> getUserAchievements(String userId) {
-        return achievementService.getUserAchievements(userId);
+    @Override
+    public List<UserAchievementDto> getUserAchievements(String userId) {
+        return achievementService.getUserAchievements(userId).stream()
+            .map(this::toAchievementDto)
+            .toList();
     }
 
     // ========== 경험치 WRITE (Saga step용) ==========
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
-    public UserExperienceResponse addExperience(String userId, int expAmount, ExpSourceType sourceType,
-                                                 Long sourceId, String description, Long categoryId, String categoryName) {
-        return userExperienceService.addExperience(userId, expAmount, sourceType, sourceId, description, categoryId, categoryName);
+    public UserExperienceDto addExperience(String userId, int expAmount, ExpSourceType sourceType,
+                                            Long sourceId, String description, Long categoryId, String categoryName) {
+        UserExperienceResponse resp = userExperienceService.addExperience(userId, expAmount, sourceType, sourceId, description, categoryId, categoryName);
+        return toExperienceResponseDto(resp);
     }
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
-    public UserExperienceResponse subtractExperience(String userId, int expAmount, ExpSourceType sourceType,
-                                                      Long sourceId, String description, Long categoryId, String categoryName) {
-        return userExperienceService.subtractExperience(userId, expAmount, sourceType, sourceId, description, categoryId, categoryName);
+    public UserExperienceDto subtractExperience(String userId, int expAmount, ExpSourceType sourceType,
+                                                 Long sourceId, String description, Long categoryId, String categoryName) {
+        UserExperienceResponse resp = userExperienceService.subtractExperience(userId, expAmount, sourceType, sourceId, description, categoryId, categoryName);
+        return toExperienceResponseDto(resp);
     }
 
     // ========== 통계 WRITE (Saga step용) ==========
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
     public void recordMissionCompletion(String userId, boolean isGuildMission) {
         userStatsService.recordMissionCompletion(userId, isGuildMission);
@@ -159,6 +217,7 @@ public class GamificationQueryFacadeService {
 
     // ========== 업적 체크 (Saga step용) ==========
 
+    @Override
     @Transactional(transactionManager = "gamificationTransactionManager")
     public void checkAchievementsByDataSource(String userId, String dataSource) {
         achievementService.checkAchievementsByDataSource(userId, dataSource);
@@ -166,8 +225,85 @@ public class GamificationQueryFacadeService {
 
     // ========== 시즌 조회 ==========
 
-    public Optional<SeasonMvpData> getSeasonMvpData(String locale) {
-        return seasonRankingService.getSeasonMvpData(locale);
+    @Override
+    public Optional<SeasonMvpDataDto> getSeasonMvpData(String locale) {
+        return seasonRankingService.getSeasonMvpData(locale)
+            .map(this::toSeasonMvpDataDto);
     }
 
+    // ========== 변환 유틸리티 ==========
+
+    private UserExperienceDto toExperienceDto(UserExperience ue) {
+        return new UserExperienceDto(
+            ue.getId(), ue.getUserId(), ue.getCurrentLevel(), ue.getCurrentExp(),
+            ue.getTotalExp(), null, null, null
+        );
+    }
+
+    private UserExperienceDto toExperienceResponseDto(UserExperienceResponse resp) {
+        return new UserExperienceDto(
+            resp.getId(), resp.getUserId(), resp.getCurrentLevel(), resp.getCurrentExp(),
+            resp.getTotalExp(), resp.getNextLevelRequiredExp(), resp.getExpToNextLevel(), resp.getProgressToNextLevel()
+        );
+    }
+
+    private UserTitleDto toTitleDto(UserTitle ut) {
+        Title t = ut.getTitle();
+        return new UserTitleDto(
+            ut.getId(), ut.getUserId(), t.getId(),
+            t.getName(), t.getNameEn(), t.getNameAr(),
+            t.getDescription(), t.getDescriptionEn(), t.getDescriptionAr(),
+            t.getRarity(), t.getPositionType(), t.getColorCode(), t.getIconUrl(),
+            ut.getIsEquipped(), ut.getEquippedPosition(), ut.getAcquiredAt()
+        );
+    }
+
+    private UserStatsDto toStatsDto(UserStats us) {
+        return new UserStatsDto(
+            us.getId(), us.getUserId(),
+            us.getTotalMissionCompletions(), us.getTotalMissionFullCompletions(),
+            us.getTotalGuildMissionCompletions(), us.getCurrentStreak(), us.getMaxStreak(),
+            us.getLastActivityDate(), us.getTotalAchievementsCompleted(),
+            us.getTotalTitlesAcquired(), us.getRankingPoints(),
+            us.getMaxCompletedMissionDuration(), us.getTotalLikesReceived(), us.getFriendCount()
+        );
+    }
+
+    private UserAchievementDto toAchievementDto(UserAchievementResponse resp) {
+        return new UserAchievementDto(
+            resp.getId(), resp.getAchievementId(), resp.getName(), resp.getDescription(),
+            resp.getCategoryCode(), resp.getMissionCategoryId(), resp.getMissionCategoryName(),
+            resp.getIconUrl(), resp.getCurrentCount(), resp.getRequiredCount(),
+            resp.getProgressPercent(), resp.getIsCompleted(), resp.getCompletedAt(),
+            resp.getIsRewardClaimed(), resp.getRewardExp(), resp.getRewardTitleId()
+        );
+    }
+
+    private SeasonMvpDataDto toSeasonMvpDataDto(SeasonMvpData data) {
+        SeasonDto season = new SeasonDto(
+            data.currentSeason().id(), data.currentSeason().title(),
+            data.currentSeason().description(), data.currentSeason().startAt(),
+            data.currentSeason().endAt(), data.currentSeason().rewardTitleId(),
+            data.currentSeason().rewardTitleName(),
+            data.currentSeason().status() != null ? data.currentSeason().status().name() : null,
+            data.currentSeason().statusName()
+        );
+
+        List<SeasonMvpPlayerDto> players = data.seasonMvpPlayers().stream()
+            .map(p -> new SeasonMvpPlayerDto(
+                p.userId(), p.nickname(), p.profileImageUrl(), p.level(),
+                p.title(), p.titleRarity(), p.leftTitle(), p.leftTitleRarity(),
+                p.rightTitle(), p.rightTitleRarity(), p.seasonExp(), p.rank()
+            ))
+            .toList();
+
+        List<SeasonMvpGuildDto> guilds = data.seasonMvpGuilds().stream()
+            .map(g -> new SeasonMvpGuildDto(
+                g.guildId(), g.name(), g.imageUrl(), g.level(),
+                g.memberCount(), g.seasonExp(), g.rank()
+            ))
+            .toList();
+
+        return new SeasonMvpDataDto(season, players, guilds);
+    }
 }

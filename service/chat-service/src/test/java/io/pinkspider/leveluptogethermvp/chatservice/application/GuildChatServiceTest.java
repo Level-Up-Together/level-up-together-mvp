@@ -20,10 +20,10 @@ import io.pinkspider.leveluptogethermvp.chatservice.domain.enums.ChatMessageType
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatMessageRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatParticipantRepository;
 import io.pinkspider.leveluptogethermvp.chatservice.infrastructure.GuildChatReadStatusRepository;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildBasicInfo;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildBasicInfo;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -55,10 +55,10 @@ class GuildChatServiceTest {
     private GuildChatParticipantRepository participantRepository;
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
@@ -514,7 +514,7 @@ class GuildChatServiceTest {
         @DisplayName("닉네임이 없으면 프로필에서 가져온다")
         void joinChat_withNullNickname_fetchFromProfile() {
             // given
-            UserProfileCache profile = new UserProfileCache(
+            UserProfileInfo profile = new UserProfileInfo(
                 testUserId, "프로필닉네임", null, 1, null, null, null
             );
 
@@ -852,7 +852,7 @@ class GuildChatServiceTest {
             ChatMessageRequest request = ChatMessageRequest.builder()
                 .content("안녕하세요!")
                 .build();
-            UserProfileCache profile = new UserProfileCache(
+            UserProfileInfo profile = new UserProfileInfo(
                 testUserId, "프로필닉네임", null, 1, null, null, null
             );
 
@@ -880,7 +880,7 @@ class GuildChatServiceTest {
             // given
             GuildChatParticipant participant = GuildChatParticipant.create(1L, testUserId, testNickname);
             setId(participant, 1L);
-            UserProfileCache profile = new UserProfileCache(
+            UserProfileInfo profile = new UserProfileInfo(
                 testUserId, "프로필닉네임", null, 1, null, null, null
             );
 

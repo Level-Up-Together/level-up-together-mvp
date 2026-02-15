@@ -10,7 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.pinkspider.global.saga.SagaStepResult;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
+import io.pinkspider.global.facade.dto.UserStatsDto;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionExecution;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.MissionParticipant;
@@ -20,7 +20,7 @@ import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.ParticipantStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.saga.MissionCompletionContext;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class UpdateUserStatsStepTest {
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @InjectMocks
     private UpdateUserStatsStep updateUserStatsStep;
@@ -48,7 +48,7 @@ class UpdateUserStatsStepTest {
     private MissionParticipant participant;
     private MissionExecution execution;
     private MissionCompletionContext context;
-    private UserStats userStats;
+    private UserStatsDto userStats;
 
     @BeforeEach
     void setUp() {
@@ -86,13 +86,9 @@ class UpdateUserStatsStepTest {
         context.setParticipant(participant);
         context.setMission(mission);
 
-        userStats = UserStats.builder()
-            .userId(TEST_USER_ID)
-            .totalMissionCompletions(10)
-            .totalGuildMissionCompletions(2)
-            .currentStreak(5)
-            .maxStreak(10)
-            .build();
+        userStats = new UserStatsDto(
+            null, TEST_USER_ID, 10, 0, 2, 5, 10, null, 0, 0, 0L, 0, 0L, 0
+        );
     }
 
     @Test
@@ -115,13 +111,9 @@ class UpdateUserStatsStepTest {
         @DisplayName("정상적으로 사용자 통계를 업데이트한다")
         void execute_success() {
             // given
-            UserStats updatedStats = UserStats.builder()
-                .userId(TEST_USER_ID)
-                .totalMissionCompletions(11)
-                .totalGuildMissionCompletions(2)
-                .currentStreak(6)
-                .maxStreak(10)
-                .build();
+            UserStatsDto updatedStats = new UserStatsDto(
+                null, TEST_USER_ID, 11, 0, 2, 6, 10, null, 0, 0, 0L, 0, 0L, 0
+            );
 
             when(gamificationQueryFacadeService.getOrCreateUserStats(TEST_USER_ID))
                 .thenReturn(userStats)
@@ -184,7 +176,7 @@ class UpdateUserStatsStepTest {
         }
 
         @Test
-        @DisplayName("정상적으로 이전 상태로 복원한다")
+        @DisplayName("스냅샷이 있으면 로깅 후 성공으로 처리한다")
         void compensate_restoresSnapshot() {
             // given
             UpdateUserStatsStep.UserStatsSnapshot snapshot = new UpdateUserStatsStep.UserStatsSnapshot(
@@ -195,37 +187,11 @@ class UpdateUserStatsStepTest {
                 snapshot
             );
 
-            when(gamificationQueryFacadeService.getOrCreateUserStats(TEST_USER_ID))
-                .thenReturn(userStats);
-
             // when
             SagaStepResult result = updateUserStatsStep.compensate(context);
 
             // then
             assertThat(result.isSuccess()).isTrue();
-        }
-
-        @Test
-        @DisplayName("복원 실패 시 에러를 반환한다")
-        void compensate_failsWhenServiceThrowsException() {
-            // given
-            UpdateUserStatsStep.UserStatsSnapshot snapshot = new UpdateUserStatsStep.UserStatsSnapshot(
-                10, 2, 5, 10
-            );
-            context.addCompensationData(
-                MissionCompletionContext.CompensationKeys.USER_STATS_BEFORE,
-                snapshot
-            );
-
-            when(gamificationQueryFacadeService.getOrCreateUserStats(TEST_USER_ID))
-                .thenThrow(new RuntimeException("DB 오류"));
-
-            // when
-            SagaStepResult result = updateUserStatsStep.compensate(context);
-
-            // then
-            assertThat(result.isSuccess()).isFalse();
-            assertThat(result.getMessage()).contains("통계 복원 실패");
         }
     }
 }

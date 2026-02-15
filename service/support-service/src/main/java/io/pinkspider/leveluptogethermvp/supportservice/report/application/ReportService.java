@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
+import io.pinkspider.global.facade.UserQueryFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -33,7 +33,7 @@ public class ReportService implements ContentReviewChecker {
     private static final String CIRCUIT_BREAKER_NAME = "report-service";
 
     private final AdminReportFeignClient adminReportFeignClient;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final ApplicationEventPublisher eventPublisher;
 
     public ReportResponse createReport(String userId, ReportCreateRequest request) {

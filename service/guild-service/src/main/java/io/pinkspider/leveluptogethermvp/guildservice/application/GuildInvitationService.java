@@ -14,8 +14,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,7 @@ public class GuildInvitationService {
     private final GuildInvitationRepository invitationRepository;
     private final GuildRepository guildRepository;
     private final GuildMemberRepository guildMemberRepository;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final MissionCategoryService missionCategoryService;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -276,14 +276,14 @@ public class GuildInvitationService {
             .toList();
 
         // 초대자 프로필 조회 (캐시)
-        Map<String, UserProfileCache> inviterProfileMap = userQueryFacadeService.getUserProfiles(inviterIds);
+        Map<String, UserProfileInfo> inviterProfileMap = userQueryFacadeService.getUserProfiles(inviterIds);
 
         // 초대 받는 사람 닉네임 조회
         String inviteeNickname = userQueryFacadeService.getUserNickname(userId);
 
         return validInvitations.stream()
             .map(inv -> {
-                UserProfileCache inviterProfile = inviterProfileMap.get(inv.getInviterId());
+                UserProfileInfo inviterProfile = inviterProfileMap.get(inv.getInviterId());
                 String inviterNickname = inviterProfile != null ? inviterProfile.nickname() : "알 수 없는 사용자";
                 return GuildInvitationResponse.from(inv, inviterNickname, inviteeNickname);
             })
@@ -309,12 +309,12 @@ public class GuildInvitationService {
             .toList();
 
         // 사용자 프로필 조회 (캐시)
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         return invitations.stream()
             .map(inv -> {
-                UserProfileCache inviterProfile = profileMap.get(inv.getInviterId());
-                UserProfileCache inviteeProfile = profileMap.get(inv.getInviteeId());
+                UserProfileInfo inviterProfile = profileMap.get(inv.getInviterId());
+                UserProfileInfo inviteeProfile = profileMap.get(inv.getInviteeId());
                 String inviterNickname = inviterProfile != null ? inviterProfile.nickname() : "알 수 없는 사용자";
                 String inviteeNickname = inviteeProfile != null ? inviteeProfile.nickname() : "알 수 없는 사용자";
                 return GuildInvitationResponse.from(inv, inviterNickname, inviteeNickname);

@@ -10,8 +10,8 @@ import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInq
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryFeignClient;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryPageApiResponse;
 import io.pinkspider.leveluptogethermvp.supportservice.core.feignclient.AdminInquiryTypesApiResponse;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 public class CustomerInquiryService {
 
     private final AdminInquiryFeignClient adminInquiryFeignClient;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
 
     /**
      * 문의 등록
@@ -33,7 +33,7 @@ public class CustomerInquiryService {
                 throw new CustomException("404", "사용자를 찾을 수 없습니다.");
             }
 
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(userId);
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(userId);
             String email = userQueryFacadeService.getUserEmail(userId);
 
             AdminInquiryApiResponse response = adminInquiryFeignClient.createInquiry(

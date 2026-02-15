@@ -21,8 +21,8 @@ import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedCommentRe
 import io.pinkspider.leveluptogethermvp.feedservice.infrastructure.FeedLikeRepository;
 import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -52,7 +52,7 @@ public class FeedQueryService {
     private final FeedLikeRepository feedLikeRepository;
     private final FeedCommentRepository feedCommentRepository;
     private final AdminInternalFeignClient adminInternalFeignClient;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final TranslationService translationService;
     private final ReportService reportService;
 
@@ -481,7 +481,7 @@ public class FeedQueryService {
             // 모든 댓글에 대해 현재 유저 레벨 조회
             Integer userLevel;
             try {
-                UserProfileCache userProfile = userQueryFacadeService.getUserProfile(comment.getUserId());
+                UserProfileInfo userProfile = userQueryFacadeService.getUserProfile(comment.getUserId());
                 userLevel = userProfile.level();
             } catch (Exception e) {
                 log.warn("Failed to get user level for comment: commentId={}, userId={}", comment.getId(), comment.getUserId());

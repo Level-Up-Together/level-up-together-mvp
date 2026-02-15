@@ -4,8 +4,8 @@ import io.pinkspider.global.event.MissionFeedImageChangedEvent;
 import io.pinkspider.global.event.MissionFeedUnsharedEvent;
 import io.pinkspider.global.saga.SagaResult;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.dto.DailyMissionInstanceResponse;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.DailyMissionInstance;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.entity.Mission;
@@ -48,7 +48,7 @@ public class DailyMissionInstanceService {
     private final DailyMissionInstanceScheduler instanceScheduler;
     private final FeedCommandService feedCommandService;
     private final ApplicationEventPublisher eventPublisher;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
     private final MissionImageStorageService missionImageStorageService;
     private final MissionCompletionSaga missionCompletionSaga;
 
@@ -434,7 +434,7 @@ public class DailyMissionInstanceService {
 
     private void createFeedFromInstance(DailyMissionInstance instance, String userId) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(userId);
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(userId);
 
             ActivityFeed feed = feedCommandService.createMissionSharedFeed(
                 userId,

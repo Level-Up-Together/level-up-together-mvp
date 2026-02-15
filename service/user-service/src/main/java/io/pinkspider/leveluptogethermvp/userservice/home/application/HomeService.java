@@ -3,12 +3,12 @@ package io.pinkspider.leveluptogethermvp.userservice.home.application;
 import io.pinkspider.global.enums.BannerType;
 import io.pinkspider.global.feign.admin.AdminBannerDto;
 import io.pinkspider.global.feign.admin.AdminInternalFeignClient;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto.GuildWithMemberCount;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildWithMemberCount;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.UserTitleDto;
 import io.pinkspider.global.enums.TitlePosition;
 import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
@@ -38,10 +38,10 @@ import org.springframework.stereotype.Service;
 public class HomeService {
 
     private final AdminInternalFeignClient adminInternalFeignClient;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
     private final UserRepository userRepository;
     private final MissionCategoryService missionCategoryService;
-    private final GuildQueryFacadeService guildQueryFacadeService;
+    private final GuildQueryFacade guildQueryFacadeService;
 
     /**
      * 활성화된 배너 목록 조회
@@ -105,7 +105,7 @@ public class HomeService {
         Map<String, Integer> levelMap = gamificationQueryFacadeService.getUserLevelMap(userIds);
 
         // 4. 배치 조회: 장착된 칭호
-        Map<String, List<UserTitle>> titleMap = gamificationQueryFacadeService.getEquippedTitleEntitiesByUserIds(userIds);
+        Map<String, List<UserTitleDto>> titleMap = gamificationQueryFacadeService.getEquippedTitlesByUserIds(userIds);
 
         // 5. 결과 조합
         List<TodayPlayerResponse> result = new ArrayList<>();
@@ -336,32 +336,32 @@ public class HomeService {
      * @param locale Accept-Language 헤더에서 추출한 locale (null이면 기본 한국어)
      */
     private TitleInfo getCombinedEquippedTitleInfo(String userId, String locale) {
-        List<UserTitle> equippedTitles = gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(userId);
+        List<UserTitleDto> equippedTitles = gamificationQueryFacadeService.getEquippedTitlesByUserId(userId);
         if (equippedTitles.isEmpty()) {
             return new TitleInfo(null, null, null, null, null, null, null, null, null);
         }
 
-        UserTitle leftUserTitle = equippedTitles.stream()
-            .filter(ut -> ut.getEquippedPosition() == TitlePosition.LEFT)
+        UserTitleDto leftUserTitle = equippedTitles.stream()
+            .filter(ut -> ut.equippedPosition() == TitlePosition.LEFT)
             .findFirst()
             .orElse(null);
 
-        UserTitle rightUserTitle = equippedTitles.stream()
-            .filter(ut -> ut.getEquippedPosition() == TitlePosition.RIGHT)
+        UserTitleDto rightUserTitle = equippedTitles.stream()
+            .filter(ut -> ut.equippedPosition() == TitlePosition.RIGHT)
             .findFirst()
             .orElse(null);
 
         // 로컬라이즈된 칭호 이름 가져오기
         String leftTitle = leftUserTitle != null ?
-            getLocalizedTitleName(leftUserTitle.getTitle(), locale) : null;
+            getLocalizedTitleName(leftUserTitle, locale) : null;
         String rightTitle = rightUserTitle != null ?
-            getLocalizedTitleName(rightUserTitle.getTitle(), locale) : null;
+            getLocalizedTitleName(rightUserTitle, locale) : null;
 
         // 개별 등급 및 색상 코드 추출
-        TitleRarity leftRarity = leftUserTitle != null ? leftUserTitle.getTitle().getRarity() : null;
-        TitleRarity rightRarity = rightUserTitle != null ? rightUserTitle.getTitle().getRarity() : null;
-        String leftColorCode = leftUserTitle != null ? leftUserTitle.getTitle().getColorCode() : null;
-        String rightColorCode = rightUserTitle != null ? rightUserTitle.getTitle().getColorCode() : null;
+        TitleRarity leftRarity = leftUserTitle != null ? leftUserTitle.titleRarity() : null;
+        TitleRarity rightRarity = rightUserTitle != null ? rightUserTitle.titleRarity() : null;
+        String leftColorCode = leftUserTitle != null ? leftUserTitle.titleColorCode() : null;
+        String rightColorCode = rightUserTitle != null ? rightUserTitle.titleColorCode() : null;
 
         // 가장 높은 등급 선택 (둘 중 하나만 있으면 그것 사용) - 기존 호환성 유지
         TitleRarity highestRarity = getHighestRarity(leftRarity, rightRarity);
@@ -396,32 +396,32 @@ public class HomeService {
      * @param equippedTitles 사용자의 장착된 칭호 리스트 (null 가능)
      * @param locale Accept-Language 헤더에서 추출한 locale (null이면 기본 한국어)
      */
-    private TitleInfo buildTitleInfoFromList(List<UserTitle> equippedTitles, String locale) {
+    private TitleInfo buildTitleInfoFromList(List<UserTitleDto> equippedTitles, String locale) {
         if (equippedTitles == null || equippedTitles.isEmpty()) {
             return new TitleInfo(null, null, null, null, null, null, null, null, null);
         }
 
-        UserTitle leftUserTitle = equippedTitles.stream()
-            .filter(ut -> ut.getEquippedPosition() == TitlePosition.LEFT)
+        UserTitleDto leftUserTitle = equippedTitles.stream()
+            .filter(ut -> ut.equippedPosition() == TitlePosition.LEFT)
             .findFirst()
             .orElse(null);
 
-        UserTitle rightUserTitle = equippedTitles.stream()
-            .filter(ut -> ut.getEquippedPosition() == TitlePosition.RIGHT)
+        UserTitleDto rightUserTitle = equippedTitles.stream()
+            .filter(ut -> ut.equippedPosition() == TitlePosition.RIGHT)
             .findFirst()
             .orElse(null);
 
         // 로컬라이즈된 칭호 이름 가져오기
         String leftTitle = leftUserTitle != null ?
-            getLocalizedTitleName(leftUserTitle.getTitle(), locale) : null;
+            getLocalizedTitleName(leftUserTitle, locale) : null;
         String rightTitle = rightUserTitle != null ?
-            getLocalizedTitleName(rightUserTitle.getTitle(), locale) : null;
+            getLocalizedTitleName(rightUserTitle, locale) : null;
 
         // 개별 등급 및 색상 코드 추출
-        TitleRarity leftRarity = leftUserTitle != null ? leftUserTitle.getTitle().getRarity() : null;
-        TitleRarity rightRarity = rightUserTitle != null ? rightUserTitle.getTitle().getRarity() : null;
-        String leftColorCode = leftUserTitle != null ? leftUserTitle.getTitle().getColorCode() : null;
-        String rightColorCode = rightUserTitle != null ? rightUserTitle.getTitle().getColorCode() : null;
+        TitleRarity leftRarity = leftUserTitle != null ? leftUserTitle.titleRarity() : null;
+        TitleRarity rightRarity = rightUserTitle != null ? rightUserTitle.titleRarity() : null;
+        String leftColorCode = leftUserTitle != null ? leftUserTitle.titleColorCode() : null;
+        String rightColorCode = rightUserTitle != null ? rightUserTitle.titleColorCode() : null;
 
         // 가장 높은 등급 선택 (둘 중 하나만 있으면 그것 사용) - 기존 호환성 유지
         TitleRarity highestRarity = getHighestRarity(leftRarity, rightRarity);
@@ -453,11 +453,11 @@ public class HomeService {
     /**
      * 칭호의 로컬라이즈된 이름 반환
      */
-    private String getLocalizedTitleName(io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title title, String locale) {
-        if (title == null) {
+    private String getLocalizedTitleName(UserTitleDto userTitle, String locale) {
+        if (userTitle == null) {
             return null;
         }
-        return LocaleUtils.getLocalizedText(title.getName(), title.getNameEn(), title.getNameAr(), locale);
+        return LocaleUtils.getLocalizedText(userTitle.titleName(), userTitle.titleNameEn(), userTitle.titleNameAr(), locale);
     }
 
     /**

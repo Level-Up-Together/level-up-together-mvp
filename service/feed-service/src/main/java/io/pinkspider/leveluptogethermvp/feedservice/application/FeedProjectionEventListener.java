@@ -11,8 +11,8 @@ import io.pinkspider.global.event.TitleEquippedEvent;
 import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,12 +29,12 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class FeedProjectionEventListener {
 
     private final FeedCommandService feedCommandService;
-    private final UserQueryFacadeService userQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleTitleAcquired(TitleAcquiredEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),
@@ -63,7 +63,7 @@ public class FeedProjectionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleAchievementCompleted(AchievementCompletedEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),
@@ -92,7 +92,7 @@ public class FeedProjectionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleGuildJoined(GuildJoinedEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),
@@ -122,7 +122,7 @@ public class FeedProjectionEventListener {
     public void handleFriendRequestAccepted(FriendRequestAcceptedEvent event) {
         try {
             // 수락한 사용자의 피드 생성
-            UserProfileCache accepterProfile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo accepterProfile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 accepterProfile.nickname(),
@@ -144,7 +144,7 @@ public class FeedProjectionEventListener {
             );
 
             // 요청을 보낸 사용자의 피드 생성
-            UserProfileCache requesterProfile = userQueryFacadeService.getUserProfile(event.requesterId());
+            UserProfileInfo requesterProfile = userQueryFacadeService.getUserProfile(event.requesterId());
             feedCommandService.createActivityFeed(
                 event.requesterId(),
                 requesterProfile.nickname(),
@@ -173,7 +173,7 @@ public class FeedProjectionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleUserLevelUp(UserLevelUpEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),
@@ -202,7 +202,7 @@ public class FeedProjectionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleGuildCreated(GuildCreatedEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),
@@ -231,7 +231,7 @@ public class FeedProjectionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleGuildLevelUp(GuildLevelUpEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),
@@ -272,7 +272,7 @@ public class FeedProjectionEventListener {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void handleAttendanceStreak(AttendanceStreakEvent event) {
         try {
-            UserProfileCache profile = userQueryFacadeService.getUserProfile(event.userId());
+            UserProfileInfo profile = userQueryFacadeService.getUserProfile(event.userId());
             feedCommandService.createActivityFeed(
                 event.userId(),
                 profile.nickname(),

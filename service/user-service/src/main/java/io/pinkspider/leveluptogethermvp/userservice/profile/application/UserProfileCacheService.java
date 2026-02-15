@@ -1,8 +1,8 @@
 package io.pinkspider.leveluptogethermvp.userservice.profile.application;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleInfo;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.dto.TitleInfoDto;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
+import io.pinkspider.global.facade.GamificationQueryFacade;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import java.util.List;
@@ -26,10 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserProfileCacheService {
 
     private final UserRepository userRepository;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
 
     public UserProfileCacheService(UserRepository userRepository,
-                                    GamificationQueryFacadeService gamificationQueryFacadeService) {
+                                    GamificationQueryFacade gamificationQueryFacadeService) {
         this.userRepository = userRepository;
         this.gamificationQueryFacadeService = gamificationQueryFacadeService;
     }
@@ -40,23 +40,23 @@ public class UserProfileCacheService {
      * - TTL: 5분 (RedisConfig에서 설정)
      */
     @Cacheable(value = "userProfile", key = "#userId")
-    public UserProfileCache getUserProfile(String userId) {
+    public UserProfileInfo getUserProfile(String userId) {
         log.debug("캐시 미스 - DB에서 사용자 프로필 조회: userId={}", userId);
 
         // 사용자 정보 조회
         Users user = userRepository.findById(userId).orElse(null);
         if (user == null) {
             log.warn("사용자를 찾을 수 없음: userId={}", userId);
-            return UserProfileCache.defaultProfile(userId);
+            return UserProfileInfo.defaultProfile(userId);
         }
 
         // 사용자 레벨 조회
         int level = gamificationQueryFacadeService.getUserLevel(userId);
 
         // 사용자 칭호 조회 (캐시 사용)
-        TitleInfo titleInfo = gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId);
+        TitleInfoDto titleInfo = gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId);
 
-        return new UserProfileCache(
+        return new UserProfileInfo(
             userId,
             user.getNickname(),
             user.getPicture(),
@@ -76,7 +76,7 @@ public class UserProfileCacheService {
      * - 개별 캐시 활용 (userId별 @Cacheable)
      * - 랭킹, 멤버 목록 등 배치 조회에 사용
      */
-    public Map<String, UserProfileCache> getUserProfiles(List<String> userIds) {
+    public Map<String, UserProfileInfo> getUserProfiles(List<String> userIds) {
         if (userIds == null || userIds.isEmpty()) {
             return Map.of();
         }

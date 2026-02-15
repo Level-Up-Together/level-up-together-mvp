@@ -28,9 +28,9 @@ import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.GuildVisibilit
 import io.pinkspider.leveluptogethermvp.guildservice.domain.enums.JoinRequestStatus;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildJoinRequestRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
 import java.time.LocalDateTime;
@@ -62,10 +62,10 @@ class GuildMemberServiceTest {
     private MissionCategoryService missionCategoryService;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -531,7 +531,7 @@ class GuildMemberServiceTest {
             when(guildHelper.findActiveGuildById(1L)).thenReturn(testGuild);
             when(guildMemberRepository.findByGuildIdAndUserId(1L, testUserId)).thenReturn(Optional.of(targetMember));
             when(userQueryFacadeService.getUserProfile(testUserId)).thenReturn(
-                new UserProfileCache(testUserId, "테스트유저", null, 1, null, null, null));
+                new UserProfileInfo(testUserId, "테스트유저", null, 1, null, null, null));
 
             // when
             GuildMemberResponse response = guildMemberService.promoteToSubMaster(1L, testMasterId, testUserId);
@@ -597,7 +597,7 @@ class GuildMemberServiceTest {
             when(guildHelper.findActiveGuildById(1L)).thenReturn(testGuild);
             when(guildMemberRepository.findByGuildIdAndUserId(1L, testUserId)).thenReturn(Optional.of(subMasterMember));
             when(userQueryFacadeService.getUserProfile(testUserId)).thenReturn(
-                new UserProfileCache(testUserId, "테스트유저", null, 1, null, null, null));
+                new UserProfileInfo(testUserId, "테스트유저", null, 1, null, null, null));
 
             // when
             GuildMemberResponse response = guildMemberService.demoteFromSubMaster(1L, testMasterId, testUserId);

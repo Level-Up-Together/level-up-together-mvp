@@ -16,11 +16,11 @@ import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
 import com.epages.restdocs.apispec.SimpleType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpGuildResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpPlayerResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.SeasonDto;
+import io.pinkspider.global.facade.dto.SeasonMvpDataDto;
+import io.pinkspider.global.facade.dto.SeasonMvpGuildDto;
+import io.pinkspider.global.facade.dto.SeasonMvpPlayerDto;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
@@ -73,7 +73,7 @@ class HomeControllerTest {
     private HomeService homeService;
 
     @MockitoBean
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     private HomeBannerResponse createMockBannerResponse(BannerType type) {
         return HomeBannerResponse.builder()
@@ -372,7 +372,7 @@ class HomeControllerTest {
     @DisplayName("GET /api/v1/home/season : 현재 시즌 MVP 정보 조회")
     void getSeasonMvpDataTest() throws Exception {
         // given
-        SeasonResponse season = new SeasonResponse(
+        SeasonDto season = new SeasonDto(
             1L,
             "시즌 1",
             "첫 번째 시즌입니다.",
@@ -380,20 +380,20 @@ class HomeControllerTest {
             LocalDateTime.now().plusDays(20),
             1L,
             "시즌 챔피언",
-            io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.enums.SeasonStatus.ACTIVE,
+            "ACTIVE",
             "진행 중"
         );
 
-        List<SeasonMvpPlayerResponse> players = List.of(
-            SeasonMvpPlayerResponse.of("user-1", "플레이어1", "https://example.com/profile1.jpg", 15, "모험가", null, null, null, null, null, 50000L, 1),
-            SeasonMvpPlayerResponse.of("user-2", "플레이어2", "https://example.com/profile2.jpg", 12, "탐험가", null, null, null, null, null, 40000L, 2)
+        List<SeasonMvpPlayerDto> players = List.of(
+            new SeasonMvpPlayerDto("user-1", "플레이어1", "https://example.com/profile1.jpg", 15, "모험가", null, null, null, null, null, 50000L, 1),
+            new SeasonMvpPlayerDto("user-2", "플레이어2", "https://example.com/profile2.jpg", 12, "탐험가", null, null, null, null, null, 40000L, 2)
         );
 
-        List<SeasonMvpGuildResponse> guilds = List.of(
-            SeasonMvpGuildResponse.of(1L, "테스트길드1", "https://example.com/guild1.jpg", 5, 10, 100000L, 1)
+        List<SeasonMvpGuildDto> guilds = List.of(
+            new SeasonMvpGuildDto(1L, "테스트길드1", "https://example.com/guild1.jpg", 5, 10, 100000L, 1)
         );
 
-        SeasonMvpData seasonMvpData = SeasonMvpData.of(season, players, guilds);
+        SeasonMvpDataDto seasonMvpData = new SeasonMvpDataDto(season, players, guilds);
 
         when(gamificationQueryFacadeService.getSeasonMvpData(isNull())).thenReturn(Optional.of(seasonMvpData));
 

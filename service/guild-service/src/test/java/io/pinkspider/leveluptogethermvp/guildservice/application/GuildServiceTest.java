@@ -31,8 +31,8 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberR
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.UserExperienceDto;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -68,7 +68,7 @@ class GuildServiceTest {
     private GuildImageStorageService guildImageStorageService;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -135,10 +135,7 @@ class GuildServiceTest {
                 .categoryId(testCategoryId)
                 .build();
 
-            UserExperience userExperience = UserExperience.builder()
-                .userId(testUserId)
-                .currentLevel(20)
-                .build();
+            UserExperienceDto userExperience = new UserExperienceDto(null, testUserId, 20, 0, 0, null, null, null);
             when(gamificationQueryFacadeService.getOrCreateUserExperience(testUserId)).thenReturn(userExperience);
             when(guildMemberRepository.isGuildMaster(testUserId)).thenReturn(false);
             when(missionCategoryService.getCategory(testCategoryId)).thenReturn(testCategory);
@@ -179,10 +176,7 @@ class GuildServiceTest {
                 .categoryId(testCategoryId)
                 .build();
 
-            UserExperience userExperience = UserExperience.builder()
-                .userId(testUserId)
-                .currentLevel(20)
-                .build();
+            UserExperienceDto userExperience = new UserExperienceDto(null, testUserId, 20, 0, 0, null, null, null);
             when(gamificationQueryFacadeService.getOrCreateUserExperience(testUserId)).thenReturn(userExperience);
             when(missionCategoryService.getCategory(testCategoryId)).thenReturn(testCategory);
             when(guildMemberRepository.hasActiveGuildMembershipInCategory(testUserId, testCategoryId)).thenReturn(true);
@@ -206,10 +200,7 @@ class GuildServiceTest {
                 .categoryId(testCategoryId)
                 .build();
 
-            UserExperience userExperience = UserExperience.builder()
-                .userId(testUserId)
-                .currentLevel(20)
-                .build();
+            UserExperienceDto userExperience = new UserExperienceDto(null, testUserId, 20, 0, 0, null, null, null);
             when(gamificationQueryFacadeService.getOrCreateUserExperience(testUserId)).thenReturn(userExperience);
             when(guildMemberRepository.isGuildMaster(testUserId)).thenReturn(false);
             when(missionCategoryService.getCategory(testCategoryId)).thenReturn(testCategory);
@@ -233,10 +224,7 @@ class GuildServiceTest {
                 .categoryId(testCategoryId)
                 .build();
 
-            UserExperience userExperience = UserExperience.builder()
-                .userId(testUserId)
-                .currentLevel(20)
-                .build();
+            UserExperienceDto userExperience = new UserExperienceDto(null, testUserId, 20, 0, 0, null, null, null);
             when(gamificationQueryFacadeService.getOrCreateUserExperience(testUserId)).thenReturn(userExperience);
             when(guildMemberRepository.isGuildMaster(testUserId)).thenReturn(true);
 

@@ -9,10 +9,10 @@ import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildJoinReq
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildMemberRepository;
 import io.pinkspider.leveluptogethermvp.guildservice.infrastructure.GuildRepository;
 import io.pinkspider.global.feign.admin.AdminInternalFeignClient;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.DetailedTitleInfo;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.DetailedTitleInfoDto;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.leveluptogethermvp.supportservice.report.application.ReportService;
 import java.util.ArrayList;
@@ -40,8 +40,8 @@ public class GuildQueryService {
     private final GuildMemberRepository guildMemberRepository;
     private final GuildJoinRequestRepository joinRequestRepository;
     private final AdminInternalFeignClient adminInternalFeignClient;
-    private final UserQueryFacadeService userQueryFacadeService;
-    private final GamificationQueryFacadeService gamificationQueryFacadeService;
+    private final UserQueryFacade userQueryFacadeService;
+    private final GamificationQueryFacade gamificationQueryFacadeService;
     private final ReportService reportService;
     private final GuildHelper guildHelper;
 
@@ -216,13 +216,13 @@ public class GuildQueryService {
             .map(GuildMember::getUserId)
             .toList();
 
-        Map<String, UserProfileCache> profileMap = userQueryFacadeService.getUserProfiles(userIds);
+        Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         // 멤버 정보에 사용자 정보 추가
         return members.stream()
             .map(member -> {
                 GuildMemberResponse response = GuildMemberResponse.from(member);
-                UserProfileCache profile = profileMap.get(member.getUserId());
+                UserProfileInfo profile = profileMap.get(member.getUserId());
                 if (profile != null) {
                     response.setNickname(profile.nickname());
                     response.setProfileImageUrl(profile.picture());
@@ -230,7 +230,7 @@ public class GuildQueryService {
                     response.setUserLevel(1);
                     // 칭호 정보 조회
                     try {
-                        DetailedTitleInfo titleInfo = gamificationQueryFacadeService.getDetailedEquippedTitleInfo(member.getUserId());
+                        DetailedTitleInfoDto titleInfo = gamificationQueryFacadeService.getDetailedEquippedTitleInfo(member.getUserId());
                         response.setEquippedTitleName(titleInfo.combinedName());
                         response.setEquippedTitleRarity(titleInfo.highestRarity());
                         response.setLeftTitleName(titleInfo.leftTitle());

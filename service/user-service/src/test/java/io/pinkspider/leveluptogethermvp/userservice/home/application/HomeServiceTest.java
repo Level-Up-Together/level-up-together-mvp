@@ -10,15 +10,14 @@ import static org.mockito.Mockito.when;
 import io.pinkspider.global.enums.BannerType;
 import io.pinkspider.global.feign.admin.AdminBannerDto;
 import io.pinkspider.global.feign.admin.AdminInternalFeignClient;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildWithMemberCount;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.HomeBannerResponse;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.MvpGuildResponse;
 import io.pinkspider.leveluptogethermvp.metaservice.application.MissionCategoryService;
 import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.UserTitleDto;
 import io.pinkspider.global.enums.TitlePosition;
 import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.userservice.home.api.dto.TodayPlayerResponse;
@@ -47,7 +46,7 @@ class HomeServiceTest {
     private AdminInternalFeignClient adminInternalFeignClient;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @Mock
     private UserRepository userRepository;
@@ -56,7 +55,7 @@ class HomeServiceTest {
     private MissionCategoryService missionCategoryService;
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @InjectMocks
     private HomeService homeService;
@@ -104,7 +103,7 @@ class HomeServiceTest {
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
             when(gamificationQueryFacadeService.getUserLevelMap(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, 5));
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserIds(List.of(testUserId)))
                 .thenReturn(Map.of());
 
             // when
@@ -140,43 +139,26 @@ class HomeServiceTest {
             List<Object[]> topGainers = new ArrayList<>();
             topGainers.add(row1);
 
-            // LEFT 칭호 생성 (RARE 등급)
-            Title leftTitle = Title.builder()
-                .name("용감한")
-                .rarity(TitleRarity.RARE)
-                .positionType(TitlePosition.LEFT)
-                .build();
-            setId(leftTitle, 1L);
+            // LEFT 칭호 DTO (RARE 등급)
+            UserTitleDto leftUserTitle = new UserTitleDto(
+                1L, testUserId, 1L, "용감한", null, null,
+                null, null, null, TitleRarity.RARE, TitlePosition.LEFT,
+                null, null, true, TitlePosition.LEFT, null
+            );
 
-            // RIGHT 칭호 생성 (LEGENDARY 등급)
-            Title rightTitle = Title.builder()
-                .name("전사")
-                .rarity(TitleRarity.LEGENDARY)
-                .positionType(TitlePosition.RIGHT)
-                .build();
-            setId(rightTitle, 2L);
-
-            // UserTitle 생성
-            UserTitle leftUserTitle = UserTitle.builder()
-                .userId(testUserId)
-                .title(leftTitle)
-                .isEquipped(true)
-                .equippedPosition(TitlePosition.LEFT)
-                .build();
-
-            UserTitle rightUserTitle = UserTitle.builder()
-                .userId(testUserId)
-                .title(rightTitle)
-                .isEquipped(true)
-                .equippedPosition(TitlePosition.RIGHT)
-                .build();
+            // RIGHT 칭호 DTO (LEGENDARY 등급)
+            UserTitleDto rightUserTitle = new UserTitleDto(
+                2L, testUserId, 2L, "전사", null, null,
+                null, null, null, TitleRarity.LEGENDARY, TitlePosition.RIGHT,
+                null, null, true, TitlePosition.RIGHT, null
+            );
 
             when(gamificationQueryFacadeService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
             when(gamificationQueryFacadeService.getUserLevelMap(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, 5));
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserIds(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, List.of(leftUserTitle, rightUserTitle)));
 
             // when
@@ -205,26 +187,18 @@ class HomeServiceTest {
             List<Object[]> topGainers = new ArrayList<>();
             topGainers.add(row1);
 
-            Title leftTitle = Title.builder()
-                .name("빠른")
-                .rarity(TitleRarity.EPIC)
-                .positionType(TitlePosition.LEFT)
-                .build();
-            setId(leftTitle, 1L);
-
-            UserTitle leftUserTitle = UserTitle.builder()
-                .userId(testUserId)
-                .title(leftTitle)
-                .isEquipped(true)
-                .equippedPosition(TitlePosition.LEFT)
-                .build();
+            UserTitleDto leftUserTitle = new UserTitleDto(
+                1L, testUserId, 1L, "빠른", null, null,
+                null, null, null, TitleRarity.EPIC, TitlePosition.LEFT,
+                null, null, true, TitlePosition.LEFT, null
+            );
 
             when(gamificationQueryFacadeService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
             when(gamificationQueryFacadeService.getUserLevelMap(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, 5));
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserIds(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, List.of(leftUserTitle)));
 
             // when
@@ -276,7 +250,7 @@ class HomeServiceTest {
                 .thenReturn(List.of(user1Entity, user2Entity));
             when(gamificationQueryFacadeService.getUserLevelMap(List.of(user1, user2)))
                 .thenReturn(Map.of(user1, 10, user2, 5));
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserIds(List.of(user1, user2)))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserIds(List.of(user1, user2)))
                 .thenReturn(Map.of());
 
             // when
@@ -316,7 +290,7 @@ class HomeServiceTest {
                 .thenReturn(List.of(featuredUserId));
             when(userRepository.findById(featuredUserId)).thenReturn(Optional.of(featuredUser));
             when(gamificationQueryFacadeService.getUserLevel(featuredUserId)).thenReturn(10);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(featuredUserId))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(featuredUserId))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);
@@ -330,7 +304,7 @@ class HomeServiceTest {
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
             when(gamificationQueryFacadeService.getUserLevel(testUserId)).thenReturn(5);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(testUserId))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -363,7 +337,7 @@ class HomeServiceTest {
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
             when(gamificationQueryFacadeService.getUserLevel(testUserId)).thenReturn(5);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(testUserId))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
 
             // when
@@ -382,7 +356,7 @@ class HomeServiceTest {
                 .thenReturn(List.of(testUserId));
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
             when(gamificationQueryFacadeService.getUserLevel(testUserId)).thenReturn(5);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(testUserId))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
             when(missionCategoryService.getCategory(testCategoryId))
                 .thenReturn(testCategoryResponse);
@@ -437,7 +411,7 @@ class HomeServiceTest {
 
                 lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
                 lenient().when(gamificationQueryFacadeService.getUserLevel(userId)).thenReturn(5);
-                lenient().when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(userId))
+                lenient().when(gamificationQueryFacadeService.getEquippedTitlesByUserId(userId))
                     .thenReturn(Collections.emptyList());
             }
 
@@ -525,7 +499,7 @@ class HomeServiceTest {
             List<Object[]> topGuilds = new ArrayList<>();
             topGuilds.add(row1);
 
-            GuildFacadeDto.GuildWithMemberCount guildWithCount = new GuildFacadeDto.GuildWithMemberCount(
+            GuildWithMemberCount guildWithCount = new GuildWithMemberCount(
                 guildId, "테스트길드", "https://example.com/guild.jpg", 5, 10
             );
 
@@ -592,28 +566,18 @@ class HomeServiceTest {
             List<Object[]> topGainers = new ArrayList<>();
             topGainers.add(row1);
 
-            Title leftTitle = Title.builder()
-                .name("용감한")
-                .nameEn("Brave")
-                .nameAr("شجاع")
-                .rarity(TitleRarity.RARE)
-                .positionType(TitlePosition.LEFT)
-                .build();
-            setId(leftTitle, 1L);
-
-            UserTitle leftUserTitle = UserTitle.builder()
-                .userId(testUserId)
-                .title(leftTitle)
-                .isEquipped(true)
-                .equippedPosition(TitlePosition.LEFT)
-                .build();
+            UserTitleDto leftUserTitle = new UserTitleDto(
+                1L, testUserId, 1L, "용감한", "Brave", "شجاع",
+                null, null, null, TitleRarity.RARE, TitlePosition.LEFT,
+                null, null, true, TitlePosition.LEFT, null
+            );
 
             when(gamificationQueryFacadeService.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
             when(userRepository.findAllById(List.of(testUserId))).thenReturn(List.of(testUser));
             when(gamificationQueryFacadeService.getUserLevelMap(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, 5));
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserIds(List.of(testUserId)))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserIds(List.of(testUserId)))
                 .thenReturn(Map.of(testUserId, List.of(leftUserTitle)));
 
             // when
@@ -637,28 +601,18 @@ class HomeServiceTest {
             List<Object[]> autoGainers = new ArrayList<>();
             autoGainers.add(row1);
 
-            Title rightTitle = Title.builder()
-                .name("전사")
-                .nameEn("Warrior")
-                .nameAr("محارب")
-                .rarity(TitleRarity.LEGENDARY)
-                .positionType(TitlePosition.RIGHT)
-                .build();
-            setId(rightTitle, 2L);
-
-            UserTitle rightUserTitle = UserTitle.builder()
-                .userId(testUserId)
-                .title(rightTitle)
-                .isEquipped(true)
-                .equippedPosition(TitlePosition.RIGHT)
-                .build();
+            UserTitleDto rightUserTitle = new UserTitleDto(
+                2L, testUserId, 2L, "전사", "Warrior", "محارب",
+                null, null, null, TitleRarity.LEGENDARY, TitlePosition.RIGHT,
+                null, null, true, TitlePosition.RIGHT, null
+            );
 
             when(gamificationQueryFacadeService.findTopExpGainersByCategoryAndPeriod(
                 eq("운동"), any(), any(), any()))
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
             when(gamificationQueryFacadeService.getUserLevel(testUserId)).thenReturn(5);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(testUserId))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(testUserId))
                 .thenReturn(List.of(rightUserTitle));
 
             // when
@@ -694,7 +648,7 @@ class HomeServiceTest {
                 .thenReturn(autoGainers);
             when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
             when(gamificationQueryFacadeService.getUserLevel(testUserId)).thenReturn(5);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(testUserId))
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(testUserId))
                 .thenReturn(Collections.emptyList());
 
             // when

@@ -23,8 +23,8 @@ import io.pinkspider.global.event.UserLevelUpEvent;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.ActivityType;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.enums.FeedVisibility;
 import io.pinkspider.global.enums.TitleRarity;
-import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.userservice.profile.domain.dto.UserProfileCache;
+import io.pinkspider.global.facade.UserQueryFacade;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,23 +42,23 @@ class FeedProjectionEventListenerTest {
     private FeedCommandService feedCommandService;
 
     @Mock
-    private UserQueryFacadeService userQueryFacadeService;
+    private UserQueryFacade userQueryFacadeService;
 
     @InjectMocks
     private FeedProjectionEventListener feedProjectionEventListener;
 
     private static final String TEST_USER_ID = "test-user-123";
     private static final String REQUESTER_USER_ID = "requester-user-456";
-    private UserProfileCache testProfile;
-    private UserProfileCache requesterProfile;
+    private UserProfileInfo testProfile;
+    private UserProfileInfo requesterProfile;
 
     @BeforeEach
     void setUp() {
-        testProfile = new UserProfileCache(
+        testProfile = new UserProfileInfo(
             TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg",
             10, "초보 모험가", TitleRarity.COMMON, "#FFFFFF"
         );
-        requesterProfile = new UserProfileCache(
+        requesterProfile = new UserProfileInfo(
             REQUESTER_USER_ID, "요청자유저", "https://example.com/requester.jpg",
             5, "견습생", TitleRarity.COMMON, "#CCCCCC"
         );

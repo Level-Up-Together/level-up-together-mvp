@@ -8,12 +8,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpData;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpGuildResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonMvpPlayerResponse;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.api.dto.SeasonResponse;
+import io.pinkspider.global.facade.dto.SeasonDto;
+import io.pinkspider.global.facade.dto.SeasonMvpDataDto;
+import io.pinkspider.global.facade.dto.SeasonMvpGuildDto;
+import io.pinkspider.global.facade.dto.SeasonMvpPlayerDto;
 import io.pinkspider.leveluptogethermvp.gamificationservice.season.application.SeasonRankingService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.enums.SeasonStatus;
 import io.pinkspider.leveluptogethermvp.bffservice.api.dto.HomeDataResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryService;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildResponse;
@@ -83,10 +82,10 @@ class BffHomeServiceTest {
     private MissionCategoryResponse testCategoryResponse;
     private GuildResponse testGuildResponse;
     private NoticeResponse testNoticeResponse;
-    private SeasonResponse testSeasonResponse;
-    private SeasonMvpPlayerResponse testSeasonMvpPlayerResponse;
-    private SeasonMvpGuildResponse testSeasonMvpGuildResponse;
-    private SeasonMvpData testSeasonMvpData;
+    private SeasonDto testSeasonDto;
+    private SeasonMvpPlayerDto testSeasonMvpPlayerDto;
+    private SeasonMvpGuildDto testSeasonMvpGuildDto;
+    private SeasonMvpDataDto testSeasonMvpData;
 
     @BeforeEach
     void setUp() {
@@ -163,7 +162,7 @@ class BffHomeServiceTest {
             .createdAt(LocalDateTime.now())
             .build();
 
-        testSeasonResponse = new SeasonResponse(
+        testSeasonDto = new SeasonDto(
             1L,
             "2024 윈터 시즌",
             "겨울 시즌 이벤트입니다.",
@@ -171,11 +170,11 @@ class BffHomeServiceTest {
             LocalDateTime.now().plusDays(7),
             1L,
             "윈터 마스터",
-            SeasonStatus.ACTIVE,
+            "ACTIVE",
             "진행중"
         );
 
-        testSeasonMvpPlayerResponse = SeasonMvpPlayerResponse.of(
+        testSeasonMvpPlayerDto = new SeasonMvpPlayerDto(
             testUserId,
             "테스터",
             "https://example.com/profile.jpg",
@@ -190,7 +189,7 @@ class BffHomeServiceTest {
             1
         );
 
-        testSeasonMvpGuildResponse = SeasonMvpGuildResponse.of(
+        testSeasonMvpGuildDto = new SeasonMvpGuildDto(
             1L,
             "테스트 길드",
             "https://example.com/guild.jpg",
@@ -200,10 +199,10 @@ class BffHomeServiceTest {
             1
         );
 
-        testSeasonMvpData = SeasonMvpData.of(
-            testSeasonResponse,
-            List.of(testSeasonMvpPlayerResponse),
-            List.of(testSeasonMvpGuildResponse)
+        testSeasonMvpData = new SeasonMvpDataDto(
+            testSeasonDto,
+            List.of(testSeasonMvpPlayerDto),
+            List.of(testSeasonMvpGuildDto)
         );
     }
 
@@ -229,7 +228,7 @@ class BffHomeServiceTest {
             when(guildQueryService.getMyGuilds(testUserId)).thenReturn(List.of(testGuildResponse));
             when(guildQueryService.getPublicGuilds(any(), any())).thenReturn(guildPage);
             when(noticeService.getActiveNotices()).thenReturn(List.of(testNoticeResponse));
-            when(seasonRankingService.getSeasonMvpData(any())).thenReturn(Optional.of(testSeasonMvpData));
+            when(seasonRankingService.getSeasonMvpDataDto(any())).thenReturn(Optional.of(testSeasonMvpData));
 
             // when - categoryId = null (전체 조회)
             HomeDataResponse response = bffHomeService.getHomeData(testUserId, null, 0, 20, 5, null);
@@ -533,7 +532,7 @@ class BffHomeServiceTest {
             when(guildQueryService.getMyGuilds(testUserId)).thenReturn(List.of(testGuildResponse));
             when(guildQueryService.getPublicGuilds(any(), any())).thenReturn(guildPage);
             when(noticeService.getActiveNotices()).thenReturn(List.of(testNoticeResponse));
-            when(seasonRankingService.getSeasonMvpData(any())).thenReturn(Optional.of(testSeasonMvpData));
+            when(seasonRankingService.getSeasonMvpDataDto(any())).thenReturn(Optional.of(testSeasonMvpData));
 
             // when
             HomeDataResponse response = bffHomeService.getHomeData(testUserId, null, 0, 20, 5, null);
@@ -543,7 +542,7 @@ class BffHomeServiceTest {
             assertThat(response.getCurrentSeason()).isNotNull();
             assertThat(response.getCurrentSeason().id()).isEqualTo(1L);
             assertThat(response.getCurrentSeason().title()).isEqualTo("2024 윈터 시즌");
-            assertThat(response.getCurrentSeason().status()).isEqualTo(SeasonStatus.ACTIVE);
+            assertThat(response.getCurrentSeason().status()).isEqualTo("ACTIVE");
             assertThat(response.getSeasonMvpPlayers()).hasSize(1);
             assertThat(response.getSeasonMvpPlayers().get(0).userId()).isEqualTo(testUserId);
             assertThat(response.getSeasonMvpPlayers().get(0).seasonExp()).isEqualTo(1000L);
@@ -570,7 +569,7 @@ class BffHomeServiceTest {
             when(guildQueryService.getMyGuilds(testUserId)).thenReturn(List.of(testGuildResponse));
             when(guildQueryService.getPublicGuilds(any(), any())).thenReturn(guildPage);
             when(noticeService.getActiveNotices()).thenReturn(List.of(testNoticeResponse));
-            when(seasonRankingService.getSeasonMvpData(any())).thenReturn(Optional.empty());
+            when(seasonRankingService.getSeasonMvpDataDto(any())).thenReturn(Optional.empty());
 
             // when
             HomeDataResponse response = bffHomeService.getHomeData(testUserId, null, 0, 20, 5, null);
@@ -603,7 +602,7 @@ class BffHomeServiceTest {
             when(guildQueryService.getMyGuilds(testUserId)).thenReturn(List.of(testGuildResponse));
             when(guildQueryService.getPublicGuilds(any(), any())).thenReturn(guildPage);
             when(noticeService.getActiveNotices()).thenReturn(List.of(testNoticeResponse));
-            when(seasonRankingService.getSeasonMvpData(any())).thenThrow(new RuntimeException("시즌 데이터 조회 실패"));
+            when(seasonRankingService.getSeasonMvpDataDto(any())).thenThrow(new RuntimeException("시즌 데이터 조회 실패"));
 
             // when
             HomeDataResponse response = bffHomeService.getHomeData(testUserId, null, 0, 20, 5, null);

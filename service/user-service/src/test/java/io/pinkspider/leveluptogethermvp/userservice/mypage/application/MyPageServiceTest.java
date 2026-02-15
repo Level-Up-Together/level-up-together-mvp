@@ -14,17 +14,16 @@ import static org.mockito.Mockito.when;
 import io.pinkspider.global.event.UserProfileChangedEvent;
 import io.pinkspider.global.exception.CustomException;
 import io.pinkspider.global.test.TestReflectionUtils;
-import io.pinkspider.leveluptogethermvp.gamificationservice.application.GamificationQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.TitleService.TitleChangeResult;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.Title;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserExperience;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserStats;
-import io.pinkspider.leveluptogethermvp.gamificationservice.domain.entity.UserTitle;
+import io.pinkspider.global.facade.GamificationQueryFacade;
+import io.pinkspider.global.facade.dto.TitleChangeResultDto;
+import io.pinkspider.global.facade.dto.UserExperienceDto;
+import io.pinkspider.global.facade.dto.UserStatsDto;
+import io.pinkspider.global.facade.dto.UserTitleDto;
 import io.pinkspider.global.enums.TitlePosition;
 import io.pinkspider.global.enums.TitleRarity;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.application.UserLevelConfigCacheService;
-import io.pinkspider.leveluptogethermvp.guildservice.application.GuildQueryFacadeService;
-import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildFacadeDto;
+import io.pinkspider.global.facade.GuildQueryFacade;
+import io.pinkspider.global.facade.dto.GuildMembershipInfo;
 import io.pinkspider.leveluptogethermvp.metaservice.userlevelconfig.domain.entity.UserLevelConfig;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.entity.Friendship;
 import io.pinkspider.leveluptogethermvp.userservice.friend.domain.enums.FriendshipStatus;
@@ -41,6 +40,7 @@ import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.User
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import io.pinkspider.global.domain.ContentReviewChecker;
 import io.pinkspider.global.enums.ReportTargetType;
+import io.pinkspider.global.facade.dto.UserProfileInfo;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -62,7 +62,7 @@ class MyPageServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private GamificationQueryFacadeService gamificationQueryFacadeService;
+    private GamificationQueryFacade gamificationQueryFacadeService;
 
     @Mock
     private FriendshipRepository friendshipRepository;
@@ -77,7 +77,7 @@ class MyPageServiceTest {
     private ImageModerationService imageModerationService;
 
     @Mock
-    private GuildQueryFacadeService guildQueryFacadeService;
+    private GuildQueryFacade guildQueryFacadeService;
 
     @Mock
     private ContentReviewChecker contentReviewChecker;
@@ -110,43 +110,23 @@ class MyPageServiceTest {
         return user;
     }
 
-    private Title createTestTitle(Long id, String name, TitleRarity rarity, TitlePosition positionType) {
-        Title title = Title.builder()
-            .name(name)
-            .description(name + " 설명")
-            .rarity(rarity)
-            .positionType(positionType)
-            .build();
-        setId(title, id);
-        return title;
+    private UserTitleDto createTestUserTitleDto(Long id, String userId, Long titleId, String name, TitleRarity rarity, TitlePosition positionType, boolean isEquipped, TitlePosition equippedPosition) {
+        return new UserTitleDto(
+            id, userId, titleId, name, null, null,
+            name + " 설명", null, null, rarity, positionType,
+            null, null, isEquipped, equippedPosition, null
+        );
     }
 
-    private UserTitle createTestUserTitle(Long id, String userId, Title title, boolean isEquipped, TitlePosition equippedPosition) {
-        UserTitle userTitle = UserTitle.builder()
-            .userId(userId)
-            .title(title)
-            .isEquipped(isEquipped)
-            .build();
-        setId(userTitle, id);
-        if (equippedPosition != null) {
-            TestReflectionUtils.setField(userTitle, "equippedPosition", equippedPosition);
-        }
-        return userTitle;
-    }
-
-    private UserStats createDefaultUserStats(String userId) {
-        return UserStats.builder()
-            .userId(userId)
-            .totalMissionCompletions(0)
-            .totalMissionFullCompletions(0)
-            .totalTitlesAcquired(0)
-            .rankingPoints(0L)
-            .build();
+    private UserStatsDto createDefaultUserStats(String userId) {
+        return new UserStatsDto(
+            null, userId, 0, 0, 0, 0, 0, null, 0, 0, 0L, 0, 0L, 0
+        );
     }
 
     /** getPublicProfile 공통 스텁 설정 */
     private void stubPublicProfileDefaults(String userId) {
-        when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(userId)).thenReturn(Collections.emptyList());
+        when(gamificationQueryFacadeService.getEquippedTitlesByUserId(userId)).thenReturn(Collections.emptyList());
         when(gamificationQueryFacadeService.getUserLevel(userId)).thenReturn(1);
         when(gamificationQueryFacadeService.getOrCreateUserStats(userId)).thenReturn(createDefaultUserStats(userId));
         when(gamificationQueryFacadeService.countUserTitles(userId)).thenReturn(0L);
@@ -164,10 +144,10 @@ class MyPageServiceTest {
             Users user = createTestUser(TEST_USER_ID, "테스터");
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(5);
             when(gamificationQueryFacadeService.getOrCreateUserExperience(TEST_USER_ID)).thenReturn(
-                UserExperience.builder().userId(TEST_USER_ID).currentLevel(1).currentExp(0).totalExp(0).build());
+                new UserExperienceDto(null, TEST_USER_ID, 1, 0, 0, null, null, null));
             when(gamificationQueryFacadeService.getOrCreateUserStats(TEST_USER_ID)).thenReturn(createDefaultUserStats(TEST_USER_ID));
             when(gamificationQueryFacadeService.countUserTitles(TEST_USER_ID)).thenReturn(3L);
             when(userLevelConfigCacheService.getLevelConfigByLevel(1)).thenReturn(UserLevelConfig.builder().requiredExp(100).build());
@@ -425,7 +405,7 @@ class MyPageServiceTest {
 
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -467,7 +447,7 @@ class MyPageServiceTest {
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
             when(gamificationQueryFacadeService.getUserLevel(TEST_USER_ID)).thenReturn(3);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -489,10 +469,9 @@ class MyPageServiceTest {
         @DisplayName("보유 칭호 목록을 조회한다")
         void getUserTitles_success() {
             // given
-            Title title = createTestTitle(1L, "테스트 칭호", TitleRarity.COMMON, TitlePosition.LEFT);
-            UserTitle userTitle = createTestUserTitle(1L, TEST_USER_ID, title, true, TitlePosition.LEFT);
+            UserTitleDto userTitle = createTestUserTitleDto(1L, TEST_USER_ID, 1L, "테스트 칭호", TitleRarity.COMMON, TitlePosition.LEFT, true, TitlePosition.LEFT);
 
-            when(gamificationQueryFacadeService.getUserTitleEntitiesWithTitle(TEST_USER_ID)).thenReturn(List.of(userTitle));
+            when(gamificationQueryFacadeService.getUserTitlesWithTitleInfo(TEST_USER_ID)).thenReturn(List.of(userTitle));
 
             // when
             UserTitleListResponse result = myPageService.getUserTitles(TEST_USER_ID);
@@ -507,7 +486,7 @@ class MyPageServiceTest {
         @DisplayName("칭호가 없으면 빈 목록을 반환한다")
         void getUserTitles_empty() {
             // given
-            when(gamificationQueryFacadeService.getUserTitleEntitiesWithTitle(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getUserTitlesWithTitleInfo(TEST_USER_ID)).thenReturn(Collections.emptyList());
 
             // when
             UserTitleListResponse result = myPageService.getUserTitles(TEST_USER_ID);
@@ -573,7 +552,7 @@ class MyPageServiceTest {
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
             when(gamificationQueryFacadeService.getUserLevel(TEST_USER_ID)).thenReturn(5);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -596,7 +575,7 @@ class MyPageServiceTest {
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
             when(gamificationQueryFacadeService.getUserLevel(TEST_USER_ID)).thenReturn(1);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -617,7 +596,7 @@ class MyPageServiceTest {
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
             when(gamificationQueryFacadeService.getUserLevel(TEST_USER_ID)).thenReturn(1);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -638,7 +617,7 @@ class MyPageServiceTest {
             when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
             when(userRepository.save(any(Users.class))).thenReturn(user);
             when(gamificationQueryFacadeService.getUserLevel(TEST_USER_ID)).thenReturn(1);
-            when(gamificationQueryFacadeService.getEquippedTitleEntitiesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
+            when(gamificationQueryFacadeService.getEquippedTitlesByUserId(TEST_USER_ID)).thenReturn(Collections.emptyList());
             when(friendshipRepository.countFriends(TEST_USER_ID)).thenReturn(0);
 
             // when
@@ -718,17 +697,15 @@ class MyPageServiceTest {
         @DisplayName("칭호를 변경한다")
         void changeTitles_success() {
             // given
-            Title leftTitle = createTestTitle(1L, "좌측칭호", TitleRarity.COMMON, TitlePosition.LEFT);
-            Title rightTitle = createTestTitle(2L, "우측칭호", TitleRarity.RARE, TitlePosition.RIGHT);
-            UserTitle leftUserTitle = createTestUserTitle(1L, TEST_USER_ID, leftTitle, true, TitlePosition.LEFT);
-            UserTitle rightUserTitle = createTestUserTitle(2L, TEST_USER_ID, rightTitle, true, TitlePosition.RIGHT);
+            UserTitleDto leftUserTitle = createTestUserTitleDto(1L, TEST_USER_ID, 1L, "좌측칭호", TitleRarity.COMMON, TitlePosition.LEFT, true, TitlePosition.LEFT);
+            UserTitleDto rightUserTitle = createTestUserTitleDto(2L, TEST_USER_ID, 2L, "우측칭호", TitleRarity.RARE, TitlePosition.RIGHT, true, TitlePosition.RIGHT);
 
             TitleChangeRequest request = new TitleChangeRequest();
             TestReflectionUtils.setField(request, "leftUserTitleId", 1L);
             TestReflectionUtils.setField(request, "rightUserTitleId", 2L);
 
             when(gamificationQueryFacadeService.changeTitles(TEST_USER_ID, 1L, 2L))
-                .thenReturn(new TitleChangeResult(leftUserTitle, rightUserTitle));
+                .thenReturn(new TitleChangeResultDto(leftUserTitle, rightUserTitle));
 
             // when
             TitleChangeResponse result = myPageService.changeTitles(TEST_USER_ID, request);
