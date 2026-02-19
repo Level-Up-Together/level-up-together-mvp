@@ -1,0 +1,246 @@
+package io.pinkspider.leveluptogethermvp.metaservice.application;
+
+import io.pinkspider.global.exception.CustomException;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryCreateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryResponse;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.dto.MissionCategoryUpdateRequest;
+import io.pinkspider.leveluptogethermvp.metaservice.domain.entity.MissionCategory;
+import io.pinkspider.leveluptogethermvp.metaservice.infrastructure.MissionCategoryRepository;
+import java.util.List;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+@Transactional(transactionManager = "metaTransactionManager")
+public class MissionCategoryService {
+
+    private final MissionCategoryRepository missionCategoryRepository;
+
+    /**
+     * 카테고리 생성 (Admin용)
+     */
+    @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    public MissionCategoryResponse createCategory(MissionCategoryCreateRequest request) {
+        if (missionCategoryRepository.existsByName(request.getName())) {
+            throw new CustomException("DUPLICATE_RESOURCE", "이미 존재하는 카테고리 이름입니다.");
+        }
+
+        MissionCategory category = MissionCategory.builder()
+            .name(request.getName())
+            .nameEn(request.getNameEn())
+            .nameAr(request.getNameAr())
+            .description(request.getDescription())
+            .descriptionEn(request.getDescriptionEn())
+            .descriptionAr(request.getDescriptionAr())
+            .icon(request.getIcon())
+            .displayOrder(request.getDisplayOrder())
+            .isActive(true)
+            .build();
+
+        MissionCategory saved = missionCategoryRepository.save(category);
+        log.info("Mission category created: id={}, name={}", saved.getId(), saved.getName());
+
+        return MissionCategoryResponse.from(saved);
+    }
+
+    /**
+     * 카테고리 수정 (Admin용)
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", key = "#categoryId"),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public MissionCategoryResponse updateCategory(Long categoryId, MissionCategoryUpdateRequest request) {
+        MissionCategory category = missionCategoryRepository.findById(categoryId)
+            .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+
+        if (request.getName() != null && !request.getName().equals(category.getName())) {
+            if (missionCategoryRepository.existsByName(request.getName())) {
+                throw new CustomException("DUPLICATE_RESOURCE", "이미 존재하는 카테고리 이름입니다.");
+            }
+            category.setName(request.getName());
+        }
+
+        if (request.getNameEn() != null) {
+            category.setNameEn(request.getNameEn());
+        }
+
+        if (request.getNameAr() != null) {
+            category.setNameAr(request.getNameAr());
+        }
+
+        if (request.getDescription() != null) {
+            category.setDescription(request.getDescription());
+        }
+
+        if (request.getDescriptionEn() != null) {
+            category.setDescriptionEn(request.getDescriptionEn());
+        }
+
+        if (request.getDescriptionAr() != null) {
+            category.setDescriptionAr(request.getDescriptionAr());
+        }
+
+        if (request.getIcon() != null) {
+            category.setIcon(request.getIcon());
+        }
+
+        if (request.getDisplayOrder() != null) {
+            category.setDisplayOrder(request.getDisplayOrder());
+        }
+
+        if (request.getIsActive() != null) {
+            category.setIsActive(request.getIsActive());
+        }
+
+        MissionCategory saved = missionCategoryRepository.save(category);
+        log.info("Mission category updated: id={}, name={}", saved.getId(), saved.getName());
+
+        return MissionCategoryResponse.from(saved);
+    }
+
+    /**
+     * 카테고리 삭제 (Admin용)
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", key = "#categoryId"),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public void deleteCategory(Long categoryId) {
+        MissionCategory category = missionCategoryRepository.findById(categoryId)
+            .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+
+        missionCategoryRepository.delete(category);
+        log.info("Mission category deleted: id={}, name={}", categoryId, category.getName());
+    }
+
+    /**
+     * 카테고리 비활성화 (Admin용) - 삭제 대신 비활성화
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", key = "#categoryId"),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public MissionCategoryResponse deactivateCategory(Long categoryId) {
+        MissionCategory category = missionCategoryRepository.findById(categoryId)
+            .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+
+        category.deactivate();
+        MissionCategory saved = missionCategoryRepository.save(category);
+        log.info("Mission category deactivated: id={}, name={}", categoryId, category.getName());
+
+        return MissionCategoryResponse.from(saved);
+    }
+
+    /**
+     * 모든 카테고리 조회 (Admin용 - 비활성화 포함)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public List<MissionCategoryResponse> getAllCategories() {
+        return missionCategoryRepository.findAllOrderByDisplayOrder().stream()
+            .map(MissionCategoryResponse::from)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 활성화된 카테고리만 조회 (사용자용)
+     * 1시간 TTL로 캐싱됨 (홈 화면 로딩 속도 최적화)
+     */
+    @Cacheable(value = "activeMissionCategories", key = "'all'")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public List<MissionCategoryResponse> getActiveCategories() {
+        return missionCategoryRepository.findAllActiveCategories().stream()
+            .map(MissionCategoryResponse::from)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 카테고리 단건 조회
+     */
+    @Cacheable(value = "missionCategories", key = "#categoryId")
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public MissionCategoryResponse getCategory(Long categoryId) {
+        MissionCategory category = missionCategoryRepository.findById(categoryId)
+            .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+
+        return MissionCategoryResponse.from(category);
+    }
+
+    /**
+     * 카테고리 이름으로 조회 (내부용)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public MissionCategory findByName(String name) {
+        return missionCategoryRepository.findByName(name).orElse(null);
+    }
+
+    /**
+     * 카테고리 ID로 엔티티 조회 (내부용)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public MissionCategory findById(Long categoryId) {
+        return missionCategoryRepository.findById(categoryId).orElse(null);
+    }
+
+    /**
+     * 카테고리 활성화 토글 (Admin용)
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", key = "#categoryId"),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public MissionCategoryResponse toggleActive(Long categoryId) {
+        MissionCategory category = missionCategoryRepository.findById(categoryId)
+            .orElseThrow(() -> new CustomException("NOT_FOUND", "카테고리를 찾을 수 없습니다."));
+
+        if (Boolean.TRUE.equals(category.getIsActive())) {
+            category.deactivate();
+        } else {
+            category.activate();
+        }
+
+        MissionCategory saved = missionCategoryRepository.save(category);
+        log.info("Mission category toggled: id={}, isActive={}", categoryId, saved.getIsActive());
+        return MissionCategoryResponse.from(saved);
+    }
+
+    /**
+     * 카테고리 검색 (Admin용 - 페이징 + 키워드)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public Page<MissionCategoryResponse> searchCategories(String keyword, Pageable pageable) {
+        return missionCategoryRepository.searchByKeyword(keyword, pageable)
+            .map(MissionCategoryResponse::from);
+    }
+
+    /**
+     * 카테고리 배치 조회 (크로스서비스 enrichment용)
+     */
+    @Transactional(readOnly = true, transactionManager = "metaTransactionManager")
+    public List<MissionCategoryResponse> getCategoriesByIds(List<Long> ids) {
+        return missionCategoryRepository.findAllByIdIn(ids).stream()
+            .map(MissionCategoryResponse::from)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * 모든 캐시 무효화 (Admin 캐시 재로드용)
+     */
+    @Caching(evict = {
+        @CacheEvict(value = "missionCategories", allEntries = true),
+        @CacheEvict(value = "activeMissionCategories", allEntries = true)
+    })
+    public void evictAllCaches() {
+        log.info("All mission category caches evicted");
+    }
+}

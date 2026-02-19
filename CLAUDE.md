@@ -8,14 +8,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build
 ./gradlew clean build
 
-# Run tests
+# Run ALL tests (1831 tests across 5 modules)
 ./gradlew test
 
+# Run tests by module
+./gradlew :service:test             # all service + global tests
+./gradlew :app:test                 # application context, benchmark
+
 # Run single test class
-./gradlew test --tests "io.pinkspider.leveluptogethermvp.userservice.oauth.api.Oauth2ControllerTest"
+./gradlew :service:test --tests "*.Oauth2ControllerTest"
 
 # Run single test method
-./gradlew test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+./gradlew :service:test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+
+# Parallel build
+./gradlew test --parallel
 
 # Run application
 ./gradlew bootRun                                    # Default (port 8443)
@@ -29,43 +36,85 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Test coverage report (minimum 70%)
 ./gradlew test jacocoTestReport
-# Report: build/reports/jacoco/html/index.html
+# Report: app/build/reports/jacoco/html/index.html
 ```
 
 ## Architecture Overview
 
-**Multi-Service Monolith**: Spring Boot 3.4.5 application with service modules sharing a single deployment unit but using separate databases per service. Designed for future MSA migration with Saga pattern.
+**Multi-Service Monolith**: Spring Boot 3.4.5 application organized as a Gradle multi-module project (2 modules +
+composite build). Services share a single deployment unit but use separate databases per service. Designed for future
+MSA migration with Saga pattern.
 
-### Service Modules (`src/main/java/io/pinkspider/leveluptogethermvp/`)
+### Gradle Multi-Module Structure
 
-| Service | Database | Purpose |
-|---------|----------|---------|
-| `userservice` | user_db | OAuth2 authentication (Google, Kakao, Apple), JWT tokens, profiles, friends, quests |
-| `missionservice` | mission_db | Mission definition, progress tracking, Saga orchestration, mission book, daily mission instances (pinned missions) |
-| `guildservice` | guild_db | Guild creation/management, members, experience/levels, bulletin board, chat, territory, invitations |
-| `metaservice` | meta_db | Common codes, calendar holidays, Redis-cached metadata, level configuration |
-| `feedservice` | feed_db | Activity feed, likes, comments, feed visibility management |
-| `notificationservice` | notification_db | Push notifications, notification preferences, notification management |
-| `adminservice` | admin_db | Home banners, featured content (players, guilds, feeds) |
-| `gamificationservice` | gamification_db | Titles, achievements, user stats, experience/levels, attendance tracking, events, seasons |
-| `bffservice` | - | Backend-for-Frontend API aggregation, unified search |
-| `loggerservice` | MongoDB | Event logging with MongoDB and Kafka |
-| `noticeservice` | - | Notice/announcement management (layered: api, application, core, domain) |
-| `profanity` | - | Profanity detection and validation (used across services) |
-| `supportservice` | - | Customer support and report handling (api, application, core, report) |
+```
+level-up-together-mvp/
+├── settings.gradle                    # 2 modules: service, app + includeBuild platform
+├── build.gradle                       # Root: common settings, BOM, -parameters flag
+├── service/build.gradle               # ALL 12 services + global infra (single compilation, multi-srcDirs)
+│   ├── src/main/java/                 # Global infra (datasource, security, profanity, translation 등)
+│   ├── shared-test/src/test/          # Shared test utils (ControllerTestConfig, MockUtil)
+│   ├── user-service/src/main/java/
+│   ├── guild-service/src/main/java/
+│   ├── ... (12 directories)
+│   └── support-service/src/main/java/
+└── app/build.gradle                   # Bootstrap + DGS codegen + JaCoCo
+    ├── src/main/java/                 # LevelUpTogetherMvpApplication.java
+    ├── src/main/resources/            # All config files, schemas, keystores
+    └── src/test/java/                 # @SpringBootTest tests only (3 files)
+```
 
-### Global Infrastructure (`src/main/java/io/pinkspider/global/`)
+**Platform shared library** (`../level-up-together-platform`): `includeBuild`로 IDE에서 소스 편집 가능. CI에서는 GitHub Packages
+Maven artifact 사용.
 
-- **Multi-datasource**: Separate databases with Hikari pooling (`io.pinkspider.global.config.datasource`)
-- **Security**: JWT filter (`JwtAuthenticationFilter`), OAuth2 providers
-- **Caching**: Redis with Lettuce client (two templates: `redisTemplateForString`, `redisTemplateForObject`)
-- **Messaging**: Kafka topics (loggerTopic, httpLoggerTopic, alimTalkTopic, appPushTopic, emailTopic, userCommunicationTopic)
-- **Events**: Spring Events for cross-service communication (`io.pinkspider.global.event`)
-- **Exception Handling**: Extend `CustomException` from `io.pinkspider.global.exception`
-- **Saga Pattern**: `io.pinkspider.global.saga` - 분산 트랜잭션 관리 (MSA 전환 대비)
-- **Rate Limiting**: Resilience4j rate limiter (`io.pinkspider.global.config.RateLimiterConfig`)
-- **Translation**: Google Translation API integration (`io.pinkspider.global.translation`)
-- **Monitoring**: Actuator at `/showmethemoney`
+- `lut-platform-kernel` — 순수 공유 타입, audit entity, API result, enums
+- `lut-platform-infra` — 공통 Spring infra (Redis, security, handler 등)
+- `lut-platform-saga` — Saga 프레임워크 + SagaDataSourceConfig
+
+**Why single service module**: Circular dependencies between services (user↔guild, user↔gamification, user↔support,
+guild↔gamification) prevent independent Gradle modules. Directories are separated for logical boundaries, compiled as
+one unit via `sourceSets.main.java.srcDirs`.
+
+### Service Modules (`service/{name}/src/main/java/io/pinkspider/leveluptogethermvp/`)
+
+| Service               | Database        | Purpose                                                                                                            |
+|-----------------------|-----------------|--------------------------------------------------------------------------------------------------------------------|
+| `userservice`         | user_db         | OAuth2 authentication (Google, Kakao, Apple), JWT tokens, profiles, friends, quests                                |
+| `missionservice`      | mission_db      | Mission definition, progress tracking, Saga orchestration, mission book, daily mission instances (pinned missions) |
+| `guildservice`        | guild_db        | Guild creation/management, members, experience/levels, bulletin board, territory, invitations                      |
+| `chatservice`         | chat_db         | Guild chat messaging, chat participants, read status, direct messages                                              |
+| `metaservice`         | meta_db         | Common codes, calendar holidays, Redis-cached metadata, level configuration, attendance reward configuration        |
+| `feedservice`         | feed_db         | Activity feed (CQRS Read Model), likes, comments, feed visibility, FeedProjectionEventListener                     |
+| `notificationservice` | notification_db | Push notifications, notification preferences, notification management                                              |
+| `adminservice`        | admin_db        | Home banners, featured content (players, guilds, feeds)                                                            |
+| `gamificationservice` | gamification_db | Titles, achievements, user stats, experience/levels, attendance tracking, events, seasons                          |
+| `bffservice`          | -               | Backend-for-Frontend API aggregation, unified search                                                               |
+| `noticeservice`       | -               | Notice/announcement management (layered: api, application, core, domain)                                           |
+| `supportservice`      | -               | Customer support and report handling (api, application, core, report)                                              |
+
+### Global Infrastructure (`service/src/main/java/io/pinkspider/global/`)
+
+MVP 전용 인프라 코드 (platform 공유 라이브러리와 별도):
+
+- **Multi-datasource**: All 9 DataSourceProperties + DataSourceConfigs (`global.config.datasource`)
+- **Security**: SecurityConfig, OAuth2Properties, CurrentUserArgumentResolver
+- **Config**: HibernateConfig, RateLimiterConfig, WebMvcConfig, WebSocketConfig, FirebaseConfig
+- **Translation**: Google Translation API integration (`global.translation`)
+- **Profanity**: Profanity detection and validation (`leveluptogethermvp/profanity/`)
+- **Image Moderation**: ONNX-based NSFW 이미지 검증 + AOP (`global.moderation`)
+- **Messaging**: AppPushMessageProducer (Redis Streams)
+- **Rate Limiting**: PerUserRateLimit + PerUserRateLimitAspect
+- **GraphQL**: DGS context, scalars, fetchers
+- **Feign**: AdminInternalFeignClient (Admin Backend 연동)
+
+### Platform Shared Library (`level-up-together-platform` 별도 레포)
+
+`includeBuild`로 IDE에서 소스 편집 가능. 공통 인프라:
+
+- **kernel**: ApiResult, ApiStatus, CustomException, Base Entity, Domain Events, Enums, Utils, **Facade 인터페이스** (UserQueryFacade, GuildQueryFacade, GamificationQueryFacade)
+- **infra**: RedisConfig, AsyncConfig, JpaAuditingConfig, QueryDslConfig, JwtAuthenticationFilter, RestExceptionHandler,
+  CryptoConverter
+- **saga**: SagaOrchestrator, AbstractSagaStep, SagaDataSourceConfig
 
 ### Transaction Manager (Critical)
 
@@ -74,28 +123,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```java
 // GuildService 예시
 @Transactional(transactionManager = "guildTransactionManager")
-public void updateGuild(...) { ... }
+public void updateGuild(...) { ...}
 
 // MissionService 예시
 @Transactional(transactionManager = "missionTransactionManager")
-public void updateMission(...) { ... }
+public void updateMission(...) { ...}
 ```
 
-| Service | Transaction Manager |
-|---------|---------------------|
-| userservice | `userTransactionManager` (Primary) |
-| missionservice | `missionTransactionManager` |
-| guildservice | `guildTransactionManager` |
-| metaservice | `metaTransactionManager` |
-| feedservice | `feedTransactionManager` |
-| notificationservice | `notificationTransactionManager` |
-| adminservice | `adminTransactionManager` |
-| gamificationservice | `gamificationTransactionManager` |
-| saga | `sagaTransactionManager` |
+| Service             | Transaction Manager                |
+|---------------------|------------------------------------|
+| userservice         | `userTransactionManager` (Primary) |
+| missionservice      | `missionTransactionManager`        |
+| guildservice        | `guildTransactionManager`          |
+| chatservice         | `chatTransactionManager`           |
+| metaservice         | `metaTransactionManager`           |
+| feedservice         | `feedTransactionManager`           |
+| notificationservice | `notificationTransactionManager`   |
+| adminservice        | `adminTransactionManager`          |
+| gamificationservice | `gamificationTransactionManager`   |
+| saga                | `sagaTransactionManager`           |
 
 ### Service Layer Pattern
 
 Each service module follows a consistent layered structure:
+
 - `api/` - REST controllers returning `ApiResult<T>` wrapper
 - `application/` - Business logic services with `@Transactional`
 - `core/` - Core domain logic (some services use this instead of or alongside `application/`)
@@ -104,24 +155,64 @@ Each service module follows a consistent layered structure:
 - `scheduler/` - Scheduled batch jobs (optional)
 - `saga/` - Saga orchestration steps (optional)
 
-Note: Some services vary slightly (e.g., `feedservice` has no `api/` layer, `noticeservice`/`supportservice` use `core/` instead of `application/`).
+Note: Some services vary slightly (e.g., `noticeservice`/`supportservice` use `core/` instead of `application/`).
+`feedservice` follows CQRS pattern with `FeedQueryService` (read) + `FeedCommandService` (write).
+
+### Cross-Service Boundary Rules (MSA 준비)
+
+**다른 서비스의 DB에 직접 접근(Repository import) 금지** — 반드시 Facade 인터페이스를 통해 접근:
+
+```java
+// BAD — 다른 서비스의 Repository 또는 Service 직접 사용
+@Service
+public class MyPageService {
+    private final UserTitleRepository userTitleRepository; // gamification_db 직접 접근
+    private final TitleService titleService;               // 구체 서비스 직접 의존
+}
+
+// GOOD — Facade 인터페이스를 통해 접근
+@Service
+public class MyPageService {
+    private final GamificationQueryFacade gamificationQueryFacade;
+}
+```
+
+**Facade 인터페이스** (`lut-platform-kernel`에 정의, 각 서비스에서 구현):
+
+| Facade                      | 구현체                              | 주요 용도                         |
+|-----------------------------|-----------------------------------|-------------------------------|
+| `UserQueryFacade`           | `UserQueryFacadeService`          | 프로필, 닉네임, 친구 관계, 존재 확인       |
+| `GuildQueryFacade`          | `GuildQueryFacadeService`         | 길드 정보, 멤버십, 권한 체크, 경험치       |
+| `GamificationQueryFacade`   | `GamificationQueryFacadeService`  | 레벨, 칭호, 업적, 통계, 경험치, 시즌     |
+
+**Facade DTO**: `io.pinkspider.global.facade.dto` 패키지에 서비스 간 전달용 DTO 정의
+(예: `UserProfileInfo`, `GuildBasicInfo`, `TitleInfoDto`, `SeasonDto` 등 22개)
+
+**현재 적용 완료:**
+- 전체 서비스 간 직접 의존 → Facade 전환 완료 (Phase 3~5)
+- Entity/Enum import는 현행 유지 (MSA 전환 시 DTO/common 라이브러리로 교체 예정)
 
 ### API Response Format
 
 All REST endpoints return `ApiResult<T>` from `io.pinkspider.global.api`:
+
 ```json
 {
   "code": "000000",
   "message": "success",
-  "value": { ... }
+  "value": {
+    ...
+  }
 }
 ```
 
 ### Exception Handling
 
 Custom exceptions should extend `CustomException`:
+
 ```java
 public class YourServiceException extends CustomException {
+
     public YourServiceException() {
         super("XXXXXX", "Error message");
     }
@@ -149,13 +240,32 @@ public class YourServiceException extends CustomException {
 
 ## Testing
 
+### Test Distribution (1831 tests across 5 modules)
+
+| Module            | Tests | Content                                              |
+|-------------------|-------|------------------------------------------------------|
+| `platform:kernel` | 39    | util tests                                           |
+| `platform:infra`  | 168   | resolver, validation, profanity, crypto, translation |
+| `platform:saga`   | 29    | saga framework tests                                 |
+| `service`         | 1583  | all service unit + controller tests (multi-srcDirs)  |
+| `app`             | 12    | ApplicationTests, benchmark, TestDataSourceConfig    |
+
+### Shared Test Utilities
+
+- `kernel/src/testFixtures/` → `TestReflectionUtils` (shared via `java-test-fixtures` plugin)
+- `service/shared-test/src/test/java/` → `TestApplication`, `ControllerTestConfig`, `BaseTestController`, `MockUtil`
+- `service/shared-test/src/test/resources/application.yml` → `spring.cloud.config.enabled: false`
+
 ### Test Fixtures
-JSON fixtures in `src/test/resources/fixture/{servicename}/` loaded via `MockUtil`:
+
+JSON fixtures in `service/{name}/src/test/resources/fixture/{servicename}/` loaded via `MockUtil`:
+
 ```java
-MockUtil.readJsonFileToClass("fixture/userservice/oauth/mockCreateJwtResponseDto.json", CreateJwtResponseDto.class);
+MockUtil.readJsonFileToClass("fixture/userservice/oauth/mockCreateJwtResponseDto.json",CreateJwtResponseDto .class);
 ```
 
-### Controller Tests
+### Controller Tests (in `:service` module)
+
 ```java
 @WebMvcTest(controllers = YourController.class, excludeAutoConfiguration = {...})
 @Import(ControllerTestConfig.class)
@@ -164,10 +274,13 @@ MockUtil.readJsonFileToClass("fixture/userservice/oauth/mockCreateJwtResponseDto
 @ActiveProfiles("test")
 ```
 
-### Unit Tests (Service Layer)
+### Unit Tests (Service Layer, in `:service` module)
+
 ```java
+
 @ExtendWith(MockitoExtension.class)
 class YourServiceTest {
+
     @Mock
     private YourRepository repository;
 
@@ -187,12 +300,15 @@ class YourServiceTest {
 }
 ```
 
-### Integration Tests
+### Integration Tests (in `:app` module — needs full application context)
+
 ```java
+
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional(transactionManager = "yourTransactionManager")
 class YourIntegrationTest {
+
     @Autowired
     private YourService service;
 }
@@ -209,10 +325,13 @@ class YourIntegrationTest {
 ## Event-Driven 패턴
 
 ### 이벤트 발행
+
 ```java
+
 @Service
 @RequiredArgsConstructor
 public class YourService {
+
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(transactionManager = "yourTransactionManager")
@@ -224,7 +343,9 @@ public class YourService {
 ```
 
 ### 이벤트 수신
+
 ```java
+
 @Component
 @RequiredArgsConstructor
 public class YourEventListener {
@@ -237,23 +358,43 @@ public class YourEventListener {
 ```
 
 ### 주요 이벤트 흐름
-| 발행 서비스 | 이벤트 | 수신 리스너 | 처리 내용 |
-|------------|--------|------------|----------|
-| GuildService | `GuildJoinedEvent` | `AchievementEventListener` | 길드 가입 업적 체크 |
-| GuildService | `GuildInvitationEvent` | `NotificationEventListener` | 초대 알림 발송 |
-| FriendService | `FriendRequestAcceptedEvent` | `NotificationEventListener` | 친구 수락 알림 |
-| GamificationService | `TitleAcquiredEvent` | `NotificationEventListener` | 칭호 획득 알림 |
-| GamificationService | `AchievementCompletedEvent` | `NotificationEventListener` | 업적 달성 알림 |
-| MissionService | `MissionStateChangedEvent` | `MissionStateHistoryEventListener` | 미션 상태 이력 저장 |
+
+| 발행 서비스                 | 이벤트                                | 수신 리스너                               | 처리 내용                  |
+|------------------------|------------------------------------|--------------------------------------|------------------------|
+| GuildService           | `GuildJoinedEvent`                 | `AchievementEventListener`           | 길드 가입 업적 체크            |
+| GuildService           | `GuildJoinedEvent`                 | `FeedProjectionEventListener`        | 길드 가입 피드 생성            |
+| GuildService           | `GuildCreatedEvent`                | `FeedProjectionEventListener`        | 길드 창설 피드 생성            |
+| GuildService           | `GuildInvitationEvent`             | `NotificationEventListener`          | 초대 알림 발송               |
+| GuildExperienceService | `GuildLevelUpEvent`                | `FeedProjectionEventListener`        | 길드 레벨업 피드 생성           |
+| FriendService          | `FriendRequestAcceptedEvent`       | `NotificationEventListener`          | 친구 수락 알림               |
+| FriendService          | `FriendRequestAcceptedEvent`       | `FeedProjectionEventListener`        | 친구 추가 피드 생성 (양쪽)       |
+| FriendService          | `FriendRequestAcceptedEvent`       | `UserStatsCounterEventListener`      | friendCount 증가 + 업적 체크  |
+| FriendService          | `FriendRemovedEvent`               | `UserStatsCounterEventListener`      | friendCount 감소 (양쪽)     |
+| GamificationService    | `TitleAcquiredEvent`               | `NotificationEventListener`          | 칭호 획득 알림               |
+| GamificationService    | `TitleAcquiredEvent`               | `FeedProjectionEventListener`        | 칭호 획득 피드 생성            |
+| GamificationService    | `AchievementCompletedEvent`        | `NotificationEventListener`          | 업적 달성 알림               |
+| GamificationService    | `AchievementCompletedEvent`        | `FeedProjectionEventListener`        | 업적 달성 피드 생성            |
+| GamificationService    | `TitleEquippedEvent`               | `FeedProjectionEventListener`        | 칭호 변경 피드 업데이트          |
+| UserExperienceService  | `UserLevelUpEvent`                 | `FeedProjectionEventListener`        | 레벨업 피드 생성              |
+| UserExperienceService  | `UserLevelUpEvent`                 | `UserLevelUpProfileSyncListener`     | 유저 프로필 레벨 동기화          |
+| AttendanceService      | `AttendanceStreakEvent`            | `FeedProjectionEventListener`        | 연속 출석 피드 생성            |
+| MissionService         | `MissionStateChangedEvent`         | `MissionStateHistoryEventListener`   | 미션 상태 이력 저장            |
+| GuildMemberService     | `GuildMemberJoinedChatNotifyEvent` | `ChatEventListener`                  | 채팅방 입장 알림              |
+| GuildMemberService     | `GuildMemberLeftChatNotifyEvent`   | `ChatEventListener`                  | 채팅방 퇴장 알림              |
+| GuildMemberService     | `GuildMemberKickedChatNotifyEvent` | `ChatEventListener`                  | 채팅방 추방 알림              |
+| UserService            | `UserSignedUpEvent`                | `UserSignedUpEventListener`          | 기본 칭호 부여               |
+| UserService            | `UserProfileChangedEvent`          | `*ProfileSnapshotEventListener` (x4) | 비정규화 닉네임 동기화 (chat/feed/guild/mission) |
+| FeedCommandService     | `FeedLikedEvent`                   | `UserStatsCounterEventListener`      | likesReceived 증가 + 업적 체크 |
+| FeedCommandService     | `FeedUnlikedEvent`                 | `UserStatsCounterEventListener`      | likesReceived 감소        |
 
 ## Redis Caching
 
-| 캐시 서비스 | 캐시 키 | TTL |
-|------------|--------|-----|
-| `UserProfileCacheService` | `userProfile:{userId}` | 5분 |
-| `FriendCacheService` | `friendIds:{userId}` | 10분 |
-| `TitleService` | `userTitleInfo:{userId}` | 5분 |
-| `MissionCategoryService` | `missionCategories:{categoryId}` | 1시간 |
+| 캐시 서비스                    | 캐시 키                             | TTL |
+|---------------------------|----------------------------------|-----|
+| `UserProfileCacheService` | `userProfile:{userId}`           | 5분  |
+| `FriendCacheService`      | `friendIds:{userId}`             | 10분 |
+| `TitleService`            | `userTitleInfo:{userId}`         | 5분  |
+| `MissionCategoryService`  | `missionCategories:{categoryId}` | 1시간 |
 
 ## Saga Pattern (Mission Completion 예시)
 
@@ -272,7 +413,9 @@ missionservice/saga/
 ```
 
 ### Saga Step 구현
+
 ```java
+
 @Component
 public class YourStep extends AbstractSagaStep<YourContext> {
 
@@ -299,76 +442,92 @@ public class YourStep extends AbstractSagaStep<YourContext> {
 
 `http/` 폴더에 IntelliJ HTTP Client 형식의 API 테스트 파일:
 
-| 파일 | 설명 |
-|------|------|
-| `oauth-jwt.http` | OAuth2 로그인, JWT 토큰 관리, 모바일 소셜 로그인 |
-| `mission.http` | 미션 CRUD, 참가자, 실행 추적, 캘린더 |
-| `guild.http` | 길드 관리, 채팅, 게시판, 거점, DM |
-| `activity-feed.http` | 피드, 좋아요, 댓글, 검색 |
-| `friend.http` | 친구 요청/수락/거절/차단 |
-| `mypage.http` | 프로필, 닉네임, 칭호 관리 |
-| `achievement.http` | 업적, 칭호, 레벨 랭킹 |
-| `attendance.http` | 출석 체크 |
-| `notification.http` | 알림 관리, 읽음 처리 |
-| `device-token.http` | FCM 토큰 등록/삭제 |
-| `event.http` | 이벤트 API |
-| `bff.http` | BFF 홈, 통합 검색, 시즌 |
-| `home.http` | 홈 배너, 추천 콘텐츠 |
-| `meta.http` | 메타데이터, 공통 코드 |
-| `user-terms.http` | 약관 동의 |
-| `user-experience.http` | 경험치, 레벨 |
-| `guild-dm.http` | 길드 DM (다이렉트 메시지) |
-| `test-login.http` | 테스트 로그인 |
+| 파일                     | 설명                                |
+|------------------------|-----------------------------------|
+| `oauth-jwt.http`       | OAuth2 로그인, JWT 토큰 관리, 모바일 소셜 로그인 |
+| `mission.http`         | 미션 CRUD, 참가자, 실행 추적, 캘린더          |
+| `guild.http`           | 길드 관리, 게시판, 거점                    |
+| `guild-chat.http`      | 길드 채팅 (메시지, 참여자, 읽음)              |
+| `activity-feed.http`   | 피드, 좋아요, 댓글, 검색                   |
+| `friend.http`          | 친구 요청/수락/거절/차단                    |
+| `mypage.http`          | 프로필, 닉네임, 칭호 관리                   |
+| `achievement.http`     | 업적, 칭호, 레벨 랭킹                     |
+| `attendance.http`      | 출석 체크                             |
+| `notification.http`    | 알림 관리, 읽음 처리                      |
+| `device-token.http`    | FCM 토큰 등록/삭제                      |
+| `event.http`           | 이벤트 API                           |
+| `bff.http`             | BFF 홈, 통합 검색, 시즌                  |
+| `home.http`            | 홈 배너, 추천 콘텐츠                      |
+| `meta.http`            | 메타데이터, 공통 코드                      |
+| `user-terms.http`      | 약관 동의                             |
+| `user-experience.http` | 경험치, 레벨                           |
+| `guild-dm.http`        | 길드 DM (다이렉트 메시지)                  |
+| `test-login.http`      | 테스트 로그인                           |
 
 환경 설정: `http/http-client.env.json`
+
 ```json
 {
-  "dev": { "baseUrl": "https://dev-api.level-up-together.com" },
-  "local": { "baseUrl": "https://local.level-up-together.com:8443" },
-  "test": { "baseUrl": "http://localhost:18080" }
+  "dev": {
+    "baseUrl": "https://dev-api.level-up-together.com"
+  },
+  "local": {
+    "baseUrl": "https://local.level-up-together.com:8443"
+  },
+  "test": {
+    "baseUrl": "http://localhost:18080"
+  }
 }
 ```
 
 ## Configuration Profiles
 
-| 프로필 | 설명 |
-|--------|------|
-| `application.yml` | Default configuration |
-| `application-test.yml` | H2 databases, test Kafka (port 18080) |
-| `application-unit-test.yml` | Unit test configuration |
-| `application-push-test.yml` | Push notification test configuration |
-| `application-local.yml` | Config server integration |
-| `application-dev.yml` / `application-prod.yml` | Environment-specific |
+| 프로필                                            | 설명                                    |
+|------------------------------------------------|---------------------------------------|
+| `application.yml`                              | Default configuration                 |
+| `application-test.yml`                         | H2 databases, test Kafka (port 18080) |
+| `application-unit-test.yml`                    | Unit test configuration               |
+| `application-push-test.yml`                    | Push notification test configuration  |
+| `application-local.yml`                        | Config server integration             |
+| `application-dev.yml` / `application-prod.yml` | Environment-specific                  |
 
-Note: Config files are located in `src/main/resources/config/`, not the root of `resources/`.
+Note: Config files are located in `app/src/main/resources/config/`, not the root of `resources/`.
 
 ## 관련 프로젝트
 
-| 프로젝트 | 경로 |
-|---------|------|
-| Admin Backend | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-mvp-admin` |
-| Admin Frontend | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-admin-frontend` |
-| Product Frontend | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-frontend` |
-| SQL Scripts | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-sql/queries` |
-| Config Server | `/Users/pink-spider/Code/github/Level-Up-Together/config-repository` |
-| React Native App | `/Users/pink-spider/Code/github/Level-Up-Together/LevelUpTogetherReactNative` |
+| 프로젝트              | 경로                                                                                  |
+|-------------------|-------------------------------------------------------------------------------------|
+| Admin Backend     | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-mvp-admin`      |
+| Admin Frontend    | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-admin-frontend` |
+| Product Backend   | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-mvp`            |
+| Product Frontend  | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-frontend`       |
+| SQL Scripts       | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-sql/queries`    |
+| Config Server     | `/Users/pink-spider/Code/github/Level-Up-Together/config-repository`                |
+| Service Discovery | `/Users/pink-spider/Code/github/Level-Up-Together/service-discovery`                |
+| React Native App  | `/Users/pink-spider/Code/github/Level-Up-Together/LevelUpTogetherReactNative`       |
 
 ## 자주 발생하는 이슈
 
 ### QueryDSL 빌드 오류
+
 `Attempt to recreate a file for type Q*` 오류 발생 시:
+
 ```bash
 ./gradlew clean compileJava
 ```
 
 ### 트랜잭션 매니저 미지정 오류
+
 데이터가 저장되지 않거나 조회되지 않는 경우, `@Transactional`에 올바른 트랜잭션 매니저가 지정되어 있는지 확인
 
 ### Integration Tests 실패
+
 SSH 터널이나 외부 서비스 연결이 필요한 테스트는 로컬에서 실패할 수 있음. `@ActiveProfiles("test")` 확인
 
 ### Race Condition (중복 키 오류) 해결 패턴
+
 동시 요청으로 인한 `DataIntegrityViolationException` (Unique constraint violation) 발생 시:
+
 ```java
 // Check-then-insert 패턴 대신 saveAndFlush + 예외 처리 사용
 private Entity getOrCreateEntity(String key) {
@@ -385,32 +544,80 @@ private Entity getOrCreateEntity(String key) {
         });
 }
 ```
-적용 사례: `AchievementService.getOrCreateUserAchievement()`, `AttendanceService.checkIn()`, `NotificationService.createNotificationWithDeduplication()`
+
+적용 사례: `AchievementService.getOrCreateUserAchievement()`, `AttendanceService.checkIn()`,
+`NotificationService.createNotificationWithDeduplication()`
+
+## Image Moderation (이미지 검증)
+
+ONNX Runtime 기반 NSFW 이미지 자동 검증 시스템 (`global.moderation`):
+
+### 아키텍처: Strategy Pattern + AOP
+
+- `@ModerateImage` 어노테이션을 메서드에 적용하면 `MultipartFile` 파라미터를 자동 탐색하여 검증
+- `ImageModerationAspect`가 `@Around` 어드바이스로 검증 실행
+- `ModerationConfig`가 `moderation.image.provider` 설정에 따라 구현체 선택
+
+### Provider 구현체
+
+| Provider         | 클래스                         | 설명                              |
+|------------------|-----------------------------|---------------------------------|
+| `none` (기본값)    | `NoOpImageModerationService`  | 비활성화 (dev/test 환경)              |
+| `onnx-nsfw`      | `OnnxNsfwModerationService`   | ONNX Runtime + OpenNSFW2 모델 ($0) |
+| `aws-rekognition` | `AwsRekognitionModerationService` | AWS Rekognition (스켈레톤)          |
+
+### 설정
+
+```yaml
+moderation:
+  image:
+    provider: onnx-nsfw   # none | onnx-nsfw | aws-rekognition
+    onnx:
+      model-path: classpath:models/nsfw.onnx
+      nsfw-threshold: 0.8
+```
+
+### 적용된 서비스
+
+- `GuildService` — 길드 이미지 업로드
+- `MyPageService` — 프로필 이미지 업로드
+- `EventController` — 이벤트 이미지 업로드
+- `PinnedMissionExecutionStrategy` / `RegularMissionExecutionStrategy` — 미션 이미지
+
+### 에러 코드
+
+부적절 이미지 감지 시: `CustomException("000010", "부적절한 이미지가 감지되었습니다.")`
 
 ## Feature-Specific Implementation Notes
 
 ### Pinned Mission (고정 미션) - Template-Instance 패턴
 
 고정 미션(`isPinned=true`)은 `DailyMissionInstance` 엔티티를 사용:
+
 - 매일 자동 생성 (스케줄러: `DailyMissionInstanceScheduler`, cron: `0 5 0 * * *`)
 - 미션 정보 스냅샷 저장 (미션 변경 시 과거 기록 보존)
 
 API 라우팅 (하위 호환성 유지):
+
 ```java
 // MissionExecutionService에서 isPinned 체크 후 분기
-if (isPinnedMission(missionId, userId)) {
-    return dailyMissionInstanceService.startInstanceByMission(...);
+if(isPinnedMission(missionId, userId)){
+    return dailyMissionInstanceService.
+
+startInstanceByMission(...);
 }
 ```
 
 ### Guild Invitation (길드 초대)
 
 비공개 길드 초대 시스템:
+
 - 초대 상태: `PENDING`, `ACCEPTED`, `REJECTED`, `CANCELLED`, `EXPIRED`
 - 만료 시간: 7일
 - 같은 카테고리의 다른 길드 가입자는 초대 불가
 
 API 엔드포인트:
+
 ```
 POST   /api/v1/guilds/{guildId}/invitations         - 초대 발송
 GET    /api/v1/users/me/guild-invitations           - 내 대기중 초대 목록

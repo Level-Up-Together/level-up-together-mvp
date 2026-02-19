@@ -3,3 +3,15 @@ plugins {
 }
 
 rootProject.name = 'level-up-together-mvp'
+
+// Platform shared library (IDE에서 소스 편집 가능하도록 composite build)
+def platformDir = file('../level-up-together-platform')
+if (platformDir.exists()) {
+    includeBuild '../level-up-together-platform'
+}
+
+// Service module (single compilation unit — services share circular deps)
+include ':service'
+
+// App (bootstrap + tests)
+include ':app'

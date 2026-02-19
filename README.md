@@ -16,16 +16,38 @@
 | **Documentation** | Spring REST Docs + OpenAPI 3.0 |
 | **Query** | QueryDSL (타입 안전 쿼리) |
 | **Resilience** | Resilience4j (Circuit Breaker) |
+| **Image Moderation** | ONNX Runtime 1.17.3 (OpenNSFW2 모델) |
 
 ## 아키텍처
 
-Multi-Service Monolith 구조로, 단일 배포 단위 내에서 서비스별로 독립된 데이터베이스를 사용합니다.
-MSA 전환을 대비하여 각 서비스가 자체 데이터베이스와 트랜잭션 매니저를 가지고 있습니다.
+Gradle Multi-Module 기반 Multi-Service Monolith 구조로, 5개 Gradle 모듈로 구성됩니다.
+단일 배포 단위 내에서 서비스별로 독립된 데이터베이스를 사용하며, MSA 전환을 대비하여 각 서비스가 자체 트랜잭션 매니저를 가지고 있습니다.
+
+### Gradle Multi-Module 구조 (2 modules + composite build)
+
+```
+level-up-together-mvp/
+├── service/       ← 12 서비스 + global infra 통합 모듈 (multi-srcDirs)
+│   ├── src/main/java/         ← Global infra (datasource, security, moderation 등)
+│   ├── user-service/src/main/java/
+│   ├── guild-service/src/main/java/
+│   └── ... (12 directories)
+└── app/           ← Bootstrap, 설정 파일, DGS codegen, JaCoCo
+
+level-up-together-platform/    ← includeBuild (별도 레포, CI에서는 GitHub Packages)
+├── kernel/    ← 순수 타입, events, Facade 인터페이스 + DTO
+├── infra/     ← Spring 인프라, security, Redis
+└── saga/      ← Saga 프레임워크
+```
+
+> **서비스 모듈이 하나인 이유**: user↔guild, user↔gamification 등 4쌍의 순환 의존이 있어 독립 Gradle 모듈로 분리 불가. 디렉토리로 논리적 경계를 유지하되 단일 컴파일 단위로 구성.
 
 **주요 아키텍처 특징:**
-- **Event-Driven**: Spring Events를 활용한 서비스 간 느슨한 결합
+- **Facade Pattern**: 서비스 간 통신은 Facade 인터페이스 (`UserQueryFacade`, `GuildQueryFacade`, `GamificationQueryFacade`)를 통해 수행
+- **Event-Driven**: Spring Events를 활용한 서비스 간 느슨한 결합 + 프로필 스냅샷 동기화
 - **Redis Caching**: 자주 조회되는 데이터의 캐싱으로 성능 최적화
 - **Saga Pattern**: 분산 트랜잭션 관리 (MSA 전환 대비)
+- **Image Moderation**: ONNX 기반 NSFW 이미지 자동 검증 (AOP)
 
 ### 시스템 아키텍처
 
@@ -58,6 +80,8 @@ graph TB
             SAGA["Saga Pattern<br/>분산 트랜잭션"]
             SECURITY["JWT/OAuth2<br/>보안 필터"]
             CACHE["Redis Cache<br/>메타데이터 캐싱"]
+            MODERATION["Image Moderation<br/>ONNX NSFW 검증"]
+            FACADE["Facade Pattern<br/>서비스 간 통신"]
         end
     end
 
@@ -133,28 +157,36 @@ graph LR
     end
 
     subgraph "Infrastructure"
+        FACADE["Facade Interfaces<br/>(UserQuery/GuildQuery/GamificationQuery)"]
         SAGA["saga"]
         EVENTS["Spring Events"]
         CACHE["Redis Cache"]
     end
 
-    BFF --> USER
+    BFF -->|facade| USER
+    BFF -->|facade| GUILD
+    BFF -->|facade| GAMIF
     BFF --> MISSION
-    BFF --> GUILD
     BFF --> FEED
     BFF --> ADMIN
 
-    MISSION --> USER
-    MISSION --> FEED
+    MISSION -->|facade| USER
+    MISSION -->|facade| GUILD
+    MISSION -->|facade| GAMIF
     MISSION --> SAGA
-    MISSION -.->|event| GAMIF
+    MISSION -.->|event| FEED
 
-    GUILD -.->|event| GAMIF
+    GUILD -->|facade| USER
+    GUILD -->|facade| GAMIF
+    GUILD -.->|event| FEED
+    GUILD -.->|event| NOTIF
     GUILD --> CACHE
 
+    FEED -->|facade| USER
+    FEED -->|facade| GAMIF
     FEED --> CACHE
 
-    NOTIF --> USER
+    NOTIF -->|facade| USER
 
     USER --> META
     USER --> CACHE
@@ -162,8 +194,10 @@ graph LR
     GUILD --> META
 
     GAMIF -.->|event| NOTIF
+    GAMIF -.->|event| FEED
 
     style BFF fill:#e2e8f0,stroke:#4a5568
+    style FACADE fill:#e0f2fe,stroke:#0284c7
     style SAGA fill:#fed7d7,stroke:#c53030
     style EVENTS fill:#fef3c7,stroke:#d97706
     style CACHE fill:#dbeafe,stroke:#2563eb
@@ -179,34 +213,55 @@ graph LR
         GUILD_SVC["GuildService"]
         MISSION_SVC["MissionService"]
         FRIEND_SVC["FriendService"]
+        USER_SVC["UserService"]
+        FEED_SVC["FeedService"]
     end
 
     subgraph "Events"
         GJE["GuildJoinedEvent"]
         GME["GuildMasterAssignedEvent"]
-        FRE["FriendRequestEvent"]
+        FRE["FriendRequestAcceptedEvent"]
         MCE["MissionCompletedEvent"]
+        UPC["UserProfileChangedEvent"]
+        USE["UserSignedUpEvent"]
+        FLE["FeedLikedEvent"]
     end
 
     subgraph "Event Listeners"
         ACH_LISTENER["AchievementEventListener"]
         NOTIF_LISTENER["NotificationEventListener"]
+        FEED_LISTENER["FeedProjectionEventListener"]
+        STATS_LISTENER["UserStatsCounterEventListener"]
+        SNAPSHOT["*ProfileSnapshotEventListener<br/>(chat/feed/guild/mission)"]
+        SIGNUP_LISTENER["UserSignedUpEventListener"]
     end
 
     GUILD_SVC -->|publish| GJE
     GUILD_SVC -->|publish| GME
     FRIEND_SVC -->|publish| FRE
     MISSION_SVC -->|publish| MCE
+    USER_SVC -->|publish| UPC
+    USER_SVC -->|publish| USE
+    FEED_SVC -->|publish| FLE
 
-    GJE -->|@TransactionalEventListener| ACH_LISTENER
-    GME -->|@TransactionalEventListener| ACH_LISTENER
-    FRE -->|@TransactionalEventListener| NOTIF_LISTENER
-    MCE -->|@TransactionalEventListener| NOTIF_LISTENER
+    GJE --> ACH_LISTENER
+    GJE --> FEED_LISTENER
+    GME --> ACH_LISTENER
+    FRE --> NOTIF_LISTENER
+    FRE --> FEED_LISTENER
+    FRE --> STATS_LISTENER
+    MCE --> FEED_LISTENER
+    UPC --> SNAPSHOT
+    USE --> SIGNUP_LISTENER
+    FLE --> STATS_LISTENER
 
     style GJE fill:#fef3c7,stroke:#d97706
     style GME fill:#fef3c7,stroke:#d97706
     style FRE fill:#fef3c7,stroke:#d97706
     style MCE fill:#fef3c7,stroke:#d97706
+    style UPC fill:#fef3c7,stroke:#d97706
+    style USE fill:#fef3c7,stroke:#d97706
+    style FLE fill:#fef3c7,stroke:#d97706
 ```
 
 ### 데이터베이스 ERD
@@ -268,9 +323,10 @@ erDiagram
     meta_db {
         common_code PK
         calendar_holiday
-        level_config
+        user_level_config
         content_translation
         profanity_word
+        attendance_reward_config
     }
 
     gamification_db {
@@ -284,7 +340,6 @@ erDiagram
         user_experience
         experience_history
         attendance_record
-        attendance_reward_config
         event
         season
         season_rank_reward
@@ -318,14 +373,24 @@ erDiagram
 # 빌드
 ./gradlew clean build
 
-# 테스트 실행
+# 전체 테스트 실행 (1831 tests)
 ./gradlew test
 
-# 단일 테스트 클래스 실행
-./gradlew test --tests "io.pinkspider.leveluptogethermvp.userservice.oauth.api.Oauth2ControllerTest"
+# 모듈별 테스트 실행
+./gradlew :platform:kernel:test     # 39 tests
+./gradlew :platform:infra:test      # 168 tests
+./gradlew :platform:saga:test       # 29 tests
+./gradlew :service:test             # 1583 tests
+./gradlew :app:test                 # 12 tests
+
+# 단일 테스트 클래스 실행 (모듈 지정)
+./gradlew :service:test --tests "*.Oauth2ControllerTest"
 
 # 단일 테스트 메서드 실행
-./gradlew test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+./gradlew :service:test --tests "*.Oauth2ControllerTest.getOauth2LoginUri"
+
+# 병렬 빌드
+./gradlew test --parallel
 
 # 애플리케이션 실행 (기본 포트: 8443)
 ./gradlew bootRun
@@ -354,7 +419,7 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 # 테스트 실행 후 커버리지 리포트 생성
 ./gradlew test jacocoTestReport
 
-# 리포트 위치: build/reports/jacoco/html/index.html
+# 리포트 위치: app/build/reports/jacoco/html/index.html
 ```
 
 ## 주요 기능
@@ -416,6 +481,12 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 - 홈 화면 데이터 집계
 - 통합 검색 (피드, 미션, 사용자, 길드)
 - 다중 서비스 데이터 조합
+
+### Image Moderation (이미지 검증)
+- ONNX Runtime 기반 NSFW 이미지 자동 검증 ($0 비용)
+- `@ModerateImage` AOP 어노테이션으로 자동 적용
+- Strategy Pattern: NoOp / ONNX NSFW / AWS Rekognition (설정 전환 가능)
+- 적용 대상: 프로필 이미지, 길드 이미지, 미션 이미지, 이벤트 이미지
 
 ## 캐싱 전략
 
@@ -498,6 +569,10 @@ Redis를 활용한 캐싱으로 서비스 간 호출을 최소화하고 성능�
 ```bash
 ./gradlew clean compileJava
 ```
+
+### Spring Cloud Config 오류 (service 모듈 테스트)
+
+`ConfigDataMissingEnvironmentPostProcessor$ImportException` 발생 시, `service/shared-test/src/test/resources/application.yml`에 `spring.cloud.config.enabled: false` 설정이 있는지 확인.
 
 ### 트랜잭션 매니저 미지정 오류
 

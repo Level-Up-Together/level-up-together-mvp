@@ -1,0 +1,120 @@
+apply plugin: 'java-library'
+
+jar { enabled = true }
+
+// 11개 서비스를 하나의 컴파일 단위로 구성 (서비스 간 순환 의존성 존재)
+// adminservice는 admin-backend로 이전됨
+// 디렉토리 분리는 유지하여 논리적 서비스 경계를 표현
+sourceSets {
+    main.java.srcDirs = [
+        'src/main/java',
+        'user-service/src/main/java',
+        'guild-service/src/main/java',
+        'mission-service/src/main/java',
+        'gamification-service/src/main/java',
+        'feed-service/src/main/java',
+        'chat-service/src/main/java',
+        'meta-service/src/main/java',
+        'notification-service/src/main/java',
+        'bff-service/src/main/java',
+        'notice-service/src/main/java',
+        'support-service/src/main/java',
+    ]
+    test.java.srcDirs = [
+        'src/test/java',
+        'shared-test/src/test/java',
+        'user-service/src/test/java',
+        'guild-service/src/test/java',
+        'mission-service/src/test/java',
+        'gamification-service/src/test/java',
+        'feed-service/src/test/java',
+        'chat-service/src/test/java',
+        'meta-service/src/test/java',
+        'notification-service/src/test/java',
+        'bff-service/src/test/java',
+        'notice-service/src/test/java',
+        'support-service/src/test/java',
+    ]
+    test.resources.srcDirs = [
+        'shared-test/src/test/resources',
+        'user-service/src/test/resources',
+        'guild-service/src/test/resources',
+        'mission-service/src/test/resources',
+        'gamification-service/src/test/resources',
+        'feed-service/src/test/resources',
+        'chat-service/src/test/resources',
+        'meta-service/src/test/resources',
+        'notification-service/src/test/resources',
+        'bff-service/src/test/resources',
+        'notice-service/src/test/resources',
+        'support-service/src/test/resources',
+    ]
+}
+
+dependencies {
+    // Platform shared (external artifacts)
+    api 'io.pinkspider:lut-platform-kernel:1.0.0-SNAPSHOT'
+    api 'io.pinkspider:lut-platform-infra:1.0.0-SNAPSHOT'
+    implementation 'io.pinkspider:lut-platform-saga:1.0.0-SNAPSHOT'
+
+    // Spring starters (MVP-specific)
+    api 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    api 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    api 'org.springframework.boot:spring-boot-starter-websocket'
+    api 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // Firebase Admin SDK
+    api 'com.google.firebase:firebase-admin:9.2.0'
+
+    // Resilience4j
+    api 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'io.github.resilience4j:resilience4j-reactor'
+
+    // Netflix DGS GraphQL
+    api 'com.netflix.graphql.dgs:graphql-dgs-spring-boot-starter'
+    api 'com.netflix.graphql.dgs:graphql-dgs-extended-scalars'
+
+    // Slack SDK
+    implementation 'com.slack.api:slack-api-client:1.39.0'
+
+    // Reactor
+    implementation 'io.projectreactor:reactor-core:3.4.19'
+
+    // Gson
+    implementation 'com.google.code.gson:gson'
+
+    // QueryDSL
+    implementation "com.querydsl:querydsl-jpa:${queryDslVersion}:jakarta"
+    annotationProcessor "com.querydsl:querydsl-apt:${queryDslVersion}:jakarta"
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+    // kernel/infra의 MappedSuperclass Q-class 생성을 위해 필요
+    annotationProcessor 'io.pinkspider:lut-platform-kernel:1.0.0-SNAPSHOT'
+    annotationProcessor 'io.pinkspider:lut-platform-infra:1.0.0-SNAPSHOT'
+
+    // ONNX Runtime (이미지 모더레이션 NSFW 모델)
+    implementation 'com.microsoft.onnxruntime:onnxruntime:1.17.3'
+
+    // GeoIP (user-service)
+    implementation 'com.maxmind.geoip2:geoip2:4.2.0'
+
+    // Test
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+    testImplementation "com.epages:restdocs-api-spec-mockmvc:${restdocsApiSpecVersion}"
+    testImplementation 'com.fasterxml.jackson.module:jackson-module-mrbean:2.17.1'
+    testImplementation testFixtures('io.pinkspider:lut-platform-kernel:1.0.0-SNAPSHOT')
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
+}
+
+tasks.named('test') {
+    systemProperty 'file.encoding', 'UTF-8'
+    useJUnitPlatform {
+        excludeTags 'excluded'
+    }
+}
