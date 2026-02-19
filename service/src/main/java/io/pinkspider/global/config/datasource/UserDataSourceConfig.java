@@ -11,9 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
+import org.springframework.lang.Nullable;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -35,18 +35,19 @@ public class UserDataSourceConfig {
     private final UserDataSourceProperties properties;
     private final SshTunnel sshTunnel;
 
-    public UserDataSourceConfig(UserDataSourceProperties properties, SshTunnel sshTunnel) {
+    public UserDataSourceConfig(UserDataSourceProperties properties, @Nullable SshTunnel sshTunnel) {
         this.properties = properties;
         this.sshTunnel = sshTunnel;
     }
 
     @Bean(name = "userDataSource")
-    @DependsOn("sshTunnel")
     @Primary
     public DataSource userDataSource() {
         HikariConfig cfg = new HikariConfig();
 
-        String jdbcUrl = DataSourceUtils.replacePortInJdbcUrl(properties.getJdbcUrl(), sshTunnel.getActualLocalPort());
+        String jdbcUrl = sshTunnel != null
+            ? DataSourceUtils.replacePortInJdbcUrl(properties.getJdbcUrl(), sshTunnel.getActualLocalPort())
+            : properties.getJdbcUrl();
         log.info("User DataSource JDBC URL: {}", jdbcUrl);
 
         cfg.setJdbcUrl(jdbcUrl);

@@ -11,8 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Profile;
+import org.springframework.lang.Nullable;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
@@ -34,17 +34,18 @@ public class GuildDataSourceConfig {
     private final GuildDataSourceProperties properties;
     private final SshTunnel sshTunnel;
 
-    public GuildDataSourceConfig(GuildDataSourceProperties properties, SshTunnel sshTunnel) {
+    public GuildDataSourceConfig(GuildDataSourceProperties properties, @Nullable SshTunnel sshTunnel) {
         this.properties = properties;
         this.sshTunnel = sshTunnel;
     }
 
     @Bean(name = "guildDataSource")
-    @DependsOn("sshTunnel")
     public DataSource guildDataSource() {
         HikariConfig cfg = new HikariConfig();
 
-        String jdbcUrl = DataSourceUtils.replacePortInJdbcUrl(properties.getJdbcUrl(), sshTunnel.getActualLocalPort());
+        String jdbcUrl = sshTunnel != null
+            ? DataSourceUtils.replacePortInJdbcUrl(properties.getJdbcUrl(), sshTunnel.getActualLocalPort())
+            : properties.getJdbcUrl();
         log.info("Guild DataSource JDBC URL: {}", jdbcUrl);
 
         cfg.setJdbcUrl(jdbcUrl);
