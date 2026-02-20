@@ -17,6 +17,7 @@
 | **Query**            | QueryDSL (타입 안전 쿼리)                      |
 | **Resilience**       | Resilience4j (Circuit Breaker)           |
 | **Image Moderation** | ONNX Runtime 1.17.3 (OpenNSFW2 모델)       |
+| **Image Storage**    | AWS S3 + CloudFront CDN (prod), Local FS (dev) |
 
 ## 아키텍처
 
@@ -26,7 +27,7 @@ Gradle Multi-Module 기반 Multi-Service Monolith 구조로, 5개 Gradle 모듈�
 ### Gradle Multi-Module 구조 (2 modules + composite build)
 
 ```
-level-up-together-mvp/
+product-service/
 ├── service/       ← 12 서비스 + global infra 통합 모듈 (multi-srcDirs)
 │   ├── src/main/java/         ← Global infra (datasource, security, moderation 등)
 │   ├── user-service/src/main/java/
@@ -50,6 +51,7 @@ level-up-together-platform/    ← includeBuild (별도 레포, CI에서는 GitH
 - **Redis Caching**: 자주 조회되는 데이터의 캐싱으로 성능 최적화
 - **Saga Pattern**: 분산 트랜잭션 관리 (MSA 전환 대비)
 - **Image Moderation**: ONNX 기반 NSFW 이미지 자동 검증 (AOP)
+- **Image Storage**: prod에서 S3 + CloudFront CDN, dev에서 로컬 파일시스템 (`@Profile` 분기)
 
 ### 시스템 아키텍처
 
@@ -498,6 +500,14 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 - Strategy Pattern: NoOp / ONNX NSFW / AWS Rekognition (설정 전환 가능)
 - 적용 대상: 프로필 이미지, 길드 이미지, 미션 이미지, 이벤트 이미지
 
+### Image Storage (이미지 저장)
+
+- `@Profile` 기반 환경별 저장소 분기 (Strategy Pattern)
+- **prod**: AWS S3 (`lut-images-prod`) 업로드 + CloudFront CDN 서빙 (`images.level-up-together.com`)
+- **dev/test**: 로컬 파일시스템 + Spring MVC 리소스 핸들러
+- S3 키 패턴: `profile/`, `guild/`, `missions/`, `events/`
+- EC2 IAM Role 기반 인증 (AccessKey 불필요)
+
 ## 캐싱 전략
 
 Redis를 활용한 캐싱으로 서비스 간 호출을 최소화하고 성능을 최적화합니다.
@@ -557,8 +567,9 @@ Redis를 활용한 캐싱으로 서비스 간 호출을 최소화하고 성능�
 
 ## CI/CD
 
-- `main` 브랜치 → Production 배포 (테스트 포함)
+- `main` 브랜치 → Production 롤링 배포 (Build → S3 Upload → ALB Deregister → SSM Deploy → Register → Health Check)
 - `develop` 브랜치 → Dev 배포 (테스트 스킵)
+- EC2 2대 무중단 배포 (ALB Target Group 순차 등록/해제)
 - Swagger 문서 자동 업데이트
 - Slack 알림 연동
 

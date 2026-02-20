@@ -48,7 +48,7 @@ MSA migration with Saga pattern.
 ### Gradle Multi-Module Structure
 
 ```
-level-up-together-mvp/
+product-service/
 ├── settings.gradle                    # 2 modules: service, app + includeBuild platform
 ├── build.gradle                       # Root: common settings, BOM, -parameters flag
 ├── service/build.gradle               # ALL 12 services + global infra (single compilation, multi-srcDirs)
@@ -83,7 +83,7 @@ one unit via `sourceSets.main.java.srcDirs`.
 | `missionservice`      | mission_db      | Mission definition, progress tracking, Saga orchestration, mission book, daily mission instances (pinned missions) |
 | `guildservice`        | guild_db        | Guild creation/management, members, experience/levels, bulletin board, territory, invitations                      |
 | `chatservice`         | chat_db         | Guild chat messaging, chat participants, read status, direct messages                                              |
-| `metaservice`         | meta_db         | Common codes, calendar holidays, Redis-cached metadata, level configuration, attendance reward configuration        |
+| `metaservice`         | meta_db         | Common codes, calendar holidays, Redis-cached metadata, level configuration, attendance reward configuration       |
 | `feedservice`         | feed_db         | Activity feed (CQRS Read Model), likes, comments, feed visibility, FeedProjectionEventListener                     |
 | `notificationservice` | notification_db | Push notifications, notification preferences, notification management                                              |
 | `adminservice`        | admin_db        | Home banners, featured content (players, guilds, feeds)                                                            |
@@ -102,6 +102,7 @@ MVP 전용 인프라 코드 (platform 공유 라이브러리와 별도):
 - **Translation**: Google Translation API integration (`global.translation`)
 - **Profanity**: Profanity detection and validation (`leveluptogethermvp/profanity/`)
 - **Image Moderation**: ONNX-based NSFW 이미지 검증 + AOP (`global.moderation`)
+- **Image Storage**: S3 + CloudFront CDN (`global.config.s3`) — prod에서 S3 업로드, dev/test에서 로컬 파일시스템
 - **Messaging**: AppPushMessageProducer (Redis Streams)
 - **Rate Limiting**: PerUserRateLimit + PerUserRateLimitAspect
 - **GraphQL**: DGS context, scalars, fetchers
@@ -111,7 +112,8 @@ MVP 전용 인프라 코드 (platform 공유 라이브러리와 별도):
 
 `includeBuild`로 IDE에서 소스 편집 가능. 공통 인프라:
 
-- **kernel**: ApiResult, ApiStatus, CustomException, Base Entity, Domain Events, Enums, Utils, **Facade 인터페이스** (UserQueryFacade, GuildQueryFacade, GamificationQueryFacade)
+- **kernel**: ApiResult, ApiStatus, CustomException, Base Entity, Domain Events, Enums, Utils, **Facade 인터페이스** (
+  UserQueryFacade, GuildQueryFacade, GamificationQueryFacade)
 - **infra**: RedisConfig, AsyncConfig, JpaAuditingConfig, QueryDslConfig, JwtAuthenticationFilter, RestExceptionHandler,
   CryptoConverter
 - **saga**: SagaOrchestrator, AbstractSagaStep, SagaDataSourceConfig
@@ -166,6 +168,7 @@ Note: Some services vary slightly (e.g., `noticeservice`/`supportservice` use `c
 // BAD — 다른 서비스의 Repository 또는 Service 직접 사용
 @Service
 public class MyPageService {
+
     private final UserTitleRepository userTitleRepository; // gamification_db 직접 접근
     private final TitleService titleService;               // 구체 서비스 직접 의존
 }
@@ -173,22 +176,24 @@ public class MyPageService {
 // GOOD — Facade 인터페이스를 통해 접근
 @Service
 public class MyPageService {
+
     private final GamificationQueryFacade gamificationQueryFacade;
 }
 ```
 
 **Facade 인터페이스** (`lut-platform-kernel`에 정의, 각 서비스에서 구현):
 
-| Facade                      | 구현체                              | 주요 용도                         |
-|-----------------------------|-----------------------------------|-------------------------------|
-| `UserQueryFacade`           | `UserQueryFacadeService`          | 프로필, 닉네임, 친구 관계, 존재 확인       |
-| `GuildQueryFacade`          | `GuildQueryFacadeService`         | 길드 정보, 멤버십, 권한 체크, 경험치       |
-| `GamificationQueryFacade`   | `GamificationQueryFacadeService`  | 레벨, 칭호, 업적, 통계, 경험치, 시즌     |
+| Facade                    | 구현체                              | 주요 용도                   |
+|---------------------------|----------------------------------|-------------------------|
+| `UserQueryFacade`         | `UserQueryFacadeService`         | 프로필, 닉네임, 친구 관계, 존재 확인  |
+| `GuildQueryFacade`        | `GuildQueryFacadeService`        | 길드 정보, 멤버십, 권한 체크, 경험치  |
+| `GamificationQueryFacade` | `GamificationQueryFacadeService` | 레벨, 칭호, 업적, 통계, 경험치, 시즌 |
 
 **Facade DTO**: `io.pinkspider.global.facade.dto` 패키지에 서비스 간 전달용 DTO 정의
 (예: `UserProfileInfo`, `GuildBasicInfo`, `TitleInfoDto`, `SeasonDto` 등 22개)
 
 **현재 적용 완료:**
+
 - 전체 서비스 간 직접 의존 → Facade 전환 완료 (Phase 3~5)
 - Entity/Enum import는 현행 유지 (MSA 전환 시 DTO/common 라이브러리로 교체 예정)
 
@@ -359,33 +364,33 @@ public class YourEventListener {
 
 ### 주요 이벤트 흐름
 
-| 발행 서비스                 | 이벤트                                | 수신 리스너                               | 처리 내용                  |
-|------------------------|------------------------------------|--------------------------------------|------------------------|
-| GuildService           | `GuildJoinedEvent`                 | `AchievementEventListener`           | 길드 가입 업적 체크            |
-| GuildService           | `GuildJoinedEvent`                 | `FeedProjectionEventListener`        | 길드 가입 피드 생성            |
-| GuildService           | `GuildCreatedEvent`                | `FeedProjectionEventListener`        | 길드 창설 피드 생성            |
-| GuildService           | `GuildInvitationEvent`             | `NotificationEventListener`          | 초대 알림 발송               |
-| GuildExperienceService | `GuildLevelUpEvent`                | `FeedProjectionEventListener`        | 길드 레벨업 피드 생성           |
-| FriendService          | `FriendRequestAcceptedEvent`       | `NotificationEventListener`          | 친구 수락 알림               |
-| FriendService          | `FriendRequestAcceptedEvent`       | `FeedProjectionEventListener`        | 친구 추가 피드 생성 (양쪽)       |
-| FriendService          | `FriendRequestAcceptedEvent`       | `UserStatsCounterEventListener`      | friendCount 증가 + 업적 체크  |
-| FriendService          | `FriendRemovedEvent`               | `UserStatsCounterEventListener`      | friendCount 감소 (양쪽)     |
-| GamificationService    | `TitleAcquiredEvent`               | `NotificationEventListener`          | 칭호 획득 알림               |
-| GamificationService    | `TitleAcquiredEvent`               | `FeedProjectionEventListener`        | 칭호 획득 피드 생성            |
-| GamificationService    | `AchievementCompletedEvent`        | `NotificationEventListener`          | 업적 달성 알림               |
-| GamificationService    | `AchievementCompletedEvent`        | `FeedProjectionEventListener`        | 업적 달성 피드 생성            |
-| GamificationService    | `TitleEquippedEvent`               | `FeedProjectionEventListener`        | 칭호 변경 피드 업데이트          |
-| UserExperienceService  | `UserLevelUpEvent`                 | `FeedProjectionEventListener`        | 레벨업 피드 생성              |
-| UserExperienceService  | `UserLevelUpEvent`                 | `UserLevelUpProfileSyncListener`     | 유저 프로필 레벨 동기화          |
-| AttendanceService      | `AttendanceStreakEvent`            | `FeedProjectionEventListener`        | 연속 출석 피드 생성            |
-| MissionService         | `MissionStateChangedEvent`         | `MissionStateHistoryEventListener`   | 미션 상태 이력 저장            |
-| GuildMemberService     | `GuildMemberJoinedChatNotifyEvent` | `ChatEventListener`                  | 채팅방 입장 알림              |
-| GuildMemberService     | `GuildMemberLeftChatNotifyEvent`   | `ChatEventListener`                  | 채팅방 퇴장 알림              |
-| GuildMemberService     | `GuildMemberKickedChatNotifyEvent` | `ChatEventListener`                  | 채팅방 추방 알림              |
-| UserService            | `UserSignedUpEvent`                | `UserSignedUpEventListener`          | 기본 칭호 부여               |
+| 발행 서비스                 | 이벤트                                | 수신 리스너                               | 처리 내용                                  |
+|------------------------|------------------------------------|--------------------------------------|----------------------------------------|
+| GuildService           | `GuildJoinedEvent`                 | `AchievementEventListener`           | 길드 가입 업적 체크                            |
+| GuildService           | `GuildJoinedEvent`                 | `FeedProjectionEventListener`        | 길드 가입 피드 생성                            |
+| GuildService           | `GuildCreatedEvent`                | `FeedProjectionEventListener`        | 길드 창설 피드 생성                            |
+| GuildService           | `GuildInvitationEvent`             | `NotificationEventListener`          | 초대 알림 발송                               |
+| GuildExperienceService | `GuildLevelUpEvent`                | `FeedProjectionEventListener`        | 길드 레벨업 피드 생성                           |
+| FriendService          | `FriendRequestAcceptedEvent`       | `NotificationEventListener`          | 친구 수락 알림                               |
+| FriendService          | `FriendRequestAcceptedEvent`       | `FeedProjectionEventListener`        | 친구 추가 피드 생성 (양쪽)                       |
+| FriendService          | `FriendRequestAcceptedEvent`       | `UserStatsCounterEventListener`      | friendCount 증가 + 업적 체크                 |
+| FriendService          | `FriendRemovedEvent`               | `UserStatsCounterEventListener`      | friendCount 감소 (양쪽)                    |
+| GamificationService    | `TitleAcquiredEvent`               | `NotificationEventListener`          | 칭호 획득 알림                               |
+| GamificationService    | `TitleAcquiredEvent`               | `FeedProjectionEventListener`        | 칭호 획득 피드 생성                            |
+| GamificationService    | `AchievementCompletedEvent`        | `NotificationEventListener`          | 업적 달성 알림                               |
+| GamificationService    | `AchievementCompletedEvent`        | `FeedProjectionEventListener`        | 업적 달성 피드 생성                            |
+| GamificationService    | `TitleEquippedEvent`               | `FeedProjectionEventListener`        | 칭호 변경 피드 업데이트                          |
+| UserExperienceService  | `UserLevelUpEvent`                 | `FeedProjectionEventListener`        | 레벨업 피드 생성                              |
+| UserExperienceService  | `UserLevelUpEvent`                 | `UserLevelUpProfileSyncListener`     | 유저 프로필 레벨 동기화                          |
+| AttendanceService      | `AttendanceStreakEvent`            | `FeedProjectionEventListener`        | 연속 출석 피드 생성                            |
+| MissionService         | `MissionStateChangedEvent`         | `MissionStateHistoryEventListener`   | 미션 상태 이력 저장                            |
+| GuildMemberService     | `GuildMemberJoinedChatNotifyEvent` | `ChatEventListener`                  | 채팅방 입장 알림                              |
+| GuildMemberService     | `GuildMemberLeftChatNotifyEvent`   | `ChatEventListener`                  | 채팅방 퇴장 알림                              |
+| GuildMemberService     | `GuildMemberKickedChatNotifyEvent` | `ChatEventListener`                  | 채팅방 추방 알림                              |
+| UserService            | `UserSignedUpEvent`                | `UserSignedUpEventListener`          | 기본 칭호 부여                               |
 | UserService            | `UserProfileChangedEvent`          | `*ProfileSnapshotEventListener` (x4) | 비정규화 닉네임 동기화 (chat/feed/guild/mission) |
-| FeedCommandService     | `FeedLikedEvent`                   | `UserStatsCounterEventListener`      | likesReceived 증가 + 업적 체크 |
-| FeedCommandService     | `FeedUnlikedEvent`                 | `UserStatsCounterEventListener`      | likesReceived 감소        |
+| FeedCommandService     | `FeedLikedEvent`                   | `UserStatsCounterEventListener`      | likesReceived 증가 + 업적 체크               |
+| FeedCommandService     | `FeedUnlikedEvent`                 | `UserStatsCounterEventListener`      | likesReceived 감소                       |
 
 ## Redis Caching
 
@@ -497,12 +502,13 @@ Note: Config files are located in `app/src/main/resources/config/`, not the root
 
 | 프로젝트              | 경로                                                                                  |
 |-------------------|-------------------------------------------------------------------------------------|
-| Admin Backend     | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-mvp-admin`      |
+| Admin Backend     | `/Users/pink-spider/Code/github/Level-Up-Together/admin-service`                    |
 | Admin Frontend    | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-admin-frontend` |
-| Product Backend   | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-mvp`            |
+| Product Backend   | `/Users/pink-spider/Code/github/Level-Up-Together/product-service`                  |
 | Product Frontend  | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-frontend`       |
 | SQL Scripts       | `/Users/pink-spider/Code/github/Level-Up-Together/level-up-together-sql/queries`    |
-| Config Server     | `/Users/pink-spider/Code/github/Level-Up-Together/config-repository`                |
+| Config Server     | `/Users/pink-spider/Code/github/Level-Up-Together/config-server`                    |
+| Config Repo       | `/Users/pink-spider/Code/github/Level-Up-Together/config-repository`                |
 | Service Discovery | `/Users/pink-spider/Code/github/Level-Up-Together/service-discovery`                |
 | React Native App  | `/Users/pink-spider/Code/github/Level-Up-Together/LevelUpTogetherReactNative`       |
 
@@ -560,11 +566,11 @@ ONNX Runtime 기반 NSFW 이미지 자동 검증 시스템 (`global.moderation`)
 
 ### Provider 구현체
 
-| Provider         | 클래스                         | 설명                              |
-|------------------|-----------------------------|---------------------------------|
-| `none` (기본값)    | `NoOpImageModerationService`  | 비활성화 (dev/test 환경)              |
-| `onnx-nsfw`      | `OnnxNsfwModerationService`   | ONNX Runtime + OpenNSFW2 모델 ($0) |
-| `aws-rekognition` | `AwsRekognitionModerationService` | AWS Rekognition (스켈레톤)          |
+| Provider          | 클래스                               | 설명                               |
+|-------------------|-----------------------------------|----------------------------------|
+| `none` (기본값)      | `NoOpImageModerationService`      | 비활성화 (dev/test 환경)               |
+| `onnx-nsfw`       | `OnnxNsfwModerationService`       | ONNX Runtime + OpenNSFW2 모델 ($0) |
+| `aws-rekognition` | `AwsRekognitionModerationService` | AWS Rekognition (스켈레톤)           |
 
 ### 설정
 
@@ -587,6 +593,49 @@ moderation:
 ### 에러 코드
 
 부적절 이미지 감지 시: `CustomException("000010", "부적절한 이미지가 감지되었습니다.")`
+
+## Image Storage (이미지 저장)
+
+`@Profile` 기반 Strategy Pattern으로 환경별 이미지 저장소 분기:
+
+| 환경          | 구현체                          | 저장소                                   |
+|-------------|------------------------------|---------------------------------------|
+| `prod`      | `S3*ImageStorageService`     | S3 (`lut-images-prod`) + CloudFront CDN |
+| `!prod`     | `Local*ImageStorageService`  | 로컬 파일시스템 + Spring MVC 리소스 핸들러         |
+
+### S3 구현체 (prod)
+
+- `S3Config` — `S3Client` Bean (`@Profile("prod")`, EC2 IAM Role 자동 인증)
+- `S3ImageProperties` — `app.upload.s3.bucket` + `app.upload.s3.cdn-base-url`
+- S3 키 패턴: `profile/{userId}/{uuid}.ext`, `guild/{guildId}/{uuid}.ext`, `missions/{userId}/{missionId}/{date}_{uuid}.ext`, `events/{uuid}.ext`
+- CDN URL 반환: `https://images.level-up-together.com/{key}`
+
+### 서비스별 구현체
+
+| 서비스 | S3 구현체 (prod)                  | Local 구현체 (!prod)                |
+|------|-------------------------------|----------------------------------|
+| 프로필  | `S3ProfileImageStorageService`  | `LocalProfileImageStorageService`  |
+| 길드   | `S3GuildImageStorageService`    | `LocalGuildImageStorageService`    |
+| 미션   | `S3MissionImageStorageService`  | `LocalMissionImageStorageService`  |
+| 이벤트  | `S3EventImageStorageService`    | `LocalEventImageStorageService`    |
+
+### 설정
+
+```yaml
+# application.yml (기본값)
+app:
+  upload:
+    s3:
+      bucket: ""
+      cdn-base-url: ""
+
+# product-service-prod.yml (Config Server)
+app:
+  upload:
+    s3:
+      bucket: lut-images-prod
+      cdn-base-url: https://images.level-up-together.com
+```
 
 ## Feature-Specific Implementation Notes
 
