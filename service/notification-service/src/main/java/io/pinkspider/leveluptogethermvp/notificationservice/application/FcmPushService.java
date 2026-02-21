@@ -179,6 +179,36 @@ public class FcmPushService {
     }
 
     /**
+     * 배지 카운트 업데이트 silent push 전송 (iOS만 해당)
+     */
+    public void sendBadgeUpdate(String userId, int badgeCount) {
+        if (firebaseMessaging == null) {
+            return;
+        }
+
+        List<DeviceToken> tokens = deviceTokenRepository.findByUserIdAndIsActiveTrue(userId);
+        for (DeviceToken token : tokens) {
+            if (token.getDeviceType() == DeviceToken.DeviceType.IOS) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token.getFcmToken())
+                            .setApnsConfig(ApnsConfig.builder()
+                                    .setAps(Aps.builder()
+                                            .setBadge(badgeCount)
+                                            .setContentAvailable(true)
+                                            .build())
+                                    .build())
+                            .build();
+                    firebaseMessaging.send(message);
+                    log.debug("Badge update sent to user {}: badge={}", userId, badgeCount);
+                } catch (FirebaseMessagingException e) {
+                    handleSendError(token, e);
+                }
+            }
+        }
+    }
+
+    /**
      * FCM 메시지 빌드
      */
     private Message buildMessage(DeviceToken token, PushMessageRequest request) {

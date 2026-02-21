@@ -48,6 +48,9 @@ class NotificationServiceTest {
     @Mock
     private AppPushMessageProducer appPushMessageProducer;
 
+    @Mock
+    private DeviceTokenService deviceTokenService;
+
     @InjectMocks
     private NotificationService notificationService;
 

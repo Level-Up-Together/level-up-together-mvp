@@ -31,6 +31,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationPreferenceRepository preferenceRepository;
     private final AppPushMessageProducer appPushMessageProducer;
+    private final DeviceTokenService deviceTokenService;
 
     // 알림 생성
     @Transactional(transactionManager = "notificationTransactionManager")
@@ -148,6 +149,11 @@ public class NotificationService {
         }
 
         notification.markAsRead();
+
+        // 배지 카운트를 실제 읽지 않은 알림 수에 동기화
+        int unreadCount = notificationRepository.countUnreadByUserId(userId);
+        deviceTokenService.syncBadgeCount(userId, unreadCount);
+
         return NotificationResponse.from(notification);
     }
 
@@ -156,6 +162,10 @@ public class NotificationService {
     public int markAllAsRead(String userId) {
         int count = notificationRepository.markAllAsRead(userId);
         log.info("모든 알림 읽음 처리: userId={}, count={}", userId, count);
+
+        // 배지 카운트 초기화 + silent push로 앱 아이콘 배지 제거
+        deviceTokenService.syncBadgeCount(userId, 0);
+
         return count;
     }
 

@@ -73,6 +73,13 @@ public interface DeviceTokenRepository extends JpaRepository<DeviceToken, Long> 
     void resetBadgeCountByUserId(@Param("userId") String userId);
 
     /**
+     * 사용자의 배지 카운트를 특정 값으로 설정
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE DeviceToken dt SET dt.badgeCount = :count WHERE dt.userId = :userId AND dt.isActive = true")
+    void setBadgeCountByUserId(@Param("userId") String userId, @Param("count") int count);
+
+    /**
      * FCM 토큰 삭제
      */
     void deleteByFcmToken(String fcmToken);

@@ -153,6 +153,20 @@ public class DeviceTokenService {
     }
 
     /**
+     * 배지 카운트를 실제 읽지 않은 알림 수에 맞춰 동기화 + silent push 전송
+     */
+    @Transactional(transactionManager = "notificationTransactionManager")
+    public void syncBadgeCount(String userId, int unreadCount) {
+        log.debug("Syncing badge count for user: {}, unreadCount={}", userId, unreadCount);
+        if (unreadCount == 0) {
+            deviceTokenRepository.resetBadgeCountByUserId(userId);
+        } else {
+            deviceTokenRepository.setBadgeCountByUserId(userId, unreadCount);
+        }
+        fcmPushService.sendBadgeUpdate(userId, unreadCount);
+    }
+
+    /**
      * 사용자를 길드 토픽에 구독
      */
     public void subscribeToGuildTopic(String userId, Long guildId) {
