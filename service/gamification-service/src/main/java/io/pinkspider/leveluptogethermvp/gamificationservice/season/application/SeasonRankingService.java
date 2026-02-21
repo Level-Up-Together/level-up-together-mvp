@@ -36,6 +36,7 @@ import io.pinkspider.global.facade.dto.SeasonMvpGuildDto;
 import io.pinkspider.global.facade.dto.SeasonMvpPlayerDto;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -156,6 +157,9 @@ public class SeasonRankingService {
             .map(row -> (String) row[0])
             .collect(Collectors.toList());
 
+        // 탈퇴 사용자 필터링
+        Set<String> activeUserIds = new HashSet<>(userQueryFacadeService.getActiveUserIds(userIds));
+
         // 2. 배치 조회: 사용자 프로필 (캐시)
         Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
@@ -173,6 +177,10 @@ public class SeasonRankingService {
 
         for (Object[] row : topGainers) {
             String odayUserId = (String) row[0];
+            if (!activeUserIds.contains(odayUserId)) {
+                continue;
+            }
+
             Long earnedExp = ((Number) row[1]).longValue();
 
             UserProfileInfo profile = profileMap.get(odayUserId);
@@ -452,6 +460,9 @@ public class SeasonRankingService {
             .map(row -> (String) row[0])
             .collect(Collectors.toList());
 
+        // 탈퇴 사용자 필터링
+        Set<String> activeUserIds = new HashSet<>(userQueryFacadeService.getActiveUserIds(userIds));
+
         Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
         Map<String, Integer> levelMap = userExperienceRepository.findByUserIdIn(userIds).stream()
@@ -465,6 +476,10 @@ public class SeasonRankingService {
 
         for (Object[] row : topGainers) {
             String odayUserId = (String) row[0];
+            if (!activeUserIds.contains(odayUserId)) {
+                continue;
+            }
+
             Long earnedExp = ((Number) row[1]).longValue();
 
             UserProfileInfo profile = profileMap.get(odayUserId);

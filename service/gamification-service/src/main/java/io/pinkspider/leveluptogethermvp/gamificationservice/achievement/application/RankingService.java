@@ -15,8 +15,10 @@ import io.pinkspider.global.facade.UserQueryFacade;
 import io.pinkspider.global.facade.dto.UserProfileInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -114,10 +116,20 @@ public class RankingService {
     }
 
     private Page<RankingResponse> convertToRankingResponse(Page<UserStats> statsPage, Pageable pageable) {
+        // 탈퇴 사용자 필터링
+        List<String> userIds = statsPage.getContent().stream()
+            .map(UserStats::getUserId)
+            .collect(Collectors.toList());
+        Set<String> activeUserIds = new HashSet<>(userQueryFacadeService.getActiveUserIds(userIds));
+
         List<RankingResponse> responses = new ArrayList<>();
         long startRank = pageable.getOffset() + 1;
 
         for (UserStats stats : statsPage.getContent()) {
+            if (!activeUserIds.contains(stats.getUserId())) {
+                continue;
+            }
+
             // 유저 레벨 조회
             Integer userLevel = userExperienceRepository.findByUserId(stats.getUserId())
                 .map(exp -> exp.getCurrentLevel())
@@ -178,6 +190,9 @@ public class RankingService {
             .map(UserExperience::getUserId)
             .collect(Collectors.toList());
 
+        // 탈퇴 사용자 필터링
+        Set<String> activeUserIds = new HashSet<>(userQueryFacadeService.getActiveUserIds(userIds));
+
         // 사용자 정보 일괄 조회 (캐시)
         Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
@@ -191,6 +206,10 @@ public class RankingService {
         long startRank = pageable.getOffset() + 1;
 
         for (UserExperience exp : expPage.getContent()) {
+            if (!activeUserIds.contains(exp.getUserId())) {
+                continue;
+            }
+
             UserProfileInfo profile = profileMap.get(exp.getUserId());
             String nickname = profile != null ? profile.nickname() : null;
             String profileImageUrl = profile != null ? profile.picture() : null;
@@ -228,6 +247,9 @@ public class RankingService {
             .map(row -> (String) row[0])
             .collect(Collectors.toList());
 
+        // 탈퇴 사용자 필터링
+        Set<String> activeUserIds = new HashSet<>(userQueryFacadeService.getActiveUserIds(userIds));
+
         // 사용자 정보 일괄 조회 (캐시)
         Map<String, UserProfileInfo> profileMap = userQueryFacadeService.getUserProfiles(userIds);
 
@@ -249,6 +271,9 @@ public class RankingService {
 
         for (Object[] row : categoryRanking.getContent()) {
             String odayUserId = (String) row[0];
+            if (!activeUserIds.contains(odayUserId)) {
+                continue;
+            }
             Long categoryExp = ((Number) row[1]).longValue();
 
             UserProfileInfo profile = profileMap.get(odayUserId);

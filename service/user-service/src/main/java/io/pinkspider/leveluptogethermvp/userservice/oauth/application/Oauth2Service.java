@@ -23,6 +23,7 @@ import io.pinkspider.leveluptogethermvp.userservice.geoip.GeoIpService;
 import io.pinkspider.leveluptogethermvp.notificationservice.application.NotificationService;
 import io.pinkspider.leveluptogethermvp.userservice.geoip.GeoIpService.GeoIpResult;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
+import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.enums.UserStatus;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
@@ -269,8 +270,13 @@ public class Oauth2Service {
         );
 
         if (existingUser.isPresent()) {
-            log.info("기존 사용자 로그인: userId={}, provider={}", existingUser.get().getId(), userInfo.getProvider());
-            return existingUser.get(); // 기존 사용자 로그인 처리
+            Users user = existingUser.get();
+            if (user.getStatus() == UserStatus.WITHDRAWN) {
+                log.warn("탈퇴한 사용자 로그인 시도: userId={}, provider={}", user.getId(), userInfo.getProvider());
+                throw new CustomException("030001", "탈퇴한 계정입니다. 새로 가입해 주세요.");
+            }
+            log.info("기존 사용자 로그인: userId={}, provider={}", user.getId(), userInfo.getProvider());
+            return user;
         }
 
         // 닉네임 중복 확인 및 처리

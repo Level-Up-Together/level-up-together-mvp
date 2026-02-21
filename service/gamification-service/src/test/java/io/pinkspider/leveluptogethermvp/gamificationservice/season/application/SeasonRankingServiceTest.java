@@ -138,6 +138,7 @@ class SeasonRankingServiceTest {
                 .thenReturn(topGainers);
             when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
+            when(userQueryFacadeService.getActiveUserIds(List.of(testUserId))).thenReturn(List.of(testUserId));
             when(userQueryFacadeService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileInfo(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
                 .thenReturn(List.of(testUserExperience));
@@ -192,6 +193,7 @@ class SeasonRankingServiceTest {
                 .thenReturn(topGainers);
             when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
+            when(userQueryFacadeService.getActiveUserIds(List.of(testUserId))).thenReturn(List.of(testUserId));
             when(userQueryFacadeService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileInfo(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
                 .thenReturn(List.of(testUserExperience));
@@ -229,6 +231,7 @@ class SeasonRankingServiceTest {
                 .thenReturn(topGainers);
             when(guildQueryFacadeService.getTopExpGuildsByPeriod(any(), any(), any()))
                 .thenReturn(List.of());
+            when(userQueryFacadeService.getActiveUserIds(List.of(testUserId))).thenReturn(List.of(testUserId));
             when(userQueryFacadeService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileInfo(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
                 .thenReturn(List.of(testUserExperience));
@@ -348,6 +351,7 @@ class SeasonRankingServiceTest {
 
             when(experienceHistoryRepository.findTopExpGainersByPeriod(any(), any(), any()))
                 .thenReturn(topGainers);
+            when(userQueryFacadeService.getActiveUserIds(List.of(testUserId))).thenReturn(List.of(testUserId));
             when(userQueryFacadeService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileInfo(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
                 .thenReturn(List.of(testUserExperience));
@@ -373,6 +377,7 @@ class SeasonRankingServiceTest {
 
             when(experienceHistoryRepository.findTopExpGainersByCategoryAndPeriod(any(), any(), any(), any()))
                 .thenReturn(topGainers);
+            when(userQueryFacadeService.getActiveUserIds(List.of(testUserId))).thenReturn(List.of(testUserId));
             when(userQueryFacadeService.getUserProfiles(List.of(testUserId))).thenReturn(java.util.Map.of(testUserId, new UserProfileInfo(testUserId, "테스터", "https://example.com/profile.jpg", 5, null, null, null)));
             when(userExperienceRepository.findByUserIdIn(List.of(testUserId)))
                 .thenReturn(List.of(testUserExperience));

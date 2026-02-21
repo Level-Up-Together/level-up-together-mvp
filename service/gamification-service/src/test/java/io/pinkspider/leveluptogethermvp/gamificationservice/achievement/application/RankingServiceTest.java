@@ -3,6 +3,7 @@ package io.pinkspider.leveluptogethermvp.gamificationservice.achievement.applica
 import static io.pinkspider.global.test.TestReflectionUtils.setId;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -95,6 +96,7 @@ class RankingServiceTest {
             Page<UserStats> statsPage = new PageImpl<>(List.of(stats1, stats2), pageable, 2);
 
             when(userStatsRepository.findAllByOrderByRankingPointsDesc(pageable)).thenReturn(statsPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user1", "user2"))).thenReturn(List.of("user1", "user2"));
             when(userExperienceRepository.findByUserId("user1")).thenReturn(Optional.of(createTestUserExperience(1L, "user1", 10, 1000)));
             when(userExperienceRepository.findByUserId("user2")).thenReturn(Optional.of(createTestUserExperience(2L, "user2", 8, 800)));
             when(userTitleRepository.findEquippedTitlesByUserId(anyString())).thenReturn(Collections.emptyList());
@@ -123,6 +125,7 @@ class RankingServiceTest {
             Page<UserStats> statsPage = new PageImpl<>(List.of(stats), pageable, 1);
 
             when(userStatsRepository.findAllByOrderByTotalMissionCompletionsDesc(pageable)).thenReturn(statsPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user1"))).thenReturn(List.of("user1"));
             when(userExperienceRepository.findByUserId("user1")).thenReturn(Optional.empty());
             when(userTitleRepository.findEquippedTitlesByUserId("user1")).thenReturn(Collections.emptyList());
 
@@ -148,6 +151,7 @@ class RankingServiceTest {
             Page<UserStats> statsPage = new PageImpl<>(List.of(stats), pageable, 1);
 
             when(userStatsRepository.findAllByOrderByMaxStreakDesc(pageable)).thenReturn(statsPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user1"))).thenReturn(List.of("user1"));
             when(userExperienceRepository.findByUserId("user1")).thenReturn(Optional.empty());
             when(userTitleRepository.findEquippedTitlesByUserId("user1")).thenReturn(Collections.emptyList());
 
@@ -173,6 +177,7 @@ class RankingServiceTest {
             Page<UserStats> statsPage = new PageImpl<>(List.of(stats), pageable, 1);
 
             when(userStatsRepository.findAllByOrderByTotalAchievementsCompletedDesc(pageable)).thenReturn(statsPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user1"))).thenReturn(List.of("user1"));
             when(userExperienceRepository.findByUserId("user1")).thenReturn(Optional.empty());
             when(userTitleRepository.findEquippedTitlesByUserId("user1")).thenReturn(Collections.emptyList());
 
@@ -351,6 +356,7 @@ class RankingServiceTest {
 
             when(experienceHistoryRepository.countUsersByCategory(category)).thenReturn(10L);
             when(experienceHistoryRepository.findUserExpRankingByCategory(category, pageable)).thenReturn(rankingPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user1"))).thenReturn(List.of("user1"));
             when(userQueryFacadeService.getUserProfiles(List.of("user1"))).thenReturn(java.util.Map.of("user1", new UserProfileInfo("user1", "테스트유저", null, 10, null, null, null)));
             when(userExperienceRepository.findByUserId("user1")).thenReturn(Optional.of(exp));
             when(userTitleRepository.findEquippedTitlesByUserId("user1")).thenReturn(Collections.emptyList());
@@ -376,6 +382,7 @@ class RankingServiceTest {
 
             when(experienceHistoryRepository.countUsersByCategory(category)).thenReturn(5L);
             when(experienceHistoryRepository.findUserExpRankingByCategory(category, pageable)).thenReturn(rankingPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user2"))).thenReturn(List.of("user2"));
             when(userQueryFacadeService.getUserProfiles(List.of("user2"))).thenReturn(java.util.Map.of("user2", new UserProfileInfo("user2", "테스트유저2", null, 1, null, null, null)));
             when(userExperienceRepository.findByUserId("user2")).thenReturn(Optional.empty());
             when(userTitleRepository.findEquippedTitlesByUserId("user2")).thenReturn(Collections.emptyList());
@@ -405,6 +412,7 @@ class RankingServiceTest {
 
             when(userExperienceRepository.countTotalUsers()).thenReturn(100L);
             when(userExperienceRepository.findAllByOrderByCurrentLevelDescTotalExpDesc(pageable)).thenReturn(expPage);
+            when(userQueryFacadeService.getActiveUserIds(List.of("user1", "user2"))).thenReturn(List.of("user1", "user2"));
             when(userQueryFacadeService.getUserProfiles(List.of("user1", "user2"))).thenReturn(java.util.Map.of("user1", new UserProfileInfo("user1", "유저1", null, 20, null, null, null), "user2", new UserProfileInfo("user2", "유저2", null, 15, null, null, null)));
             when(userTitleRepository.findEquippedTitlesByUserId(anyString())).thenReturn(Collections.emptyList());
 

@@ -55,6 +55,15 @@ public class UserQueryFacadeService implements UserQueryFacade {
         userProfileCacheService.evictUserProfileCache(userId);
     }
 
+    // ========== 활성 사용자 필터링 ==========
+
+    public List<String> getActiveUserIds(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        return userRepository.findActiveUserIds(userIds);
+    }
+
     // ========== 존재 확인 ==========
 
     public boolean userExistsById(String userId) {

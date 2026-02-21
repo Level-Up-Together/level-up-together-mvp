@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.userservice.core.application;
 
 import io.pinkspider.global.security.UserExistenceChecker;
+import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.enums.UserStatus;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,12 +26,12 @@ public class UserExistsCacheService implements UserExistenceChecker {
     /**
      * 사용자 존재 여부 확인 (캐싱)
      * - JWT 인증 필터에서 사용
-     * - 존재하지 않는 userId로 요청 시 false 반환 → 401 응답
+     * - 존재하지 않거나 탈퇴(WITHDRAWN) 상태인 userId → false 반환 → 401 응답
      */
     @Cacheable(value = "userExists", key = "#userId")
     public boolean existsById(String userId) {
         log.debug("캐시 미스 - DB에서 사용자 존재 여부 조회: userId={}", userId);
-        return userRepository.existsById(userId);
+        return userRepository.existsByIdAndStatusNot(userId, UserStatus.WITHDRAWN);
     }
 
     /**

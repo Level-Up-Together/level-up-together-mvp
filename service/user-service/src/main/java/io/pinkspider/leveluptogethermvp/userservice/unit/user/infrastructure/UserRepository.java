@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure;
 
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
+import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.enums.UserStatus;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,9 @@ public interface UserRepository extends JpaRepository<Users, String> {
     // 닉네임 중복 확인 (자신 제외)
     boolean existsByNicknameAndIdNot(String nickname, String userId);
 
+    // 사용자 존재 여부 확인 (특정 상태 제외)
+    boolean existsByIdAndStatusNot(String id, UserStatus status);
+
     // 닉네임 존재 여부 확인
     boolean existsByNickname(String nickname);
 
@@ -42,11 +46,18 @@ public interface UserRepository extends JpaRepository<Users, String> {
     Optional<Users> findByNickname(String nickname);
 
     /**
-     * 닉네임으로 사용자 검색 (닉네임이 설정된 사용자만)
+     * 닉네임으로 사용자 검색 (닉네임이 설정된 활성 사용자만)
      */
     @Query("SELECT u FROM Users u WHERE u.nicknameSet = true " +
+           "AND u.status = 'ACTIVE' " +
            "AND LOWER(u.nickname) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     Page<Users> searchByNickname(@Param("keyword") String keyword, Pageable pageable);
+
+    /**
+     * 주어진 사용자 ID 목록 중 활성(ACTIVE) 상태인 사용자 ID만 반환
+     */
+    @Query("SELECT u.id FROM Users u WHERE u.id IN :userIds AND u.status = 'ACTIVE'")
+    List<String> findActiveUserIds(@Param("userIds") List<String> userIds);
 
     // ========== Admin Internal API 전용 ==========
 

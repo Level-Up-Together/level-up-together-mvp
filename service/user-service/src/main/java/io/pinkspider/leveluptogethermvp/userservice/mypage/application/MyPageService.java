@@ -31,6 +31,8 @@ import io.pinkspider.leveluptogethermvp.userservice.mypage.domain.dto.UserTitleL
 import io.pinkspider.global.enums.ReportTargetType;
 import io.pinkspider.global.domain.ContentReviewChecker;
 import io.pinkspider.global.facade.dto.UserProfileInfo;
+import io.pinkspider.leveluptogethermvp.userservice.core.application.UserExistsCacheService;
+import io.pinkspider.leveluptogethermvp.userservice.oauth.application.MultiDeviceTokenService;
 import io.pinkspider.leveluptogethermvp.userservice.profile.application.UserProfileCacheService;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.domain.entity.Users;
 import io.pinkspider.leveluptogethermvp.userservice.unit.user.infrastructure.UserRepository;
@@ -62,6 +64,8 @@ public class MyPageService {
     private final ContentReviewChecker contentReviewChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final UserProfileCacheService userProfileCacheService;
+    private final UserExistsCacheService userExistsCacheService;
+    private final MultiDeviceTokenService multiDeviceTokenService;
 
     /**
      * MyPage 전체 데이터 조회
@@ -417,6 +421,13 @@ public class MyPageService {
         // 사용자 상태를 WITHDRAWN으로 변경
         user.withdraw();
         userRepository.save(user);
+
+        // 모든 디바이스의 JWT 토큰 즉시 무효화
+        multiDeviceTokenService.logoutAllDevices(userId);
+
+        // 캐시 무효화 (JWT 인증 필터 + 프로필 조회)
+        userExistsCacheService.evictUserExistsCache(userId);
+        userProfileCacheService.evictUserProfileCache(userId);
 
         log.info("회원 탈퇴 처리 완료: userId={}", userId);
     }
