@@ -154,7 +154,7 @@ class DailyMissionInstanceSchedulerTest {
         }
 
         @Test
-        @DisplayName("미완료 인스턴스를 MISSED 처리한다")
+        @DisplayName("미시작(PENDING) 인스턴스를 MISSED 처리한다")
         void generateDailyInstances_marksMissed() {
             // given
             when(instanceRepository.markMissedInstances(any(LocalDate.class))).thenReturn(5);

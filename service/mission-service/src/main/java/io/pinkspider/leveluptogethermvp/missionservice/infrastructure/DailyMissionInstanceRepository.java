@@ -126,7 +126,7 @@ public interface DailyMissionInstanceRepository extends JpaRepository<DailyMissi
      */
     @Modifying
     @Query("UPDATE DailyMissionInstance dmi SET dmi.status = 'MISSED' " +
-           "WHERE dmi.status IN ('PENDING', 'IN_PROGRESS') AND dmi.instanceDate < :date")
+           "WHERE dmi.status = 'PENDING' AND dmi.instanceDate < :date")
     int markMissedInstances(@Param("date") LocalDate date);
 
     /**
