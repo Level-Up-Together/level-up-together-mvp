@@ -29,6 +29,7 @@ import io.pinkspider.global.enums.MissionStatus;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionType;
 import io.pinkspider.leveluptogethermvp.missionservice.domain.enums.MissionVisibility;
 import io.pinkspider.global.event.GuildMissionArrivedEvent;
+import io.pinkspider.global.event.MissionStateChangedEvent;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionParticipantRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionRepository;
 import io.pinkspider.leveluptogethermvp.missionservice.infrastructure.MissionTemplateRepository;
@@ -326,8 +327,8 @@ class MissionServiceTest {
     class OpenMissionTest {
 
         @Test
-        @DisplayName("길드 미션 오픈 시 길드원에게 이벤트가 발행된다")
-        void openMission_guildMission_publishesEvent() {
+        @DisplayName("길드 미션 오픈 시 길드원 자동 참여 + 알림 이벤트가 발행된다")
+        void openMission_guildMission_enrollsAndPublishesEvent() {
             // given
             Long missionId = 1L;
             Long guildId = 100L;
@@ -358,16 +359,14 @@ class MissionServiceTest {
             assertThat(response).isNotNull();
             assertThat(response.getStatus()).isEqualTo(MissionStatus.OPEN);
 
-            // 이벤트 발행 확인 (생성자 제외한 멤버 목록과 함께)
-            verify(eventPublisher).publishEvent(eventCaptor.capture());
-            GuildMissionArrivedEvent event = eventCaptor.getValue();
-            assertThat(event.missionId()).isEqualTo(missionId);
-            assertThat(event.missionTitle()).isEqualTo("길드 미션");
-            assertThat(event.memberIds()).containsExactlyInAnyOrder(member1Id, member2Id);
-            assertThat(event.memberIds()).doesNotContain(TEST_USER_ID);  // 생성자 제외
+            // 길드원 자동 참여 확인 (생성자 제외)
+            verify(missionParticipantService).addGuildMemberAsParticipant(mission, member1Id);
+            verify(missionParticipantService).addGuildMemberAsParticipant(mission, member2Id);
+            verify(missionParticipantService, never()).addGuildMemberAsParticipant(mission, TEST_USER_ID);
 
-            // 참여자 자동 등록은 하지 않음 (길드원이 직접 참여 신청)
-            verify(missionParticipantService, never()).addGuildMemberAsParticipant(any(), anyString());
+            // 이벤트 발행 확인 (상태 변경 + 길드 미션 알림)
+            verify(eventPublisher).publishEvent(any(MissionStateChangedEvent.class));
+            verify(eventPublisher).publishEvent(any(GuildMissionArrivedEvent.class));
         }
 
         @Test

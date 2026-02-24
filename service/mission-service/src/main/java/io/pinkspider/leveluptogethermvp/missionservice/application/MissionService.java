@@ -294,19 +294,18 @@ public class MissionService {
         // 상태 히스토리 이벤트 발행
         eventPublisher.publishEvent(MissionStateChangedEvent.ofOpen(userId, missionId, fromStatus));
 
-        // 길드 미션인 경우 길드원에게 모집 알림 전송 (참여는 직접 신청)
+        // 길드 미션인 경우 길드원 자동 참여 + 알림 전송
         if (mission.getType() == MissionType.GUILD && mission.getGuildId() != null) {
-            notifyGuildMembersAboutRecruitment(mission, userId);
+            enrollAndNotifyGuildMembers(mission, userId);
         }
 
         return MissionResponse.from(mission);
     }
 
     /**
-     * 길드원에게 미션 모집 시작 알림 전송 (참여는 길드원이 직접 신청)
-     * 이벤트를 발행하여 비동기로 알림 처리
+     * 길드 미션 OPEN 시 활성 길드원 자동 참여 + 알림 전송
      */
-    private void notifyGuildMembersAboutRecruitment(Mission mission, String creatorId) {
+    private void enrollAndNotifyGuildMembers(Mission mission, String creatorId) {
         try {
             Long guildId = mission.getGuildIdAsLong();
 
@@ -316,15 +315,27 @@ public class MissionService {
                 .toList();
 
             if (!memberIds.isEmpty()) {
-                // 이벤트 발행 (리스너에서 비동기로 알림 처리)
+                // 길드원 자동 참여 등록
+                int enrolled = 0;
+                for (String memberId : memberIds) {
+                    try {
+                        missionParticipantService.addGuildMemberAsParticipant(mission, memberId);
+                        enrolled++;
+                    } catch (Exception e) {
+                        log.warn("길드원 미션 자동 참여 실패: missionId={}, userId={}, error={}",
+                            mission.getId(), memberId, e.getMessage());
+                    }
+                }
+                log.info("길드원 미션 자동 참여 완료: missionId={}, guildId={}, enrolled={}/{}",
+                    mission.getId(), guildId, enrolled, memberIds.size());
+
+                // 알림 이벤트 발행
                 eventPublisher.publishEvent(new GuildMissionArrivedEvent(
                     creatorId,
                     memberIds,
                     mission.getId(),
                     mission.getTitle()
                 ));
-                log.info("길드 미션 모집 이벤트 발행: missionId={}, guildId={}, memberCount={}",
-                    mission.getId(), guildId, memberIds.size());
             }
         } catch (NumberFormatException e) {
             log.error("길드 ID 파싱 실패: guildId={}", mission.getGuildId(), e);

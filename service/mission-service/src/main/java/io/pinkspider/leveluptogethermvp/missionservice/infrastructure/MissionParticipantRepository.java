@@ -75,6 +75,19 @@ public interface MissionParticipantRepository extends JpaRepository<MissionParti
     List<MissionParticipant> findAllActivePinnedMissionParticipants();
 
     /**
+     * 사용자의 특정 길드 미션에서의 활성 참여 목록 조회 (길드 탈퇴/추방 시 정리용)
+     */
+    @Query("SELECT mp FROM MissionParticipant mp " +
+           "JOIN FETCH mp.mission m " +
+           "WHERE mp.userId = :userId " +
+           "AND m.guildId = :guildId " +
+           "AND m.isDeleted = false " +
+           "AND mp.status NOT IN ('WITHDRAWN', 'FAILED', 'COMPLETED')")
+    List<MissionParticipant> findActiveGuildMissionParticipations(
+        @Param("userId") String userId,
+        @Param("guildId") String guildId);
+
+    /**
      * 활성 고정 미션 참여자 ID 목록만 조회 (메모리 효율적인 배치 처리용)
      */
     @Query("SELECT mp.id FROM MissionParticipant mp " +

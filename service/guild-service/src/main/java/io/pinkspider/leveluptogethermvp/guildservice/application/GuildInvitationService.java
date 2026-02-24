@@ -1,6 +1,7 @@
 package io.pinkspider.leveluptogethermvp.guildservice.application;
 
 import io.pinkspider.global.event.GuildInvitationEvent;
+import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.global.event.GuildMemberJoinedChatNotifyEvent;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildInvitationResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.entity.Guild;
@@ -196,6 +197,9 @@ public class GuildInvitationService {
             guildMemberRepository.save(newMember);
             log.info("길드 가입 (초대 수락): guildId={}, userId={}", guild.getId(), userId);
         }
+
+        // 길드 가입 이벤트 발행 (업적 체크, 길드 미션 자동 참여 등)
+        eventPublisher.publishEvent(new GuildJoinedEvent(userId, guild.getId(), guild.getName()));
 
         // 채팅방에 가입 알림 메시지 전송
         String memberNickname = userQueryFacadeService.getUserNickname(userId);

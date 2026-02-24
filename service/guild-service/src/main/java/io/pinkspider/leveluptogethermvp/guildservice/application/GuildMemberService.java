@@ -3,6 +3,7 @@ package io.pinkspider.leveluptogethermvp.guildservice.application;
 import io.pinkspider.global.event.GuildMemberJoinedChatNotifyEvent;
 import io.pinkspider.global.event.GuildMemberKickedChatNotifyEvent;
 import io.pinkspider.global.event.GuildMemberLeftChatNotifyEvent;
+import io.pinkspider.global.event.GuildMemberRemovedEvent;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildJoinRequestDto;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildJoinRequestResponse;
 import io.pinkspider.leveluptogethermvp.guildservice.domain.dto.GuildMemberResponse;
@@ -315,6 +316,9 @@ public class GuildMemberService {
         // 채팅방에 탈퇴 알림 메시지 전송
         eventPublisher.publishEvent(new GuildMemberLeftChatNotifyEvent(guildId, memberNickname));
 
+        // 길드 미션 참여 정리용 이벤트 발행
+        eventPublisher.publishEvent(new GuildMemberRemovedEvent(userId, guildId));
+
         log.info("길드 탈퇴: guildId={}, userId={}", guildId, userId);
     }
 
@@ -418,6 +422,9 @@ public class GuildMemberService {
 
         // 채팅방에 추방 알림 메시지 전송
         eventPublisher.publishEvent(new GuildMemberKickedChatNotifyEvent(guildId, memberNickname));
+
+        // 길드 미션 참여 정리용 이벤트 발행
+        eventPublisher.publishEvent(new GuildMemberRemovedEvent(targetUserId, guildId));
 
         log.info("멤버 추방: guildId={}, operator={}, target={}", guildId, operatorId, targetUserId);
     }
