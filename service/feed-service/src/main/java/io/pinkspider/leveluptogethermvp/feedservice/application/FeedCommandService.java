@@ -11,6 +11,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
+import io.pinkspider.global.facade.dto.DetailedTitleInfoDto;
 import io.pinkspider.global.facade.dto.TitleInfoDto;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.FeedComment;
@@ -53,6 +54,9 @@ public class FeedCommandService {
                                            String referenceType, Long referenceId, String referenceName,
                                            FeedVisibility visibility, Long guildId,
                                            String imageUrl, String iconUrl) {
+        // 좌/우 칭호 상세 정보 조회
+        DetailedTitleInfoDto detailedTitle = getDetailedTitleInfoSafe(userId);
+
         ActivityFeed feed = ActivityFeed.builder()
             .userId(userId)
             .userNickname(userNickname)
@@ -61,6 +65,10 @@ public class FeedCommandService {
             .userTitle(userTitle)
             .userTitleRarity(userTitleRarity)
             .userTitleColorCode(userTitleColorCode)
+            .userLeftTitle(detailedTitle.leftTitle())
+            .userLeftTitleRarity(detailedTitle.leftRarity())
+            .userRightTitle(detailedTitle.rightTitle())
+            .userRightTitleRarity(detailedTitle.rightRarity())
             .activityType(activityType)
             .title(title)
             .description(description)
@@ -95,17 +103,19 @@ public class FeedCommandService {
 
         // 사용자 장착 칭호 정보 조회
         TitleInfoDto titleInfo = gamificationQueryFacadeService.getCombinedEquippedTitleInfo(userId);
-        String userTitle = titleInfo.name();
-        TitleRarity userTitleRarity = titleInfo.rarity();
-        String userTitleColorCode = titleInfo.colorCode();
+        DetailedTitleInfoDto detailedTitle = getDetailedTitleInfoSafe(userId);
 
         ActivityFeed feed = ActivityFeed.builder()
             .userId(userId)
             .userNickname(userProfile.nickname())
             .userProfileImageUrl(userProfile.picture())
-            .userTitle(userTitle)
-            .userTitleRarity(userTitleRarity)
-            .userTitleColorCode(userTitleColorCode)
+            .userTitle(titleInfo.name())
+            .userTitleRarity(titleInfo.rarity())
+            .userTitleColorCode(titleInfo.colorCode())
+            .userLeftTitle(detailedTitle.leftTitle())
+            .userLeftTitleRarity(detailedTitle.leftRarity())
+            .userRightTitle(detailedTitle.rightTitle())
+            .userRightTitleRarity(detailedTitle.rightRarity())
             .activityType(request.getActivityType())
             .title(request.getTitle())
             .description(request.getDescription())
@@ -263,6 +273,9 @@ public class FeedCommandService {
                                                 Integer durationMinutes, Integer expEarned) {
         String title = missionTitle;
 
+        // 좌/우 칭호 상세 정보 조회
+        DetailedTitleInfoDto detailedTitle = getDetailedTitleInfoSafe(userId);
+
         ActivityFeed feed = ActivityFeed.builder()
             .userId(userId)
             .userNickname(userNickname)
@@ -271,6 +284,10 @@ public class FeedCommandService {
             .userTitle(userTitle)
             .userTitleRarity(userTitleRarity)
             .userTitleColorCode(userTitleColorCode)
+            .userLeftTitle(detailedTitle.leftTitle())
+            .userLeftTitleRarity(detailedTitle.leftRarity())
+            .userRightTitle(detailedTitle.rightTitle())
+            .userRightTitleRarity(detailedTitle.rightRarity())
             .activityType(ActivityType.MISSION_SHARED)
             .title(title)
             .description(note)
@@ -364,7 +381,23 @@ public class FeedCommandService {
      */
     @Transactional(transactionManager = "feedTransactionManager")
     public int updateFeedTitles(String userId, String titleName, TitleRarity titleRarity, String titleColorCode) {
-        return activityFeedRepository.updateUserTitleByUserId(userId, titleName, titleRarity, titleColorCode);
+        // 좌/우 칭호 상세 정보 조회
+        DetailedTitleInfoDto detailedTitle = getDetailedTitleInfoSafe(userId);
+        return activityFeedRepository.updateUserTitleByUserId(userId, titleName, titleRarity, titleColorCode,
+            detailedTitle.leftTitle(), detailedTitle.leftRarity(),
+            detailedTitle.rightTitle(), detailedTitle.rightRarity());
+    }
+
+    /**
+     * 좌/우 칭호 상세 정보를 안전하게 조회 (실패 시 빈 정보 반환)
+     */
+    private DetailedTitleInfoDto getDetailedTitleInfoSafe(String userId) {
+        try {
+            return gamificationQueryFacadeService.getDetailedEquippedTitleInfo(userId);
+        } catch (Exception e) {
+            log.warn("좌/우 칭호 상세 정보 조회 실패: userId={}, error={}", userId, e.getMessage());
+            return new DetailedTitleInfoDto(null, null, null, null, null, null);
+        }
     }
 
     /**

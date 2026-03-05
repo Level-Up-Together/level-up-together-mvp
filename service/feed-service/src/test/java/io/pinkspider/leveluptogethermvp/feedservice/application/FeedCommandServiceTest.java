@@ -18,6 +18,7 @@ import io.pinkspider.leveluptogethermvp.feedservice.api.dto.CreateFeedRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentRequest;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedCommentResponse;
 import io.pinkspider.leveluptogethermvp.feedservice.api.dto.FeedLikeResponse;
+import io.pinkspider.global.facade.dto.DetailedTitleInfoDto;
 import io.pinkspider.global.facade.dto.TitleInfoDto;
 import io.pinkspider.global.facade.GamificationQueryFacade;
 import io.pinkspider.leveluptogethermvp.feedservice.domain.entity.ActivityFeed;
@@ -67,6 +68,7 @@ class FeedCommandServiceTest {
 
     private static final String TEST_USER_ID = "test-user-123";
     private static final String OTHER_USER_ID = "other-user-456";
+    private static final DetailedTitleInfoDto EMPTY_DETAILED_TITLE = new DetailedTitleInfoDto(null, null, null, null, null, null);
 
     private CreateFeedRequest createTestFeedRequest() {
         CreateFeedRequest request = new CreateFeedRequest();
@@ -108,6 +110,7 @@ class FeedCommandServiceTest {
         void createActivityFeed_success() {
             // given
             ActivityFeed savedFeed = createTestFeed(1L, TEST_USER_ID);
+            when(gamificationQueryFacadeService.getDetailedEquippedTitleInfo(TEST_USER_ID)).thenReturn(EMPTY_DETAILED_TITLE);
             when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(savedFeed);
 
             // when
@@ -141,6 +144,7 @@ class FeedCommandServiceTest {
             when(userQueryFacadeService.getUserProfile(TEST_USER_ID)).thenReturn(new UserProfileInfo(TEST_USER_ID, "테스트유저", "https://example.com/profile.jpg", 5, null, null, null));
             when(gamificationQueryFacadeService.getCombinedEquippedTitleInfo(TEST_USER_ID))
                 .thenReturn(new TitleInfoDto("초보 모험가", TitleRarity.COMMON, "#FFFFFF"));
+            when(gamificationQueryFacadeService.getDetailedEquippedTitleInfo(TEST_USER_ID)).thenReturn(EMPTY_DETAILED_TITLE);
             when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(savedFeed);
 
             // when
@@ -468,6 +472,7 @@ class FeedCommandServiceTest {
             setId(savedFeed, 1L);
 
             when(activityFeedRepository.save(any(ActivityFeed.class))).thenReturn(savedFeed);
+            when(gamificationQueryFacadeService.getDetailedEquippedTitleInfo(TEST_USER_ID)).thenReturn(EMPTY_DETAILED_TITLE);
 
             // when
             ActivityFeed result = feedCommandService.createMissionSharedFeed(

@@ -31,6 +31,10 @@ public class ActivityFeedResponse {
     private String userTitle;
     private TitleRarity userTitleRarity;
     private String userTitleColorCode;
+    private String userLeftTitle;
+    private TitleRarity userLeftTitleRarity;
+    private String userRightTitle;
+    private TitleRarity userRightTitleRarity;
     private ActivityType activityType;
     private String activityTypeDisplayName;
     private String category;
@@ -78,6 +82,10 @@ public class ActivityFeedResponse {
             .userTitle(feed.getUserTitle())
             .userTitleRarity(feed.getUserTitleRarity())
             .userTitleColorCode(feed.getUserTitleColorCode())
+            .userLeftTitle(feed.getUserLeftTitle())
+            .userLeftTitleRarity(feed.getUserLeftTitleRarity())
+            .userRightTitle(feed.getUserRightTitle())
+            .userRightTitleRarity(feed.getUserRightTitleRarity())
             .activityType(feed.getActivityType())
             .activityTypeDisplayName(feed.getActivityType().getDisplayName())
             .category(feed.getActivityType().getCategory())

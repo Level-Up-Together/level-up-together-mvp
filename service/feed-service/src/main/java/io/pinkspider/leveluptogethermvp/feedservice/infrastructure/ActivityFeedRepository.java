@@ -104,15 +104,22 @@ public interface ActivityFeedRepository extends JpaRepository<ActivityFeed, Long
     @Query("SELECT f FROM ActivityFeed f WHERE f.id IN :feedIds ORDER BY f.createdAt DESC")
     List<ActivityFeed> findByIdIn(@Param("feedIds") List<Long> feedIds);
 
-    // 사용자의 모든 피드의 userTitle, userTitleRarity, userTitleColorCode 업데이트
+    // 사용자의 모든 피드의 칭호 정보 업데이트 (조합 + 좌/우 개별)
     @Modifying
     @Transactional(transactionManager = "feedTransactionManager")
-    @Query("UPDATE ActivityFeed f SET f.userTitle = :userTitle, f.userTitleRarity = :userTitleRarity, f.userTitleColorCode = :userTitleColorCode WHERE f.userId = :userId")
+    @Query("UPDATE ActivityFeed f SET f.userTitle = :userTitle, f.userTitleRarity = :userTitleRarity, f.userTitleColorCode = :userTitleColorCode, " +
+           "f.userLeftTitle = :userLeftTitle, f.userLeftTitleRarity = :userLeftTitleRarity, " +
+           "f.userRightTitle = :userRightTitle, f.userRightTitleRarity = :userRightTitleRarity " +
+           "WHERE f.userId = :userId")
     int updateUserTitleByUserId(
         @Param("userId") String userId,
         @Param("userTitle") String userTitle,
         @Param("userTitleRarity") TitleRarity userTitleRarity,
-        @Param("userTitleColorCode") String userTitleColorCode);
+        @Param("userTitleColorCode") String userTitleColorCode,
+        @Param("userLeftTitle") String userLeftTitle,
+        @Param("userLeftTitleRarity") TitleRarity userLeftTitleRarity,
+        @Param("userRightTitle") String userRightTitle,
+        @Param("userRightTitleRarity") TitleRarity userRightTitleRarity);
 
     // referenceId로 피드 삭제 (미션 삭제 시 관련 피드 삭제용)
     @Modifying

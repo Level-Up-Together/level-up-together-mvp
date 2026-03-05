@@ -29,6 +29,10 @@ public class RankingResponse {
     private String equippedTitleName;
     private TitleRarity equippedTitleRarity;
     private String equippedTitleColorCode;
+    private String leftTitleName;
+    private TitleRarity leftTitleRarity;
+    private String rightTitleName;
+    private TitleRarity rightTitleRarity;
 
     public static RankingResponse from(UserStats stats, Long rank) {
         return RankingResponse.builder()
@@ -43,7 +47,9 @@ public class RankingResponse {
 
     public static RankingResponse from(UserStats stats, Long rank, String nickname, Integer userLevel,
                                        String equippedTitleName, TitleRarity equippedTitleRarity,
-                                       String equippedTitleColorCode) {
+                                       String equippedTitleColorCode,
+                                       String leftTitleName, TitleRarity leftTitleRarity,
+                                       String rightTitleName, TitleRarity rightTitleRarity) {
         return RankingResponse.builder()
             .rank(rank)
             .userId(stats.getUserId())
@@ -56,6 +62,10 @@ public class RankingResponse {
             .equippedTitleName(equippedTitleName)
             .equippedTitleRarity(equippedTitleRarity)
             .equippedTitleColorCode(equippedTitleColorCode)
+            .leftTitleName(leftTitleName)
+            .leftTitleRarity(leftTitleRarity)
+            .rightTitleName(rightTitleName)
+            .rightTitleRarity(rightTitleRarity)
             .build();
     }
 }

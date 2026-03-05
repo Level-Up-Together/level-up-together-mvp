@@ -133,6 +133,10 @@ class RankingControllerTest {
                             fieldWithPath("value.content[].equipped_title_name").type(JsonFieldType.STRING).description("장착 칭호").optional(),
                             fieldWithPath("value.content[].equipped_title_rarity").type(JsonFieldType.STRING).description("칭호 등급 (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHIC)").optional(),
                             fieldWithPath("value.content[].equipped_title_color_code").type(JsonFieldType.STRING).description("칭호 색상 코드").optional(),
+                            fieldWithPath("value.content[].left_title_name").type(JsonFieldType.STRING).description("좌측 칭호").optional(),
+                            fieldWithPath("value.content[].left_title_rarity").type(JsonFieldType.STRING).description("좌측 칭호 등급").optional(),
+                            fieldWithPath("value.content[].right_title_name").type(JsonFieldType.STRING).description("우측 칭호").optional(),
+                            fieldWithPath("value.content[].right_title_rarity").type(JsonFieldType.STRING).description("우측 칭호 등급").optional(),
                             fieldWithPath("value.pageable").type(JsonFieldType.OBJECT).description("페이징 정보").optional(),
                             fieldWithPath("value.pageable.page_number").type(JsonFieldType.NUMBER).description("페이지 번호").optional(),
                             fieldWithPath("value.pageable.page_size").type(JsonFieldType.NUMBER).description("페이지 크기").optional(),
@@ -318,7 +322,11 @@ class RankingControllerTest {
                             fieldWithPath("value.user_level").type(JsonFieldType.NUMBER).description("사용자 레벨").optional(),
                             fieldWithPath("value.equipped_title_name").type(JsonFieldType.STRING).description("장착 칭호").optional(),
                             fieldWithPath("value.equipped_title_rarity").type(JsonFieldType.STRING).description("칭호 등급 (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHIC)").optional(),
-                            fieldWithPath("value.equipped_title_color_code").type(JsonFieldType.STRING).description("칭호 색상 코드").optional()
+                            fieldWithPath("value.equipped_title_color_code").type(JsonFieldType.STRING).description("칭호 색상 코드").optional(),
+                            fieldWithPath("value.left_title_name").type(JsonFieldType.STRING).description("좌측 칭호").optional(),
+                            fieldWithPath("value.left_title_rarity").type(JsonFieldType.STRING).description("좌측 칭호 등급").optional(),
+                            fieldWithPath("value.right_title_name").type(JsonFieldType.STRING).description("우측 칭호").optional(),
+                            fieldWithPath("value.right_title_rarity").type(JsonFieldType.STRING).description("우측 칭호 등급").optional()
                         )
                         .build()
                 )
@@ -374,7 +382,11 @@ class RankingControllerTest {
                             fieldWithPath("value[].user_level").type(JsonFieldType.NUMBER).description("사용자 레벨").optional(),
                             fieldWithPath("value[].equipped_title_name").type(JsonFieldType.STRING).description("장착 칭호").optional(),
                             fieldWithPath("value[].equipped_title_rarity").type(JsonFieldType.STRING).description("칭호 등급 (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, MYTHIC)").optional(),
-                            fieldWithPath("value[].equipped_title_color_code").type(JsonFieldType.STRING).description("칭호 색상 코드").optional()
+                            fieldWithPath("value[].equipped_title_color_code").type(JsonFieldType.STRING).description("칭호 색상 코드").optional(),
+                            fieldWithPath("value[].left_title_name").type(JsonFieldType.STRING).description("좌측 칭호").optional(),
+                            fieldWithPath("value[].left_title_rarity").type(JsonFieldType.STRING).description("좌측 칭호 등급").optional(),
+                            fieldWithPath("value[].right_title_name").type(JsonFieldType.STRING).description("우측 칭호").optional(),
+                            fieldWithPath("value[].right_title_rarity").type(JsonFieldType.STRING).description("우측 칭호 등급").optional()
                         )
                         .build()
                 )

@@ -23,6 +23,10 @@ public class LevelRankingResponse {
     private String equippedTitle;
     private TitleRarity equippedTitleRarity;
     private String equippedTitleColorCode;
+    private String leftTitle;
+    private TitleRarity leftTitleRarity;
+    private String rightTitle;
+    private TitleRarity rightTitleRarity;
     private Integer currentLevel;
     private Integer currentExp;
     private Integer totalExp;
@@ -53,7 +57,11 @@ public class LevelRankingResponse {
         String profileImageUrl,
         String equippedTitle,
         TitleRarity equippedTitleRarity,
-        String equippedTitleColorCode
+        String equippedTitleColorCode,
+        String leftTitle,
+        TitleRarity leftTitleRarity,
+        String rightTitle,
+        TitleRarity rightTitleRarity
     ) {
         double percentile = totalUsers > 0
             ? Math.round((double) rank / totalUsers * 1000) / 10.0
@@ -67,6 +75,10 @@ public class LevelRankingResponse {
             .equippedTitle(equippedTitle)
             .equippedTitleRarity(equippedTitleRarity)
             .equippedTitleColorCode(equippedTitleColorCode)
+            .leftTitle(leftTitle)
+            .leftTitleRarity(leftTitleRarity)
+            .rightTitle(rightTitle)
+            .rightTitleRarity(rightTitleRarity)
             .currentLevel(exp.getCurrentLevel())
             .currentExp(exp.getCurrentExp())
             .totalExp(exp.getTotalExp())
@@ -85,7 +97,11 @@ public class LevelRankingResponse {
         String profileImageUrl,
         String equippedTitle,
         TitleRarity equippedTitleRarity,
-        String equippedTitleColorCode
+        String equippedTitleColorCode,
+        String leftTitle,
+        TitleRarity leftTitleRarity,
+        String rightTitle,
+        TitleRarity rightTitleRarity
     ) {
         return LevelRankingResponse.builder()
             .rank(totalUsers + 1)
@@ -95,6 +111,10 @@ public class LevelRankingResponse {
             .equippedTitle(equippedTitle)
             .equippedTitleRarity(equippedTitleRarity)
             .equippedTitleColorCode(equippedTitleColorCode)
+            .leftTitle(leftTitle)
+            .leftTitleRarity(leftTitleRarity)
+            .rightTitle(rightTitle)
+            .rightTitleRarity(rightTitleRarity)
             .currentLevel(1)
             .currentExp(0)
             .totalExp(0)
