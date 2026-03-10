@@ -84,6 +84,10 @@ openapi3 {
     format = 'json'
 }
 
+tasks.matching { it.name == 'openapi3' }.configureEach {
+    dependsOn(':service:test')
+}
+
 // Test
 tasks.named('test') {
     systemProperty 'file.encoding', 'UTF-8'
