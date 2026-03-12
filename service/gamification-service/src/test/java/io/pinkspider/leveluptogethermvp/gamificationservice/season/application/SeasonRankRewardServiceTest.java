@@ -119,7 +119,7 @@ class SeasonRankRewardServiceTest {
             // given
             CreateSeasonRankRewardRequest request = new CreateSeasonRankRewardRequest(1, 1, 100L, 1);
             when(seasonRepository.findById(1L)).thenReturn(Optional.of(testSeason));
-            when(rankRewardRepository.existsOverlappingRange(anyLong(), anyInt(), anyInt(), anyLong())).thenReturn(false);
+            when(rankRewardRepository.existsOverlappingRangeWithNullCategory(anyLong(), anyInt(), anyInt(), anyLong())).thenReturn(false);
             when(titleRepository.findById(100L)).thenReturn(Optional.of(testTitle));
             when(rankRewardRepository.save(any(SeasonRankReward.class))).thenReturn(testReward);
 
@@ -165,7 +165,7 @@ class SeasonRankRewardServiceTest {
             // given
             CreateSeasonRankRewardRequest request = new CreateSeasonRankRewardRequest(1, 5, 100L, 1);
             when(seasonRepository.findById(1L)).thenReturn(Optional.of(testSeason));
-            when(rankRewardRepository.existsOverlappingRange(1L, 1, 5, 0L)).thenReturn(true);
+            when(rankRewardRepository.existsOverlappingRangeWithNullCategory(1L, 1, 5, 0L)).thenReturn(true);
 
             // when & then
             assertThatThrownBy(() -> seasonRankRewardService.createRankReward(1L, request))
@@ -184,7 +184,7 @@ class SeasonRankRewardServiceTest {
             // given
             UpdateSeasonRankRewardRequest request = new UpdateSeasonRankRewardRequest(1, 3, 100L, 1);
             when(rankRewardRepository.findById(1L)).thenReturn(Optional.of(testReward));
-            when(rankRewardRepository.existsOverlappingRange(1L, 1, 3, 1L)).thenReturn(false);
+            when(rankRewardRepository.existsOverlappingRangeWithNullCategory(1L, 1, 3, 1L)).thenReturn(false);
             when(titleRepository.findById(100L)).thenReturn(Optional.of(testTitle));
 
             // when

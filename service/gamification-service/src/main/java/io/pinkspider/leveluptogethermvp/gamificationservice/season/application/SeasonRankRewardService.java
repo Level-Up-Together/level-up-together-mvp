@@ -53,7 +53,7 @@ public class SeasonRankRewardService {
         }
 
         // 순위 구간 중복 검사
-        if (rankRewardRepository.existsOverlappingRange(seasonId, request.rankStart(), request.rankEnd(), 0L)) {
+        if (rankRewardRepository.existsOverlappingRangeWithNullCategory(seasonId, request.rankStart(), request.rankEnd(), 0L)) {
             throw new CustomException("RANK_RANGE_OVERLAP", "순위 구간이 기존 보상과 중복됩니다.");
         }
 
@@ -92,7 +92,7 @@ public class SeasonRankRewardService {
         }
 
         // 순위 구간 중복 검사 (자신 제외)
-        if (rankRewardRepository.existsOverlappingRange(
+        if (rankRewardRepository.existsOverlappingRangeWithNullCategory(
                 reward.getSeason().getId(), request.rankStart(), request.rankEnd(), rewardId)) {
             throw new CustomException("RANK_RANGE_OVERLAP", "순위 구간이 기존 보상과 중복됩니다.");
         }

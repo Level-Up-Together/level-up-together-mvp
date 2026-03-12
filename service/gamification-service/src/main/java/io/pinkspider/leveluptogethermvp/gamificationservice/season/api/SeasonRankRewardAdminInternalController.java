@@ -10,6 +10,7 @@ import io.pinkspider.leveluptogethermvp.gamificationservice.season.domain.dto.Up
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Admin 내부 API 컨트롤러 - Season Rank Reward
  * 인증 불필요 (SecurityConfig에서 /api/internal/** permitAll)
  */
+@Validated
 @RestController
 @RequestMapping("/api/internal/seasons/{seasonId}/rank-rewards")
 @RequiredArgsConstructor

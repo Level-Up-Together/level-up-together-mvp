@@ -31,25 +31,6 @@ public interface SeasonRankRewardRepository extends JpaRepository<SeasonRankRewa
     Optional<Integer> findMaxRankBySeasonId(@Param("seasonId") Long seasonId);
 
     /**
-     * 시즌의 순위 구간 중복 검사
-     */
-    @Query("""
-        SELECT COUNT(srr) > 0 FROM SeasonRankReward srr
-        WHERE srr.season.id = :seasonId
-        AND srr.isActive = true
-        AND srr.id != :excludeId
-        AND ((srr.rankStart <= :rankStart AND srr.rankEnd >= :rankStart)
-            OR (srr.rankStart <= :rankEnd AND srr.rankEnd >= :rankEnd)
-            OR (srr.rankStart >= :rankStart AND srr.rankEnd <= :rankEnd))
-        """)
-    boolean existsOverlappingRange(
-        @Param("seasonId") Long seasonId,
-        @Param("rankStart") int rankStart,
-        @Param("rankEnd") int rankEnd,
-        @Param("excludeId") Long excludeId
-    );
-
-    /**
      * 시즌의 순위 구간 중복 검사 (카테고리 지정)
      */
     @Query("""
