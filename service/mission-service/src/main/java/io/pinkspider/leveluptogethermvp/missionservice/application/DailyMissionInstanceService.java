@@ -37,6 +37,9 @@ import java.util.stream.Collectors;
  * - 인스턴스 시작/완료
  * - 피드 공유
  * - 이미지 업로드
+ *
+ * Phase 1 fix: findActiveInstanceByParticipant → 작업별 조회 메서드 분리
+ * Phase 2: instanceId 기반 직접 조회 지원
  */
 @Service
 @RequiredArgsConstructor
@@ -90,15 +93,11 @@ public class DailyMissionInstanceService {
     }
 
     /**
-     * 고정 미션 인스턴스 조회 (missionId + date로 조회)
+     * 고정 미션 인스턴스 조회 (missionId + date + optional instanceId)
      */
     @Transactional(readOnly = true, transactionManager = "missionTransactionManager")
-    public DailyMissionInstanceResponse getInstanceByMission(Long missionId, String userId, LocalDate date) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        DailyMissionInstance instance = findActiveInstanceByParticipant(participant.getId(), date);
-
+    public DailyMissionInstanceResponse getInstanceByMission(Long missionId, String userId, LocalDate date, Long instanceId) {
+        DailyMissionInstance instance = resolveQueryInstance(missionId, userId, date, instanceId);
         return DailyMissionInstanceResponse.from(instance);
     }
 
@@ -148,8 +147,7 @@ public class DailyMissionInstanceService {
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstanceResponse startInstanceByMission(Long missionId, String userId, LocalDate date) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
+        MissionParticipant participant = findParticipant(missionId, userId);
 
         // 일일 수행 제한 체크
         Mission mission = participant.getMission();
@@ -195,19 +193,11 @@ public class DailyMissionInstanceService {
 
     /**
      * 인스턴스 완료 (경험치 지급 + 피드 공유 옵션)
-     *
-     * Saga 패턴을 사용하여 여러 DB에 걸친 트랜잭션을 안전하게 처리
-     * - mission_db: 인스턴스 완료, 다음 인스턴스 생성
-     * - gamification_db: 경험치 지급, 통계 업데이트
-     * - feed_db: 피드 생성 (선택적)
-     *
-     * 실패 시 자동으로 보상 트랜잭션 실행
      */
     public DailyMissionInstanceResponse completeInstance(Long instanceId, String userId, String note, boolean shareToFeed) {
         log.info("고정 미션 완료 요청 (Saga): instanceId={}, userId={}, shareToFeed={}",
             instanceId, userId, shareToFeed);
 
-        // Saga 실행
         SagaResult<MissionCompletionContext> result =
             missionCompletionSaga.executePinned(instanceId, userId, note, shareToFeed);
 
@@ -223,8 +213,7 @@ public class DailyMissionInstanceService {
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstanceResponse completeInstanceByMission(Long missionId, String userId, LocalDate date, String note, boolean shareToFeed) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
+        MissionParticipant participant = findParticipant(missionId, userId);
 
         DailyMissionInstance instance = instanceRepository.findInProgressByParticipantIdAndDate(participant.getId(), date)
             .orElseThrow(() -> new IllegalArgumentException("진행 중인 인스턴스를 찾을 수 없습니다: " + date));
@@ -253,8 +242,7 @@ public class DailyMissionInstanceService {
      */
     @Transactional(transactionManager = "missionTransactionManager")
     public DailyMissionInstanceResponse skipInstanceByMission(Long missionId, String userId, LocalDate date) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
+        MissionParticipant participant = findParticipant(missionId, userId);
 
         DailyMissionInstance instance = instanceRepository.findInProgressByParticipantIdAndDate(participant.getId(), date)
             .orElseThrow(() -> new IllegalArgumentException("진행 중인 인스턴스를 찾을 수 없습니다: " + date));
@@ -290,15 +278,11 @@ public class DailyMissionInstanceService {
     }
 
     /**
-     * 고정 미션 피드 공유 (missionId + date로 조회)
+     * 고정 미션 피드 공유 (missionId + date + optional instanceId)
      */
     @Transactional(transactionManager = "missionTransactionManager")
-    public DailyMissionInstanceResponse shareToFeedByMission(Long missionId, String userId, LocalDate date) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        DailyMissionInstance instance = findActiveInstanceByParticipant(participant.getId(), date);
-
+    public DailyMissionInstanceResponse shareToFeedByMission(Long missionId, String userId, LocalDate date, Long instanceId) {
+        DailyMissionInstance instance = resolveCompletedInstance(missionId, userId, date, instanceId);
         return shareToFeed(instance.getId(), userId);
     }
 
@@ -327,27 +311,20 @@ public class DailyMissionInstanceService {
     }
 
     /**
-     * 고정 미션 피드 공유 취소 (missionId + date로 조회)
+     * 고정 미션 피드 공유 취소 (missionId + date + optional instanceId)
      */
     @Transactional(transactionManager = "missionTransactionManager")
-    public DailyMissionInstanceResponse unshareFromFeedByMission(Long missionId, String userId, LocalDate date) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        DailyMissionInstance instance = findActiveInstanceByParticipant(participant.getId(), date);
-
+    public DailyMissionInstanceResponse unshareFromFeedByMission(Long missionId, String userId, LocalDate date, Long instanceId) {
+        DailyMissionInstance instance = resolveCompletedInstance(missionId, userId, date, instanceId);
         return unshareFromFeed(instance.getId(), userId);
     }
 
     /**
-     * 고정 미션 노트 업데이트 (missionId + date로 조회)
+     * 고정 미션 노트 업데이트 (missionId + date + optional instanceId)
      */
     @Transactional(transactionManager = "missionTransactionManager")
-    public DailyMissionInstanceResponse updateNoteByMission(Long missionId, String userId, LocalDate date, String note) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        DailyMissionInstance instance = findActiveInstanceByParticipant(participant.getId(), date);
+    public DailyMissionInstanceResponse updateNoteByMission(Long missionId, String userId, LocalDate date, String note, Long instanceId) {
+        DailyMissionInstance instance = resolveCompletedInstance(missionId, userId, date, instanceId);
         validateInstanceOwner(instance, userId);
 
         if (instance.getStatus() != ExecutionStatus.COMPLETED) {
@@ -357,7 +334,7 @@ public class DailyMissionInstanceService {
         instance.setNote(note);
         instanceRepository.save(instance);
 
-        log.info("고정 미션 기록 업데이트: missionId={}, userId={}, date={}", missionId, userId, date);
+        log.info("고정 미션 기록 업데이트: missionId={}, userId={}, date={}, instanceId={}", missionId, userId, date, instance.getId());
         return DailyMissionInstanceResponse.from(instance);
     }
 
@@ -400,15 +377,11 @@ public class DailyMissionInstanceService {
     }
 
     /**
-     * 고정 미션 이미지 업로드 (missionId + date로 조회)
+     * 고정 미션 이미지 업로드 (missionId + date + optional instanceId)
      */
     @Transactional(transactionManager = "missionTransactionManager")
-    public DailyMissionInstanceResponse uploadImageByMission(Long missionId, String userId, LocalDate date, MultipartFile image) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        DailyMissionInstance instance = findActiveInstanceByParticipant(participant.getId(), date);
-
+    public DailyMissionInstanceResponse uploadImageByMission(Long missionId, String userId, LocalDate date, MultipartFile image, Long instanceId) {
+        DailyMissionInstance instance = resolveCompletedInstance(missionId, userId, date, instanceId);
         return uploadImage(instance.getId(), userId, image);
     }
 
@@ -438,26 +411,66 @@ public class DailyMissionInstanceService {
     }
 
     /**
-     * 고정 미션 이미지 삭제 (missionId + date로 조회)
+     * 고정 미션 이미지 삭제 (missionId + date + optional instanceId)
      */
     @Transactional(transactionManager = "missionTransactionManager")
-    public DailyMissionInstanceResponse deleteImageByMission(Long missionId, String userId, LocalDate date) {
-        MissionParticipant participant = participantRepository.findByMissionIdAndUserId(missionId, userId)
-            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
-
-        DailyMissionInstance instance = findActiveInstanceByParticipant(participant.getId(), date);
-
+    public DailyMissionInstanceResponse deleteImageByMission(Long missionId, String userId, LocalDate date, Long instanceId) {
+        DailyMissionInstance instance = resolveCompletedInstance(missionId, userId, date, instanceId);
         return deleteImage(instance.getId(), userId);
     }
 
-    // ============ 헬퍼 메서드 ============
+    // ============ 인스턴스 해석 (Phase 1 + Phase 2) ============
 
     /**
-     * 참여자의 특정 날짜 활성 인스턴스 조회
-     * IN_PROGRESS 우선, 없으면 최신 시퀀스 인스턴스 반환
-     * (같은 날짜에 여러 인스턴스가 존재할 수 있으므로 findByParticipantIdAndInstanceDate 대신 사용)
+     * 후처리 작업용 인스턴스 해석 (note, image, share)
+     *
+     * instanceId가 있으면 → 직접 조회 (정확한 타겟팅)
+     * instanceId가 없으면 → 가장 최근 COMPLETED 인스턴스 반환
+     *
+     * Phase 1 fix: 기존 findActiveInstanceByParticipant()의 IN_PROGRESS 우선 반환 버그 해결
+     * Phase 2: instanceId 지원으로 다중 완료 인스턴스 중 정확한 타겟팅 가능
      */
-    private DailyMissionInstance findActiveInstanceByParticipant(Long participantId, LocalDate date) {
+    private DailyMissionInstance resolveCompletedInstance(Long missionId, String userId, LocalDate date, Long instanceId) {
+        if (instanceId != null) {
+            return findInstanceById(instanceId);
+        }
+        MissionParticipant participant = findParticipant(missionId, userId);
+        return findLatestCompletedInstance(participant.getId(), date);
+    }
+
+    /**
+     * 조회 작업용 인스턴스 해석
+     *
+     * instanceId가 있으면 → 직접 조회
+     * instanceId가 없으면 → 우선순위: IN_PROGRESS > COMPLETED(최신) > 기타(최신 시퀀스)
+     */
+    private DailyMissionInstance resolveQueryInstance(Long missionId, String userId, LocalDate date, Long instanceId) {
+        if (instanceId != null) {
+            return findInstanceById(instanceId);
+        }
+        MissionParticipant participant = findParticipant(missionId, userId);
+        return findBestMatchInstance(participant.getId(), date);
+    }
+
+    /**
+     * 가장 최근 완료된 인스턴스 조회
+     * 같은 날짜에 여러 COMPLETED 인스턴스가 있을 때, 시퀀스가 가장 큰(최근) 것을 반환
+     */
+    private DailyMissionInstance findLatestCompletedInstance(Long participantId, LocalDate date) {
+        List<DailyMissionInstance> instances = instanceRepository
+            .findByParticipantIdAndInstanceDateOrderBySequenceDesc(participantId, date);
+        return instances.stream()
+            .filter(i -> i.getStatus() == ExecutionStatus.COMPLETED)
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException(
+                "해당 날짜의 완료된 인스턴스를 찾을 수 없습니다: " + date));
+    }
+
+    /**
+     * 가장 적절한 인스턴스 조회 (조회 용도)
+     * 우선순위: IN_PROGRESS > COMPLETED(최신 시퀀스) > 기타(최신 시퀀스)
+     */
+    private DailyMissionInstance findBestMatchInstance(Long participantId, LocalDate date) {
         return instanceRepository.findInProgressByParticipantIdAndDate(participantId, date)
             .orElseGet(() -> {
                 List<DailyMissionInstance> instances = instanceRepository
@@ -465,8 +478,19 @@ public class DailyMissionInstanceService {
                 if (instances.isEmpty()) {
                     throw new IllegalArgumentException("해당 날짜의 인스턴스를 찾을 수 없습니다: " + date);
                 }
-                return instances.get(0);
+                // COMPLETED 우선, 없으면 최신 시퀀스
+                return instances.stream()
+                    .filter(i -> i.getStatus() == ExecutionStatus.COMPLETED)
+                    .findFirst()
+                    .orElse(instances.get(0));
             });
+    }
+
+    // ============ 공통 헬퍼 메서드 ============
+
+    private MissionParticipant findParticipant(Long missionId, String userId) {
+        return participantRepository.findByMissionIdAndUserId(missionId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("미션 참여 정보를 찾을 수 없습니다."));
     }
 
     private DailyMissionInstance findInstanceById(Long instanceId) {
@@ -492,7 +516,7 @@ public class DailyMissionInstanceService {
                 profile.titleName(),
                 profile.titleRarity(),
                 profile.titleColorCode(),
-                instance.getId(),  // executionId 대신 instanceId 사용
+                instance.getId(),
                 instance.getParticipant().getMission().getId(),
                 instance.getMissionTitle(),
                 instance.getMissionDescription(),

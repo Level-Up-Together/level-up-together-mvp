@@ -21,6 +21,8 @@ import io.pinkspider.global.component.LmObjectMapper;
 import io.pinkspider.leveluptogethermvp.config.ControllerTestConfig;
 import io.pinkspider.leveluptogethermvp.chatservice.domain.dto.ChatMessageRequest;
 import io.pinkspider.leveluptogethermvp.chatservice.domain.dto.ChatMessageResponse;
+import io.pinkspider.leveluptogethermvp.chatservice.domain.dto.ChatParticipantResponse;
+import io.pinkspider.leveluptogethermvp.chatservice.domain.dto.ChatRoomInfoResponse;
 import io.pinkspider.leveluptogethermvp.chatservice.application.GuildChatService;
 import io.pinkspider.util.MockUtil;
 import java.time.LocalDateTime;
@@ -542,6 +544,312 @@ class GuildChatControllerTest {
                         .responseFields(
                             fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
                             fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/guilds/{guildId}/chat/info : 채팅방 정보 조회")
+    void getChatRoomInfoTest() throws Exception {
+        // given
+        Long guildId = 1L;
+
+        ChatRoomInfoResponse response = ChatRoomInfoResponse.of(
+            guildId, "테스트길드", null, 10, 5, 3, 100L);
+
+        when(guildChatService.getChatRoomInfo(anyLong(), anyString())).thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/guilds/{guildId}/chat/info", guildId)
+                .with(user(MOCK_USER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-08. 채팅방 정보 조회",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("채팅방 정보 조회 (참여자 수, 안읽은 메시지 수 포함) (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("채팅방 정보"),
+                            fieldWithPath("value.guild_id").type(JsonFieldType.NUMBER).description("길드 ID"),
+                            fieldWithPath("value.guild_name").type(JsonFieldType.STRING).description("길드 이름"),
+                            fieldWithPath("value.guild_image_url").type(JsonFieldType.STRING).description("길드 이미지 URL").optional(),
+                            fieldWithPath("value.member_count").type(JsonFieldType.NUMBER).description("길드 멤버 수"),
+                            fieldWithPath("value.participant_count").type(JsonFieldType.NUMBER).description("채팅 참여자 수"),
+                            fieldWithPath("value.unread_message_count").type(JsonFieldType.NUMBER).description("안읽은 메시지 수"),
+                            fieldWithPath("value.last_read_message_id").type(JsonFieldType.NUMBER).description("마지막으로 읽은 메시지 ID").optional()
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/guilds/{guildId}/chat/with-unread : 안읽은 수 포함 메시지 조회")
+    void getMessagesWithUnreadCountTest() throws Exception {
+        // given
+        Long guildId = 1L;
+        List<ChatMessageResponse> messages = createMockChatMessages();
+        Page<ChatMessageResponse> page = new PageImpl<>(messages, org.springframework.data.domain.PageRequest.of(0, 50), messages.size());
+
+        when(guildChatService.getMessagesWithUnreadCount(anyLong(), anyString(), any(org.springframework.data.domain.Pageable.class)))
+            .thenReturn(page);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/guilds/{guildId}/chat/with-unread", guildId)
+                .with(user(MOCK_USER_ID))
+                .param("page", "0")
+                .param("size", "50")
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-09. 안읽은 수 포함 메시지 조회",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("안읽은 메시지 수 포함 채팅 메시지 조회 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .queryParameters(
+                            parameterWithName("page").type(SimpleType.NUMBER).description("페이지 번호 (기본값: 0)").optional(),
+                            parameterWithName("size").type(SimpleType.NUMBER).description("페이지 크기 (기본값: 50)").optional()
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/guilds/{guildId}/chat/read/{messageId} : 메시지 읽음 처리")
+    void markAsReadTest() throws Exception {
+        // given
+        Long guildId = 1L;
+        Long messageId = 100L;
+
+        doNothing().when(guildChatService).markAsRead(anyLong(), anyString(), anyLong());
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/v1/guilds/{guildId}/chat/read/{messageId}", guildId, messageId)
+                .with(user(MOCK_USER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-10. 메시지 읽음 처리",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("채팅 메시지 읽음 처리 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID"),
+                            parameterWithName("messageId").type(SimpleType.NUMBER).description("읽음 처리할 메시지 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/guilds/{guildId}/chat/join : 채팅방 입장")
+    void joinChatTest() throws Exception {
+        // given
+        Long guildId = 1L;
+
+        ChatParticipantResponse response = ChatParticipantResponse.builder()
+            .userId(MOCK_USER_ID)
+            .userNickname(MOCK_NICKNAME)
+            .joinedAt(java.time.LocalDateTime.of(2025, 1, 15, 10, 0))
+            .isActive(true)
+            .build();
+
+        when(guildChatService.joinChat(anyLong(), anyString(), anyString())).thenReturn(response);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/v1/guilds/{guildId}/chat/join", guildId)
+                .with(user(MOCK_USER_ID))
+                .header(X_USER_NICKNAME, MOCK_NICKNAME)
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-11. 채팅방 입장",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("채팅방 입장 처리 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.OBJECT).description("참여자 정보"),
+                            fieldWithPath("value.user_id").type(JsonFieldType.STRING).description("사용자 ID"),
+                            fieldWithPath("value.user_nickname").type(JsonFieldType.STRING).description("사용자 닉네임"),
+                            fieldWithPath("value.joined_at").type(JsonFieldType.STRING).description("참여 시간"),
+                            fieldWithPath("value.is_active").type(JsonFieldType.BOOLEAN).description("활성 여부")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/guilds/{guildId}/chat/leave : 채팅방 퇴장")
+    void leaveChatTest() throws Exception {
+        // given
+        Long guildId = 1L;
+
+        doNothing().when(guildChatService).leaveChat(anyLong(), anyString(), anyString());
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/v1/guilds/{guildId}/chat/leave", guildId)
+                .with(user(MOCK_USER_ID))
+                .header(X_USER_NICKNAME, MOCK_NICKNAME)
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-12. 채팅방 퇴장",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("채팅방 퇴장 처리 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/guilds/{guildId}/chat/participation-status : 채팅방 참여 상태 확인")
+    void getParticipationStatusTest() throws Exception {
+        // given
+        Long guildId = 1L;
+
+        when(guildChatService.isParticipating(anyLong(), anyString())).thenReturn(true);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/guilds/{guildId}/chat/participation-status", guildId)
+                .with(user(MOCK_USER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-13. 채팅방 참여 상태 확인",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("채팅방 참여 상태 확인 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value").type(JsonFieldType.BOOLEAN).description("채팅방 참여 여부")
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/guilds/{guildId}/chat/participants : 채팅방 참여자 목록 조회")
+    void getParticipantsTest() throws Exception {
+        // given
+        Long guildId = 1L;
+
+        List<ChatParticipantResponse> participants = List.of(
+            ChatParticipantResponse.builder()
+                .userId(MOCK_USER_ID)
+                .userNickname(MOCK_NICKNAME)
+                .joinedAt(java.time.LocalDateTime.of(2025, 1, 15, 10, 0))
+                .isActive(true)
+                .build()
+        );
+
+        when(guildChatService.getActiveParticipants(anyLong(), anyString())).thenReturn(participants);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/guilds/{guildId}/chat/participants", guildId)
+                .with(user(MOCK_USER_ID))
+                .contentType(MediaType.APPLICATION_JSON)
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드채팅-14. 채팅방 참여자 목록 조회",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild Chat")
+                        .description("현재 채팅방 활성 참여자 목록 조회 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID")
+                        )
+                        .responseFields(
+                            fieldWithPath("code").type(JsonFieldType.STRING).description("응답 코드"),
+                            fieldWithPath("message").type(JsonFieldType.STRING).description("응답 메시지"),
+                            fieldWithPath("value[]").type(JsonFieldType.ARRAY).description("참여자 목록"),
+                            fieldWithPath("value[].user_id").type(JsonFieldType.STRING).description("사용자 ID"),
+                            fieldWithPath("value[].user_nickname").type(JsonFieldType.STRING).description("사용자 닉네임"),
+                            fieldWithPath("value[].joined_at").type(JsonFieldType.STRING).description("참여 시간"),
+                            fieldWithPath("value[].is_active").type(JsonFieldType.BOOLEAN).description("활성 여부")
                         )
                         .build()
                 )

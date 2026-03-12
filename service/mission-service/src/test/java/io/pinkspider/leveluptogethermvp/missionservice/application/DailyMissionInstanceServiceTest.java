@@ -808,7 +808,7 @@ class DailyMissionInstanceServiceTest {
                 .thenReturn(List.of(instance));
 
             // when
-            DailyMissionInstanceResponse response = service.getInstanceByMission(MISSION_ID, TEST_USER_ID, targetDate);
+            DailyMissionInstanceResponse response = service.getInstanceByMission(MISSION_ID, TEST_USER_ID, targetDate, null);
 
             // then
             assertThat(response).isNotNull();
@@ -822,7 +822,7 @@ class DailyMissionInstanceServiceTest {
                 .thenReturn(Optional.empty());
 
             // when & then
-            assertThatThrownBy(() -> service.getInstanceByMission(MISSION_ID, TEST_USER_ID, LocalDate.now()))
+            assertThatThrownBy(() -> service.getInstanceByMission(MISSION_ID, TEST_USER_ID, LocalDate.now(), null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("미션 참여 정보를 찾을 수 없습니다");
         }
@@ -841,7 +841,7 @@ class DailyMissionInstanceServiceTest {
                 .thenReturn(List.of());
 
             // when & then
-            assertThatThrownBy(() -> service.getInstanceByMission(MISSION_ID, TEST_USER_ID, targetDate))
+            assertThatThrownBy(() -> service.getInstanceByMission(MISSION_ID, TEST_USER_ID, targetDate, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("해당 날짜의 인스턴스를 찾을 수 없습니다");
         }
@@ -951,7 +951,7 @@ class DailyMissionInstanceServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            DailyMissionInstanceResponse response = service.shareToFeedByMission(MISSION_ID, TEST_USER_ID, today);
+            DailyMissionInstanceResponse response = service.shareToFeedByMission(MISSION_ID, TEST_USER_ID, today, null);
 
             // then
             assertThat(response).isNotNull();
@@ -972,10 +972,12 @@ class DailyMissionInstanceServiceTest {
             MockMultipartFile mockFile = new MockMultipartFile(
                 "image", "test.jpg", "image/jpeg", "test content".getBytes());
 
+            TestReflectionUtils.setField(instance, "status", ExecutionStatus.COMPLETED);
+
             when(participantRepository.findByMissionIdAndUserId(MISSION_ID, TEST_USER_ID))
                 .thenReturn(Optional.of(participant));
-            when(instanceRepository.findInProgressByParticipantIdAndDate(PARTICIPANT_ID, today))
-                .thenReturn(Optional.of(instance));
+            when(instanceRepository.findByParticipantIdAndInstanceDateOrderBySequenceDesc(PARTICIPANT_ID, today))
+                .thenReturn(List.of(instance));
             when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
                 .thenReturn(Optional.of(instance));
             when(missionImageStorageService.store(any(), eq(TEST_USER_ID), eq(MISSION_ID), anyString()))
@@ -985,7 +987,7 @@ class DailyMissionInstanceServiceTest {
 
             // when
             DailyMissionInstanceResponse response = service.uploadImageByMission(
-                MISSION_ID, TEST_USER_ID, today, mockFile);
+                MISSION_ID, TEST_USER_ID, today, mockFile, null);
 
             // then
             assertThat(response).isNotNull();
@@ -1002,19 +1004,20 @@ class DailyMissionInstanceServiceTest {
         void deleteImageByMission_success() {
             // given
             LocalDate today = LocalDate.now();
+            TestReflectionUtils.setField(instance, "status", ExecutionStatus.COMPLETED);
             instance.setImageUrl("https://example.com/image.jpg");
 
             when(participantRepository.findByMissionIdAndUserId(MISSION_ID, TEST_USER_ID))
                 .thenReturn(Optional.of(participant));
-            when(instanceRepository.findInProgressByParticipantIdAndDate(PARTICIPANT_ID, today))
-                .thenReturn(Optional.of(instance));
+            when(instanceRepository.findByParticipantIdAndInstanceDateOrderBySequenceDesc(PARTICIPANT_ID, today))
+                .thenReturn(List.of(instance));
             when(instanceRepository.findByIdWithParticipantAndMission(INSTANCE_ID))
                 .thenReturn(Optional.of(instance));
             when(instanceRepository.save(any(DailyMissionInstance.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
             // when
-            DailyMissionInstanceResponse response = service.deleteImageByMission(MISSION_ID, TEST_USER_ID, today);
+            DailyMissionInstanceResponse response = service.deleteImageByMission(MISSION_ID, TEST_USER_ID, today, null);
 
             // then
             assertThat(response).isNotNull();

@@ -16,7 +16,6 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotNull;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
@@ -41,7 +40,7 @@ import org.hibernate.annotations.Comment;
     )
 )
 @Comment("미션 수행 기록")
-public class MissionExecution extends LocalDateTimeBaseEntity {
+public class MissionExecution extends LocalDateTimeBaseEntity implements MissionExecutionLifecycle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -103,168 +102,21 @@ public class MissionExecution extends LocalDateTimeBaseEntity {
     @Comment("낙관적 락 버전")
     private Long version;
 
-    // 최소 미션 수행 시간 (분) - 어뷰징 방지
-    private static final long MINIMUM_EXECUTION_MINUTES = 1;
-    // 최대 미션 수행 시간 (분) - 어뷰징 방지 (2시간)
-    private static final long MAXIMUM_EXECUTION_MINUTES = 120;
+    // === MissionExecutionLifecycle 구현 ===
 
     /**
-     * 미션 수행 시작
+     * 경험치 계산: 분당 1 EXP, 최소 1분, 최대 480분(8시간)
      */
-    public void start() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("이미 완료된 수행 기록입니다.");
-        }
-        if (this.status == ExecutionStatus.MISSED) {
-            throw new IllegalStateException("미실행 처리된 수행 기록은 시작할 수 없습니다.");
-        }
-        if (this.startedAt != null) {
-            throw new IllegalStateException("이미 시작된 수행 기록입니다.");
-        }
-        this.status = ExecutionStatus.IN_PROGRESS;
-        this.startedAt = LocalDateTime.now();
-    }
-
-    /**
-     * 미션 수행 완료 및 경험치 계산 (분당 1 EXP)
-     * 최소 수행 시간 검증으로 어뷰징 방지
-     */
-    public void complete() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("이미 완료된 수행 기록입니다.");
-        }
-        if (this.status == ExecutionStatus.MISSED) {
-            throw new IllegalStateException("미실행 처리된 수행 기록은 완료할 수 없습니다.");
-        }
-        if (this.startedAt == null) {
-            throw new IllegalStateException("미션을 먼저 시작해야 합니다.");
-        }
-
-        // 최소 수행 시간 검증 (어뷰징 방지)
-        LocalDateTime now = LocalDateTime.now();
-        long elapsedSeconds = Duration.between(this.startedAt, now).getSeconds();
-        long elapsedMinutes = elapsedSeconds / 60;
-        if (elapsedMinutes < MINIMUM_EXECUTION_MINUTES) {
-            throw new IllegalStateException(String.format(
-                "최소 1분 이상 수행해야 완료할 수 있습니다. (시작: %s, 현재: %s, 경과: %d초)",
-                this.startedAt, now, elapsedSeconds));
-        }
-
-        this.status = ExecutionStatus.COMPLETED;
-        this.completedAt = now;
-        // 경험치 계산: 시작~종료 시간을 분으로 계산하여 분당 1 EXP
-        this.expEarned = calculateExpByDuration();
-    }
-
-    /**
-     * 시작~종료 시간을 분으로 계산하여 경험치 반환 (분당 1 EXP)
-     */
+    @Override
     public int calculateExpByDuration() {
         if (this.startedAt == null || this.completedAt == null) {
             return 0;
         }
         long durationMinutes = java.time.Duration.between(this.startedAt, this.completedAt).toMinutes();
-        // 최소 1분, 최대 480분(8시간) 제한
         return (int) Math.max(1, Math.min(durationMinutes, 480));
     }
 
-    public void markAsMissed() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 수행 기록은 미실행 처리할 수 없습니다.");
-        }
-        this.status = ExecutionStatus.MISSED;
-    }
-
-    /**
-     * 진행 중인 미션 취소 (PENDING 상태로 되돌림)
-     */
-    public void skip() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 수행 기록은 취소할 수 없습니다.");
-        }
-        if (this.status == ExecutionStatus.MISSED) {
-            throw new IllegalStateException("미실행 처리된 수행 기록은 취소할 수 없습니다.");
-        }
-        // PENDING 상태로 되돌리고 시작 시간 초기화
-        this.status = ExecutionStatus.PENDING;
-        this.startedAt = null;
-    }
-
-    public void setExpEarned(int exp) {
-        this.expEarned = exp;
-    }
-
-    /**
-     * 피드에 공유 처리
-     */
-    public void shareToFeed() {
-        this.isSharedToFeed = true;
-    }
-
-    /**
-     * 피드 공유 취소 처리
-     */
-    public void unshareFromFeed() {
-        this.isSharedToFeed = false;
-    }
-
-    /**
-     * 2시간 초과 미션 자동 완료 (어뷰징 방지)
-     * 스케줄러에서 호출하여 시작 후 2시간이 경과한 미션을 자동 종료
-     *
-     * @param baseExp 기본 경험치 (2시간 초과 시 부여, 설정 파일에서 주입)
-     * @return 자동 완료 처리 여부
-     */
-    public boolean autoCompleteIfExpired(int baseExp) {
-        if (this.status != ExecutionStatus.IN_PROGRESS || this.startedAt == null) {
-            return false;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        long elapsedMinutes = Duration.between(this.startedAt, now).toMinutes();
-
-        if (elapsedMinutes < MAXIMUM_EXECUTION_MINUTES) {
-            return false;
-        }
-
-        // 2시간(120분) 초과: 기본 경험치만 부여
-        this.status = ExecutionStatus.COMPLETED;
-        this.completedAt = this.startedAt.plusMinutes(MAXIMUM_EXECUTION_MINUTES);
-        this.expEarned = baseExp;
-        this.isAutoCompleted = true;
-        return true;
-    }
-
-    /**
-     * 날짜 변경 시 자동 완료 (자정 스케줄러 safety net)
-     *
-     * 날짜가 바뀌었는데 완료되지 않은 IN_PROGRESS 미션을 자동 완료합니다.
-     * 2시간 초과 시 기본 경험치만 부여합니다.
-     *
-     * @param baseExp 기본 경험치 (2시간 초과 시 부여)
-     * @return 자동 완료 처리 여부
-     */
-    public boolean autoCompleteForDateChange(int baseExp) {
-        if (this.status != ExecutionStatus.IN_PROGRESS || this.startedAt == null) {
-            return false;
-        }
-
-        this.status = ExecutionStatus.COMPLETED;
-        this.completedAt = LocalDateTime.now();
-        long elapsedMinutes = Duration.between(this.startedAt, this.completedAt).toMinutes();
-        this.expEarned = elapsedMinutes > MAXIMUM_EXECUTION_MINUTES ? baseExp : calculateExpByDuration();
-        this.isAutoCompleted = true;
-        return true;
-    }
-
-    /**
-     * 수행 시작 후 경과 시간이 최대 수행 시간을 초과했는지 확인
-     */
-    public boolean isExpired() {
-        if (this.status != ExecutionStatus.IN_PROGRESS || this.startedAt == null) {
-            return false;
-        }
-        long elapsedMinutes = Duration.between(this.startedAt, LocalDateTime.now()).toMinutes();
-        return elapsedMinutes >= MAXIMUM_EXECUTION_MINUTES;
-    }
+    // start(), complete(), skip(), markAsMissed(), shareToFeed(), unshareFromFeed(),
+    // isExpired(), autoCompleteIfExpired(), autoCompleteForDateChange()
+    // → MissionExecutionLifecycle 인터페이스의 default 메서드 사용
 }

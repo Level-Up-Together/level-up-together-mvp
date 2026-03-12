@@ -4,6 +4,7 @@ import io.pinkspider.global.event.FeedLikedEvent;
 import io.pinkspider.global.event.FeedUnlikedEvent;
 import io.pinkspider.global.event.FriendRemovedEvent;
 import io.pinkspider.global.event.FriendRequestAcceptedEvent;
+import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +63,18 @@ public class UserStatsCounterEventListener {
             log.debug("친구 카운터 증가: userId={}, requesterId={}", event.userId(), event.requesterId());
         } catch (Exception e) {
             log.warn("친구 카운터 업데이트 실패: userId={}, error={}", event.userId(), e.getMessage());
+        }
+    }
+
+    @Async(EVENT_EXECUTOR)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleGuildJoined(GuildJoinedEvent event) {
+        try {
+            userStatsService.incrementGuildJoinCount(event.userId());
+            achievementService.checkAchievementsByDataSource(event.userId(), "USER_STATS");
+            log.debug("길드 가입 카운터 증가: userId={}, guildId={}", event.userId(), event.guildId());
+        } catch (Exception e) {
+            log.warn("길드 가입 카운터 업데이트 실패: userId={}, error={}", event.userId(), e.getMessage());
         }
     }
 

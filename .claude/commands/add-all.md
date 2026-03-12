@@ -9,4 +9,6 @@ allowed-tools: Bash(git status:*), Bash(git diff:*), Bash(git log:*)
 /add-dir /Users/pink-spider/Code/github/Level-Up-Together/level-up-together-frontend
 /add-dir /Users/pink-spider/Code/github/Level-Up-Together/level-up-together-sql
 /add-dir /Users/pink-spider/Code/github/Level-Up-Together/config-repository
+/add-dir /Users/pink-spider/Code/github/Level-Up-Together/level-up-together-infra
+/add-dir /Users/pink-spider/Code/github/Level-Up-Together/level-up-together-platform
 /add-dir /Users/pink-spider/Code/github/Level-Up-Together/LevelUpTogetherReactNative

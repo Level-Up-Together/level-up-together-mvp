@@ -41,44 +41,49 @@ public class PinnedMissionExecutionStrategy implements MissionExecutionStrategy 
     @Override
     @ModerateImage
     public MissionExecutionResponse uploadExecutionImage(Long missionId, String userId, LocalDate executionDate,
-                                                          MultipartFile image) {
-        log.info("고정 미션 이미지 업로드 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-        var response = dailyMissionInstanceService.uploadImageByMission(missionId, userId, executionDate, image);
+                                                          MultipartFile image, Long instanceId) {
+        log.info("고정 미션 이미지 업로드 요청: missionId={}, instanceId={}", missionId, instanceId);
+        var response = dailyMissionInstanceService.uploadImageByMission(missionId, userId, executionDate, image, instanceId);
         return MissionExecutionResponse.fromDailyInstance(response);
     }
 
     @Override
-    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate) {
-        log.info("고정 미션 이미지 삭제 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-        var response = dailyMissionInstanceService.deleteImageByMission(missionId, userId, executionDate);
+    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate,
+                                                          Long instanceId) {
+        log.info("고정 미션 이미지 삭제 요청: missionId={}, instanceId={}", missionId, instanceId);
+        var response = dailyMissionInstanceService.deleteImageByMission(missionId, userId, executionDate, instanceId);
         return MissionExecutionResponse.fromDailyInstance(response);
     }
 
     @Override
-    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate) {
-        log.info("고정 미션 피드 공유 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-        var response = dailyMissionInstanceService.shareToFeedByMission(missionId, userId, executionDate);
+    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate,
+                                                          Long instanceId) {
+        log.info("고정 미션 피드 공유 요청: missionId={}, instanceId={}", missionId, instanceId);
+        var response = dailyMissionInstanceService.shareToFeedByMission(missionId, userId, executionDate, instanceId);
         return MissionExecutionResponse.fromDailyInstance(response);
     }
 
     @Override
-    public MissionExecutionResponse unshareExecutionFromFeed(Long missionId, String userId, LocalDate executionDate) {
-        log.info("고정 미션 피드 공유 취소 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-        var response = dailyMissionInstanceService.unshareFromFeedByMission(missionId, userId, executionDate);
+    public MissionExecutionResponse unshareExecutionFromFeed(Long missionId, String userId, LocalDate executionDate,
+                                                              Long instanceId) {
+        log.info("고정 미션 피드 공유 취소 요청: missionId={}, instanceId={}", missionId, instanceId);
+        var response = dailyMissionInstanceService.unshareFromFeedByMission(missionId, userId, executionDate, instanceId);
         return MissionExecutionResponse.fromDailyInstance(response);
     }
 
     @Override
-    public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate, String note) {
-        log.info("고정 미션 기록 업데이트 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-        var response = dailyMissionInstanceService.updateNoteByMission(missionId, userId, executionDate, note);
+    public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate,
+                                                          String note, Long instanceId) {
+        log.info("고정 미션 기록 업데이트 요청: missionId={}, instanceId={}", missionId, instanceId);
+        var response = dailyMissionInstanceService.updateNoteByMission(missionId, userId, executionDate, note, instanceId);
         return MissionExecutionResponse.fromDailyInstance(response);
     }
 
     @Override
-    public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date) {
-        log.info("고정 미션 조회 요청, DailyMissionInstanceService로 위임: missionId={}", missionId);
-        var response = dailyMissionInstanceService.getInstanceByMission(missionId, userId, date);
+    public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date,
+                                                        Long instanceId) {
+        log.info("고정 미션 조회 요청: missionId={}, instanceId={}", missionId, instanceId);
+        var response = dailyMissionInstanceService.getInstanceByMission(missionId, userId, date, instanceId);
         return MissionExecutionResponse.fromDailyInstance(response);
     }
 }

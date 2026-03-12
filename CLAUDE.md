@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build
 ./gradlew clean build
 
-# Run ALL tests (1831 tests across 5 modules)
+# Run ALL tests (2324 tests across 5 modules)
 ./gradlew test
 
 # Run tests by module
@@ -245,14 +245,14 @@ public class YourServiceException extends CustomException {
 
 ## Testing
 
-### Test Distribution (1831 tests across 5 modules)
+### Test Distribution (2324 tests across 5 modules)
 
 | Module            | Tests | Content                                              |
 |-------------------|-------|------------------------------------------------------|
 | `platform:kernel` | 39    | util tests                                           |
 | `platform:infra`  | 168   | resolver, validation, profanity, crypto, translation |
 | `platform:saga`   | 29    | saga framework tests                                 |
-| `service`         | 1583  | all service unit + controller tests (multi-srcDirs)  |
+| `service`         | 2076  | all service unit + controller tests (multi-srcDirs)  |
 | `app`             | 12    | ApplicationTests, benchmark, TestDataSourceConfig    |
 
 ### Shared Test Utilities
@@ -391,6 +391,10 @@ public class YourEventListener {
 | UserService            | `UserProfileChangedEvent`          | `*ProfileSnapshotEventListener` (x4) | 비정규화 닉네임 동기화 (chat/feed/guild/mission) |
 | FeedCommandService     | `FeedLikedEvent`                   | `UserStatsCounterEventListener`      | likesReceived 증가 + 업적 체크               |
 | FeedCommandService     | `FeedUnlikedEvent`                 | `UserStatsCounterEventListener`      | likesReceived 감소                       |
+| GuildService           | `GuildJoinedEvent`                 | `UserStatsCounterEventListener`      | guildJoinCount 증가 + 업적 체크              |
+| MissionCompletionSaga  | `MissionCompletedCountEvent`       | `UserStatsCounterEventListener`      | totalMissionCompletions 증가 + 업적 체크     |
+| MissionCompletionSaga  | `GuildMissionCompletedCountEvent`  | `UserStatsCounterEventListener`      | totalGuildMissionCompletions 증가 + 업적 체크 |
+| MissionAutoCompleteScheduler | `MissionAutoEndWarningEvent` | `NotificationEventListener`          | 미션 자동 종료 10분 전 경고 알림                  |
 
 ## Redis Caching
 
@@ -405,16 +409,19 @@ public class YourEventListener {
 
 ```
 missionservice/saga/
-├── MissionCompletionSaga.java        - Saga 오케스트레이터
-├── MissionCompletionContext.java     - Saga 컨텍스트 (공유 데이터)
+├── MissionCompletionSaga.java        - Saga 오케스트레이터 (Regular + Pinned 분기)
+├── MissionCompletionContext.java     - Saga 컨텍스트 (공유 데이터, isPinned 플래그)
 └── steps/
-    ├── LoadMissionDataStep.java
-    ├── CompleteExecutionStep.java
-    ├── UpdateParticipantProgressStep.java
-    ├── GrantUserExperienceStep.java
-    ├── GrantGuildExperienceStep.java
-    ├── UpdateUserStatsStep.java
-    └── CreateFeedFromMissionStep.java
+    ├── LoadMissionDataStep.java           - 일반 미션 데이터 로드
+    ├── LoadPinnedMissionDataStep.java     - 고정 미션 데이터 로드
+    ├── CompleteExecutionStep.java         - 일반 미션 실행 완료 (2시간 EXP 차등)
+    ├── CompletePinnedInstanceStep.java    - 고정 미션 인스턴스 완료
+    ├── CreateNextPinnedInstanceStep.java  - 다음 고정 미션 인스턴스 생성
+    ├── UpdateParticipantProgressStep.java - 참가자 진행 상태 업데이트
+    ├── GrantUserExperienceStep.java       - 유저 경험치 지급
+    ├── GrantGuildExperienceStep.java      - 길드 경험치 지급
+    ├── UpdateUserStatsStep.java           - 유저 통계 업데이트
+    └── CreateFeedFromMissionStep.java     - 피드 생성
 ```
 
 ### Saga Step 구현
@@ -645,17 +652,40 @@ app:
 
 - 매일 자동 생성 (스케줄러: `DailyMissionInstanceScheduler`, cron: `0 5 0 * * *`)
 - 미션 정보 스냅샷 저장 (미션 변경 시 과거 기록 보존)
+- 다중 실행 지원 (시퀀스 번호로 일일 복수 완료 추적)
 
-API 라우팅 (하위 호환성 유지):
+API 라우팅 — Strategy Pattern (`MissionExecutionStrategy` 인터페이스):
 
 ```java
-// MissionExecutionService에서 isPinned 체크 후 분기
-if(isPinnedMission(missionId, userId)){
-    return dailyMissionInstanceService.
-
-startInstanceByMission(...);
-}
+// MissionExecutionService에서 Strategy 패턴으로 분기
+// PinnedMissionExecutionStrategy  → DailyMissionInstanceService 위임
+// RegularMissionExecutionStrategy → Saga 기반 처리
 ```
+
+**Strategy 메서드** (8개): `startExecution`, `endExecution`, `cancelExecution`, `getActiveExecution`,
+`shareExecutionToFeed`, `unshareExecutionFromFeed`, `updateExecutionNote`, `updateExecutionImage`
+
+### Mission Soft Delete (미션 소프트 삭제)
+
+미션 삭제 시 물리적 삭제 대신 소프트 삭제 사용:
+
+- `Mission.isDeleted` (boolean) + `Mission.deletedAt` (LocalDateTime)
+- 목록 조회 시 `isDeleted=false` 필터링
+
+### Mission Auto-Complete (미션 자동 종료)
+
+`MissionAutoCompleteScheduler` (5분 간격 실행):
+
+- 목표 시간 도달 미션: 자동 완료 처리 (목표 시간 기준 EXP 지급)
+- 2시간 초과 미션 (목표 시간 없는 경우): 자동 완료 (기본 EXP만 지급, `isAutoCompleted=true`)
+- 자동 종료 10분 전: `MissionAutoEndWarningEvent` 발행 → 경고 알림 발송
+
+### Guild Mission Auto-Enrollment (길드 미션 자동 참가)
+
+길드원이 가입하거나 길드 미션이 공개되면 자동으로 참가자 등록:
+
+- `MissionParticipantService.addGuildMemberAsParticipant()` — 중복 방지 포함
+- 탈퇴/추방 시 참가자 정리
 
 ### Guild Invitation (길드 초대)
 

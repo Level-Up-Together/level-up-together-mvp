@@ -41,15 +41,12 @@ public class MissionExecutionService {
         Mission mission = participant.getMission();
         LocalDate today = LocalDate.now();
 
-        // 고정 미션(isPinned=true)은 DailyMissionInstance를 사용하므로 여기서 생성하지 않음
         if (Boolean.TRUE.equals(mission.getIsPinned())) {
             log.info("고정 미션은 DailyMissionInstance를 사용하므로 MissionExecution 생성 건너뜀: missionId={}",
                 mission.getId());
             return;
         }
 
-        // 일반 미션(isPinned=false 또는 null)은 오늘 하루치만 생성
-        // 기존 실행 날짜 조회 (재참여 시 중복 방지)
         boolean alreadyExists = executionRepository.findByParticipantIdAndExecutionDate(
             participant.getId(), today).isPresent();
 
@@ -91,19 +88,36 @@ public class MissionExecutionService {
         return strategyResolver.resolve(missionId, userId).completeExecution(missionId, userId, executionDate, note, shareToFeed);
     }
 
+    // === 후처리 메서드 (instanceId 지원) ===
+
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse uploadExecutionImage(Long missionId, String userId, LocalDate executionDate, MultipartFile image) {
-        return strategyResolver.resolve(missionId, userId).uploadExecutionImage(missionId, userId, executionDate, image);
+    public MissionExecutionResponse uploadExecutionImage(Long missionId, String userId, LocalDate executionDate, MultipartFile image, Long instanceId) {
+        return strategyResolver.resolve(missionId, userId).uploadExecutionImage(missionId, userId, executionDate, image, instanceId);
     }
 
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate) {
-        return strategyResolver.resolve(missionId, userId).deleteExecutionImage(missionId, userId, executionDate);
+    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate, Long instanceId) {
+        return strategyResolver.resolve(missionId, userId).deleteExecutionImage(missionId, userId, executionDate, instanceId);
     }
 
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate) {
-        return strategyResolver.resolve(missionId, userId).shareExecutionToFeed(missionId, userId, executionDate);
+    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate, Long instanceId) {
+        return strategyResolver.resolve(missionId, userId).shareExecutionToFeed(missionId, userId, executionDate, instanceId);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate, String note, Long instanceId) {
+        return strategyResolver.resolve(missionId, userId).updateExecutionNote(missionId, userId, executionDate, note, instanceId);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager")
+    public MissionExecutionResponse unshareExecutionFromFeed(Long missionId, String userId, LocalDate executionDate, Long instanceId) {
+        return strategyResolver.resolve(missionId, userId).unshareExecutionFromFeed(missionId, userId, executionDate, instanceId);
+    }
+
+    @Transactional(transactionManager = "missionTransactionManager", readOnly = true)
+    public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date, Long instanceId) {
+        return strategyResolver.resolve(missionId, userId).getExecutionByDate(missionId, userId, date, instanceId);
     }
 
     // ============ 오늘 날짜 기준 편의 메서드 ============
@@ -130,17 +144,6 @@ public class MissionExecutionService {
 
     /**
      * Saga 패턴을 사용한 미션 수행 완료 처리
-     *
-     * 여러 서비스에 걸친 트랜잭션을 안전하게 처리하고,
-     * 실패 시 자동으로 보상 트랜잭션을 실행하여 데이터 일관성 보장
-     *
-     * 각 Saga step은 REQUIRES_NEW 트랜잭션을 사용하므로
-     * 외부 메소드에서 별도의 트랜잭션 관리 불필요
-     *
-     * @param executionId 수행 기록 ID
-     * @param userId 사용자 ID
-     * @param note 메모
-     * @return 미션 수행 응답
      */
     public MissionExecutionResponse completeExecution(Long executionId, String userId, String note) {
         return completeExecution(executionId, userId, note, false);
@@ -148,24 +151,16 @@ public class MissionExecutionService {
 
     /**
      * Saga 패턴을 사용한 미션 수행 완료 처리 (피드 공유 옵션 포함)
-     *
-     * @param executionId 수행 기록 ID
-     * @param userId 사용자 ID
-     * @param note 메모
-     * @param shareToFeed 피드 공유 여부
-     * @return 미션 수행 응답
      */
     public MissionExecutionResponse completeExecution(Long executionId, String userId, String note, boolean shareToFeed) {
         log.info("미션 수행 완료 요청 (Saga): executionId={}, userId={}, shareToFeed={}",
             executionId, userId, shareToFeed);
 
-        // Saga 실행
         SagaResult<MissionCompletionContext> result = missionCompletionSaga.execute(executionId, userId, note, shareToFeed);
 
         if (result.isSuccess()) {
             return missionCompletionSaga.toResponse(result);
         } else {
-            // Saga 실패 로깅 (디버깅용)
             log.warn("미션 완료 처리 실패 (sagaId={}, status={}): {}",
                 result.getSagaId(), result.getStatus(), result.getMessage());
 
@@ -173,7 +168,6 @@ public class MissionExecutionService {
                 log.info("미션 완료 실패 - 보상 트랜잭션 완료: sagaId={}", result.getSagaId());
             }
 
-            // 사용자에게는 원본 에러 메시지만 전달
             throw new IllegalStateException(result.getMessage(), result.getException());
         }
     }
@@ -187,22 +181,5 @@ public class MissionExecutionService {
             .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 수행 기록을 찾을 수 없습니다: " + date));
 
         return completeExecution(execution.getId(), userId, note);
-    }
-
-    /**
-     * 완료된 미션 실행의 노트(기록) 업데이트
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate, String note) {
-        return strategyResolver.resolve(missionId, userId).updateExecutionNote(missionId, userId, executionDate, note);
-    }
-
-    /**
-     * 피드 공유 취소
-     * - 공유된 피드 삭제 및 isSharedToFeed 초기화
-     */
-    @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse unshareExecutionFromFeed(Long missionId, String userId, LocalDate executionDate) {
-        return strategyResolver.resolve(missionId, userId).unshareExecutionFromFeed(missionId, userId, executionDate);
     }
 }

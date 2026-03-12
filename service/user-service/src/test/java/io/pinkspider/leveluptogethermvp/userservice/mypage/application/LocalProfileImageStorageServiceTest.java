@@ -279,5 +279,58 @@ class LocalProfileImageStorageServiceTest {
             // then
             assertThat(result).isFalse();
         }
+
+        @Test
+        @DisplayName("MIME 타입이 null이면 false를 반환한다")
+        void isValidImage_nullMimeType_returnsFalse() {
+            // given
+            MockMultipartFile file = new MockMultipartFile(
+                "file", "test.jpg", null, "test content".getBytes()
+            );
+
+            when(properties.getMaxSize()).thenReturn(5242880L);
+            when(properties.getAllowedExtensionList()).thenReturn(java.util.Arrays.asList("jpg", "jpeg", "png", "gif", "webp"));
+
+            // when
+            boolean result = storageService.isValidImage(file);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        @DisplayName("파일 이름이 빈 문자열이면 false를 반환한다")
+        void isValidImage_emptyFilename_returnsFalse() {
+            // given
+            MockMultipartFile file = new MockMultipartFile(
+                "file", "", "image/jpeg", "test content".getBytes()
+            );
+
+            when(properties.getMaxSize()).thenReturn(5242880L);
+
+            // when
+            boolean result = storageService.isValidImage(file);
+
+            // then
+            assertThat(result).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("delete - 존재하지 않는 파일 테스트")
+    class DeleteNonExistentFileTest {
+
+        @Test
+        @DisplayName("존재하지 않는 파일 경로면 조용히 무시한다")
+        void delete_nonExistentFile_doesNotThrow() {
+            // given
+            when(properties.getUrlPrefix()).thenReturn(URL_PREFIX);
+            when(properties.getPath()).thenReturn(tempDir.toString());
+
+            String imageUrl = URL_PREFIX + "/" + TEST_USER_ID + "/nonexistent-image.jpg";
+
+            // when (예외 없이 완료되어야 함)
+            storageService.delete(imageUrl);
+        }
     }
 }

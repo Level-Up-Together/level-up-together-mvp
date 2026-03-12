@@ -357,6 +357,125 @@ class GuildDirectMessageControllerTest {
     }
 
     @Test
+    @DisplayName("GET /api/v1/guilds/{guildId}/dm/messages/{otherUserId} : 상대방 ID로 메시지 조회")
+    void getMessagesByOtherUserIdTest() throws Exception {
+        // given
+        Long guildId = 1L;
+
+        DirectMessageResponse response = DirectMessageResponse.builder()
+            .id(1L)
+            .conversationId(1L)
+            .senderId(MOCK_USER_ID)
+            .senderNickname("발신자닉네임")
+            .content("안녕하세요!")
+            .isRead(false)
+            .createdAt(LocalDateTime.now())
+            .build();
+
+        Page<DirectMessageResponse> page = new PageImpl<>(
+            List.of(response),
+            org.springframework.data.domain.PageRequest.of(0, 50),
+            1
+        );
+
+        when(dmService.getMessages(anyLong(), anyString(), anyString(), any(Pageable.class)))
+            .thenReturn(page);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/v1/guilds/{guildId}/dm/messages/{otherUserId}",
+                    guildId, MOCK_RECIPIENT_ID)
+                .with(user(MOCK_USER_ID))
+                .param("page", "0")
+                .param("size", "50")
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드DM-08. 상대방 ID로 메시지 조회",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild DM")
+                        .description("상대방 사용자 ID로 DM 메시지 목록 조회 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID"),
+                            parameterWithName("otherUserId").type(SimpleType.STRING).description("상대방 사용자 ID")
+                        )
+                        .queryParameters(
+                            parameterWithName("page").type(SimpleType.NUMBER).description("페이지 번호 (기본값: 0)").optional(),
+                            parameterWithName("size").type(SimpleType.NUMBER).description("페이지 크기 (기본값: 50)").optional()
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/guilds/{guildId}/dm/conversations/{conversationId}/messages/before/{beforeId} : 이전 메시지 조회 (무한 스크롤)")
+    void getMessagesBeforeIdTest() throws Exception {
+        // given
+        Long guildId = 1L;
+        Long conversationId = 1L;
+        Long beforeId = 50L;
+
+        DirectMessageResponse response = DirectMessageResponse.builder()
+            .id(49L)
+            .conversationId(conversationId)
+            .senderId(MOCK_USER_ID)
+            .senderNickname("발신자닉네임")
+            .content("이전 메시지입니다")
+            .isRead(true)
+            .readAt(LocalDateTime.now().minusHours(1))
+            .createdAt(LocalDateTime.now().minusHours(2))
+            .build();
+
+        Page<DirectMessageResponse> page = new PageImpl<>(
+            List.of(response),
+            org.springframework.data.domain.PageRequest.of(0, 50),
+            1
+        );
+
+        when(dmService.getMessagesBeforeId(anyLong(), anyString(), anyLong(), anyLong(), any(Pageable.class)))
+            .thenReturn(page);
+
+        // when
+        ResultActions resultActions = mockMvc.perform(
+            RestDocumentationRequestBuilders.get(
+                    "/api/v1/guilds/{guildId}/dm/conversations/{conversationId}/messages/before/{beforeId}",
+                    guildId, conversationId, beforeId)
+                .with(user(MOCK_USER_ID))
+                .param("page", "0")
+                .param("size", "50")
+        ).andDo(
+            MockMvcRestDocumentationWrapper.document("길드DM-09. 이전 메시지 조회 (무한 스크롤)",
+                preprocessRequest(prettyPrint()),
+                preprocessResponse(prettyPrint()),
+                resource(
+                    ResourceSnippetParameters.builder()
+                        .tag("Guild DM")
+                        .description("특정 메시지 ID 이전의 DM 메시지 조회 - 무한 스크롤 용 (JWT 토큰 인증 필요)")
+                        .pathParameters(
+                            parameterWithName("guildId").type(SimpleType.NUMBER).description("길드 ID"),
+                            parameterWithName("conversationId").type(SimpleType.NUMBER).description("대화 ID"),
+                            parameterWithName("beforeId").type(SimpleType.NUMBER).description("기준 메시지 ID")
+                        )
+                        .queryParameters(
+                            parameterWithName("page").type(SimpleType.NUMBER).description("페이지 번호 (기본값: 0)").optional(),
+                            parameterWithName("size").type(SimpleType.NUMBER).description("페이지 크기 (기본값: 50)").optional()
+                        )
+                        .build()
+                )
+            )
+        );
+
+        // then
+        resultActions.andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
     @DisplayName("POST /api/v1/guilds/{guildId}/dm/conversations/{otherUserId} : 대화 시작/조회")
     void getOrCreateConversationTest() throws Exception {
         // given

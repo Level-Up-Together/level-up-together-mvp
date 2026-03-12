@@ -10,6 +10,7 @@ import io.pinkspider.global.event.FeedLikedEvent;
 import io.pinkspider.global.event.FeedUnlikedEvent;
 import io.pinkspider.global.event.FriendRemovedEvent;
 import io.pinkspider.global.event.FriendRequestAcceptedEvent;
+import io.pinkspider.global.event.GuildJoinedEvent;
 import io.pinkspider.leveluptogethermvp.gamificationservice.achievement.application.AchievementService;
 import io.pinkspider.leveluptogethermvp.gamificationservice.stats.application.UserStatsService;
 import org.junit.jupiter.api.DisplayName;
@@ -133,6 +134,36 @@ class UserStatsCounterEventListenerTest {
 
             // when - 예외가 전파되지 않음
             listener.handleFriendAccepted(event);
+        }
+    }
+
+    @Nested
+    @DisplayName("handleGuildJoined 테스트")
+    class HandleGuildJoinedTest {
+
+        @Test
+        @DisplayName("길드 가입 카운터를 증가시키고 업적을 체크한다")
+        void handleGuildJoined_success() {
+            // given
+            GuildJoinedEvent event = new GuildJoinedEvent(USER_ID, 1L, "테스트 길드");
+
+            // when
+            listener.handleGuildJoined(event);
+
+            // then
+            verify(userStatsService).incrementGuildJoinCount(USER_ID);
+            verify(achievementService).checkAchievementsByDataSource(USER_ID, "USER_STATS");
+        }
+
+        @Test
+        @DisplayName("예외 발생 시 로그만 남기고 전파하지 않는다")
+        void handleGuildJoined_exceptionHandled() {
+            // given
+            GuildJoinedEvent event = new GuildJoinedEvent(USER_ID, 1L, "테스트 길드");
+            doThrow(new RuntimeException("DB error")).when(userStatsService).incrementGuildJoinCount(USER_ID);
+
+            // when - 예외가 전파되지 않음
+            listener.handleGuildJoined(event);
         }
     }
 

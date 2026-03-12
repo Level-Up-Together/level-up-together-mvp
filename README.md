@@ -377,14 +377,14 @@ erDiagram
 # 빌드
 ./gradlew clean build
 
-# 전체 테스트 실행 (1831 tests)
+# 전체 테스트 실행 (2324 tests)
 ./gradlew test
 
 # 모듈별 테스트 실행
 ./gradlew :platform:kernel:test     # 39 tests
 ./gradlew :platform:infra:test      # 168 tests
 ./gradlew :platform:saga:test       # 29 tests
-./gradlew :service:test             # 1583 tests
+./gradlew :service:test             # 2076 tests
 ./gradlew :app:test                 # 12 tests
 
 # 단일 테스트 클래스 실행 (모듈 지정)
@@ -443,6 +443,7 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 - 업적/칭호 시스템 (LEFT+RIGHT 조합 방식)
   - Strategy 패턴 기반 동적 업적 체크
   - 미션 카테고리별 완료 횟수 업적 지원
+- **유저 통계 (UserStats)**: 미션 완료, 길드 미션 완료, 좋아요 수신, 친구 수, 길드 가입 수 등 이벤트 기반 자동 카운팅
 - 출석 체크 (연속 출석 보너스)
 - 이벤트 관리 (기간별 이벤트)
 - 시즌 관리 (시즌별 랭킹, 보상)
@@ -453,17 +454,21 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 - 미션 카테고리 (시스템 카테고리 + 사용자 정의)
 - 미션 참가자 진행 상태 추적
 - 미션 실행 스케줄 자동 생성
-- 미션 완료 시 경험치 지급
+- 미션 완료 시 경험치 지급 (2시간 기준 차등 지급)
 - 미션북 (시스템 미션 라이브러리)
 - Saga 패턴 기반 분산 트랜잭션 관리
 - **고정 미션 (Pinned Mission)**: Template-Instance 패턴
   - 매일 자동 생성되는 일일 인스턴스
   - 미션 정보 스냅샷 저장
+  - Strategy 패턴으로 일반/고정 미션 라우팅 분기
+- **미션 자동 종료**: 목표 시간 도달 또는 2시간 초과 시 자동 완료 (경고 알림 포함)
+- **길드 미션 자동 참가**: 길드 가입/미션 공개 시 멤버 자동 등록
+- **소프트 삭제**: 미션 삭제 시 물리적 삭제 대신 논리적 삭제
 
 ### 길드 (Guild Service)
 
 - 길드 생성 및 관리
-- 멤버 가입/탈퇴/추방 관리
+- 멤버 가입/탈퇴/추방 관리 (탈퇴 시 길드 미션 참가자 자동 정리)
 - **길드 초대 시스템** (비공개 길드용)
   - 마스터/관리자가 유저 초대
   - 초대 수락/거절/취소/만료 상태 관리
@@ -507,6 +512,16 @@ JaCoCo를 사용하며 최소 **70%** 커버리지를 요구합니다.
 - **dev/test**: 로컬 파일시스템 + Spring MVC 리소스 핸들러
 - S3 키 패턴: `profile/`, `guild/`, `missions/`, `events/`
 - EC2 IAM Role 기반 인증 (AccessKey 불필요)
+
+## 스케줄러
+
+| 스케줄러                            | 주기                     | 설명                                  |
+|----------------------------------|------------------------|-------------------------------------|
+| `DailyMissionInstanceScheduler`  | `0 5 0 * * *` (매일 0:05) | 고정 미션 일일 인스턴스 자동 생성                 |
+| `MissionAutoCompleteScheduler`   | 5분 간격 (fixedRate)       | 만료 미션 자동 종료 + 종료 10분 전 경고 알림 발송     |
+| `TokenMaintenanceScheduler`      | `0 0 2 * * *` (매일 2:00) | 만료된 OAuth 토큰 정리                     |
+| `DailyMvpHistoryScheduler`       | `0 5 0 * * *` (매일 0:05) | MVP 히스토리 기록                         |
+| `SeasonRewardScheduler`          | `0 0 3 * * *` (매일 3:00) | 시즌 보상 배포                            |
 
 ## 캐싱 전략
 

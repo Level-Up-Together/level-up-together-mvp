@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -37,7 +36,6 @@ public class MissionExecutionController {
 
     /**
      * 미션 수행 시작 (특정 날짜)
-     * 시작 시간을 기록하여 종료 시 경험치 계산에 사용 (분당 1 EXP)
      */
     @PatchMapping("/{missionId}/executions/{executionDate}/start")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> startExecution(
@@ -64,10 +62,6 @@ public class MissionExecutionController {
 
     /**
      * 미션의 특정 날짜 실행 완료 처리
-     * 시작 시간 ~ 종료 시간을 분으로 계산하여 분당 1 EXP 획득
-     * Rate Limit: 사용자당 1분에 10회
-     *
-     * @param shareToFeed 피드에 공유 여부 (기본값 false)
      */
     @PatchMapping("/{missionId}/executions/{executionDate}/complete")
     @PerUserRateLimit(name = "missionCompletion", limit = 10, windowSeconds = 60)
@@ -135,7 +129,6 @@ public class MissionExecutionController {
 
     /**
      * 미션 수행 취소 (오늘)
-     * 진행 중인 미션을 PENDING 상태로 되돌림
      */
     @PatchMapping("/{missionId}/executions/skip")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> skipExecutionToday(
@@ -173,7 +166,6 @@ public class MissionExecutionController {
 
     /**
      * 사용자의 월별 캘린더 데이터 조회
-     * 해당 월의 완료된 미션 실행 내역과 총 획득 경험치 반환
      */
     @GetMapping("/executions/monthly")
     public ResponseEntity<ApiResult<MonthlyCalendarResponse>> getMonthlyCalendarData(
@@ -187,83 +179,99 @@ public class MissionExecutionController {
 
     /**
      * 특정 날짜의 미션 실행 정보 조회
+     *
+     * @param instanceId 고정 미션의 특정 인스턴스 ID (optional, 고정 미션에서 다중 인스턴스 타겟팅용)
      */
     @GetMapping("/{missionId}/executions/{executionDate}")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> getExecution(
         @PathVariable Long missionId,
         @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate executionDate,
-        @CurrentUser String userId) {
+        @CurrentUser String userId,
+        @RequestParam(required = false) Long instanceId) {
 
-        MissionExecutionResponse response = executionQueryService.getExecutionByDate(missionId, userId, executionDate);
+        MissionExecutionResponse response = executionService.getExecutionByDate(missionId, userId, executionDate, instanceId);
         return ResponseEntity.ok(ApiResult.<MissionExecutionResponse>builder().value(response).build());
     }
 
     /**
      * 완료된 미션 실행의 노트(기록) 업데이트
+     *
+     * @param instanceId 고정 미션의 특정 인스턴스 ID (optional)
      */
     @PatchMapping("/{missionId}/executions/{executionDate}/note")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> updateExecutionNote(
         @PathVariable Long missionId,
         @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate executionDate,
         @CurrentUser String userId,
-        @RequestParam(required = false) String note) {
+        @RequestParam(required = false) String note,
+        @RequestParam(required = false) Long instanceId) {
 
-        MissionExecutionResponse response = executionService.updateExecutionNote(missionId, userId, executionDate, note);
+        MissionExecutionResponse response = executionService.updateExecutionNote(missionId, userId, executionDate, note, instanceId);
         return ResponseEntity.ok(ApiResult.<MissionExecutionResponse>builder().value(response).build());
     }
 
     /**
      * 완료된 미션 실행에 이미지 업로드
+     *
+     * @param instanceId 고정 미션의 특정 인스턴스 ID (optional)
      */
     @PostMapping(value = "/{missionId}/executions/{executionDate}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResult<MissionExecutionResponse>> uploadExecutionImage(
         @PathVariable Long missionId,
         @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate executionDate,
         @CurrentUser String userId,
-        @RequestPart("image") MultipartFile image) {
+        @RequestPart("image") MultipartFile image,
+        @RequestParam(required = false) Long instanceId) {
 
-        MissionExecutionResponse response = executionService.uploadExecutionImage(missionId, userId, executionDate, image);
+        MissionExecutionResponse response = executionService.uploadExecutionImage(missionId, userId, executionDate, image, instanceId);
         return ResponseEntity.ok(ApiResult.<MissionExecutionResponse>builder().value(response).build());
     }
 
     /**
      * 완료된 미션 실행의 이미지 삭제
+     *
+     * @param instanceId 고정 미션의 특정 인스턴스 ID (optional)
      */
     @DeleteMapping("/{missionId}/executions/{executionDate}/image")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> deleteExecutionImage(
         @PathVariable Long missionId,
         @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate executionDate,
-        @CurrentUser String userId) {
+        @CurrentUser String userId,
+        @RequestParam(required = false) Long instanceId) {
 
-        MissionExecutionResponse response = executionService.deleteExecutionImage(missionId, userId, executionDate);
+        MissionExecutionResponse response = executionService.deleteExecutionImage(missionId, userId, executionDate, instanceId);
         return ResponseEntity.ok(ApiResult.<MissionExecutionResponse>builder().value(response).build());
     }
 
     /**
      * 완료된 미션 실행을 피드에 공유
-     * 이미 완료된 미션을 나중에 피드에 공유할 때 사용
+     *
+     * @param instanceId 고정 미션의 특정 인스턴스 ID (optional)
      */
     @PostMapping("/{missionId}/executions/{executionDate}/share")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> shareExecutionToFeed(
         @PathVariable Long missionId,
         @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate executionDate,
-        @CurrentUser String userId) {
+        @CurrentUser String userId,
+        @RequestParam(required = false) Long instanceId) {
 
-        MissionExecutionResponse response = executionService.shareExecutionToFeed(missionId, userId, executionDate);
+        MissionExecutionResponse response = executionService.shareExecutionToFeed(missionId, userId, executionDate, instanceId);
         return ResponseEntity.ok(ApiResult.<MissionExecutionResponse>builder().value(response).build());
     }
 
     /**
      * 피드 공유 취소
-     * 공유된 피드를 삭제하고 공유 상태를 초기화
+     *
+     * @param instanceId 고정 미션의 특정 인스턴스 ID (optional)
      */
     @DeleteMapping("/{missionId}/executions/{executionDate}/share")
     public ResponseEntity<ApiResult<MissionExecutionResponse>> unshareExecutionFromFeed(
         @PathVariable Long missionId,
         @PathVariable @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate executionDate,
-        @CurrentUser String userId) {
+        @CurrentUser String userId,
+        @RequestParam(required = false) Long instanceId) {
 
-        MissionExecutionResponse response = executionService.unshareExecutionFromFeed(missionId, userId, executionDate);
+        MissionExecutionResponse response = executionService.unshareExecutionFromFeed(missionId, userId, executionDate, instanceId);
         return ResponseEntity.ok(ApiResult.<MissionExecutionResponse>builder().value(response).build());
     }
 }

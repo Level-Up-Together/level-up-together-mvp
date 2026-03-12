@@ -355,17 +355,17 @@ class MissionExecutionServiceTest {
             MissionExecutionResponse expectedResponse = MissionExecutionResponse.from(execution);
 
             when(strategyResolver.resolve(testMission.getId(), testUserId)).thenReturn(mockStrategy);
-            when(mockStrategy.uploadExecutionImage(testMission.getId(), testUserId, date, mockFile))
+            when(mockStrategy.uploadExecutionImage(testMission.getId(), testUserId, date, mockFile, null))
                 .thenReturn(expectedResponse);
 
             // when
             MissionExecutionResponse result = executionService.uploadExecutionImage(
-                testMission.getId(), testUserId, date, mockFile);
+                testMission.getId(), testUserId, date, mockFile, null);
 
             // then
             assertThat(result).isEqualTo(expectedResponse);
             verify(strategyResolver).resolve(testMission.getId(), testUserId);
-            verify(mockStrategy).uploadExecutionImage(testMission.getId(), testUserId, date, mockFile);
+            verify(mockStrategy).uploadExecutionImage(testMission.getId(), testUserId, date, mockFile, null);
         }
 
         @Test
@@ -377,17 +377,17 @@ class MissionExecutionServiceTest {
             MissionExecutionResponse expectedResponse = MissionExecutionResponse.from(execution);
 
             when(strategyResolver.resolve(testMission.getId(), testUserId)).thenReturn(mockStrategy);
-            when(mockStrategy.deleteExecutionImage(testMission.getId(), testUserId, date))
+            when(mockStrategy.deleteExecutionImage(testMission.getId(), testUserId, date, null))
                 .thenReturn(expectedResponse);
 
             // when
             MissionExecutionResponse result = executionService.deleteExecutionImage(
-                testMission.getId(), testUserId, date);
+                testMission.getId(), testUserId, date, null);
 
             // then
             assertThat(result).isEqualTo(expectedResponse);
             verify(strategyResolver).resolve(testMission.getId(), testUserId);
-            verify(mockStrategy).deleteExecutionImage(testMission.getId(), testUserId, date);
+            verify(mockStrategy).deleteExecutionImage(testMission.getId(), testUserId, date, null);
         }
 
         @Test
@@ -399,17 +399,17 @@ class MissionExecutionServiceTest {
             MissionExecutionResponse expectedResponse = MissionExecutionResponse.from(execution);
 
             when(strategyResolver.resolve(testMission.getId(), testUserId)).thenReturn(mockStrategy);
-            when(mockStrategy.shareExecutionToFeed(testMission.getId(), testUserId, date))
+            when(mockStrategy.shareExecutionToFeed(testMission.getId(), testUserId, date, null))
                 .thenReturn(expectedResponse);
 
             // when
             MissionExecutionResponse result = executionService.shareExecutionToFeed(
-                testMission.getId(), testUserId, date);
+                testMission.getId(), testUserId, date, null);
 
             // then
             assertThat(result).isEqualTo(expectedResponse);
             verify(strategyResolver).resolve(testMission.getId(), testUserId);
-            verify(mockStrategy).shareExecutionToFeed(testMission.getId(), testUserId, date);
+            verify(mockStrategy).shareExecutionToFeed(testMission.getId(), testUserId, date, null);
         }
     }
 
@@ -430,17 +430,17 @@ class MissionExecutionServiceTest {
             String newNote = "오늘 운동 완료!";
 
             when(strategyResolver.resolve(testMission.getId(), testUserId)).thenReturn(mockStrategy);
-            when(mockStrategy.updateExecutionNote(testMission.getId(), testUserId, executionDate, newNote))
+            when(mockStrategy.updateExecutionNote(testMission.getId(), testUserId, executionDate, newNote, null))
                 .thenReturn(expectedResponse);
 
             // when
             MissionExecutionResponse response = executionService.updateExecutionNote(
-                testMission.getId(), testUserId, executionDate, newNote);
+                testMission.getId(), testUserId, executionDate, newNote, null);
 
             // then
             assertThat(response).isEqualTo(expectedResponse);
             verify(strategyResolver).resolve(testMission.getId(), testUserId);
-            verify(mockStrategy).updateExecutionNote(testMission.getId(), testUserId, executionDate, newNote);
+            verify(mockStrategy).updateExecutionNote(testMission.getId(), testUserId, executionDate, newNote, null);
         }
     }
 
@@ -624,17 +624,17 @@ class MissionExecutionServiceTest {
             MissionExecutionResponse expectedResponse = MissionExecutionResponse.from(execution);
 
             when(strategyResolver.resolve(testMission.getId(), testUserId)).thenReturn(mockStrategy);
-            when(mockStrategy.unshareExecutionFromFeed(testMission.getId(), testUserId, executionDate))
+            when(mockStrategy.unshareExecutionFromFeed(testMission.getId(), testUserId, executionDate, null))
                 .thenReturn(expectedResponse);
 
             // when
             MissionExecutionResponse response = executionService.unshareExecutionFromFeed(
-                testMission.getId(), testUserId, executionDate);
+                testMission.getId(), testUserId, executionDate, null);
 
             // then
             assertThat(response).isEqualTo(expectedResponse);
             verify(strategyResolver).resolve(testMission.getId(), testUserId);
-            verify(mockStrategy).unshareExecutionFromFeed(testMission.getId(), testUserId, executionDate);
+            verify(mockStrategy).unshareExecutionFromFeed(testMission.getId(), testUserId, executionDate, null);
         }
     }
 

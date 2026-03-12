@@ -52,7 +52,7 @@ import org.hibernate.annotations.Comment;
     }
 )
 @Comment("고정 미션 일일 인스턴스")
-public class DailyMissionInstance extends LocalDateTimeBaseEntity {
+public class DailyMissionInstance extends LocalDateTimeBaseEntity implements MissionExecutionLifecycle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -166,87 +166,44 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
     @Comment("낙관적 락 버전")
     private Long version;
 
-    // ============ 비즈니스 로직 ============
-
-    private static final long MINIMUM_EXECUTION_MINUTES = 1;
-    // 최대 미션 수행 시간 (분) - 어뷰징 방지 (2시간)
-    private static final long MAXIMUM_EXECUTION_MINUTES = 120;
+    // === MissionExecutionLifecycle 훅 구현 ===
 
     /**
-     * 미션 수행 시작
+     * 완료 후처리: completionCount, totalExpEarned 갱신
      */
-    public void start() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("이미 완료된 인스턴스입니다.");
-        }
-        if (this.status == ExecutionStatus.MISSED) {
-            throw new IllegalStateException("미실행 처리된 인스턴스는 시작할 수 없습니다.");
-        }
-        if (this.startedAt != null) {
-            throw new IllegalStateException("이미 시작된 인스턴스입니다.");
-        }
-        this.status = ExecutionStatus.IN_PROGRESS;
-        this.startedAt = LocalDateTime.now();
-    }
-
-    /**
-     * 미션 수행 완료 및 경험치 계산 (분당 1 EXP)
-     */
-    public void complete() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("이미 완료된 인스턴스입니다.");
-        }
-        if (this.status == ExecutionStatus.MISSED) {
-            throw new IllegalStateException("미실행 처리된 인스턴스는 완료할 수 없습니다.");
-        }
-        if (this.startedAt == null) {
-            throw new IllegalStateException("미션을 먼저 시작해야 합니다.");
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        long elapsedSeconds = Duration.between(this.startedAt, now).getSeconds();
-        long elapsedMinutes = elapsedSeconds / 60;
-        if (elapsedMinutes < MINIMUM_EXECUTION_MINUTES) {
-            throw new IllegalStateException(String.format(
-                "최소 1분 이상 수행해야 완료할 수 있습니다. (시작: %s, 현재: %s, 경과: %d초)",
-                this.startedAt, now, elapsedSeconds));
-        }
-
-        this.status = ExecutionStatus.COMPLETED;
-        this.completedAt = now;
-        this.expEarned = calculateExpByDuration();
-
-        // 완료 횟수 및 총 경험치 누적
+    @Override
+    public void onComplete() {
         this.completionCount = (this.completionCount == null ? 0 : this.completionCount) + 1;
         this.totalExpEarned = (this.totalExpEarned == null ? 0 : this.totalExpEarned) + this.expEarned;
     }
 
     /**
-     * 완료된 인스턴스를 PENDING 상태로 리셋 (고정 미션의 재시작용)
-     * completionCount, totalExpEarned는 유지하여 오늘 수행 내역 기록
+     * 자동 완료 후처리: completionCount, totalExpEarned 갱신
      */
-    public void resetToPending() {
-        if (this.status != ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료 상태의 인스턴스만 리셋할 수 있습니다.");
-        }
-        this.status = ExecutionStatus.PENDING;
-        this.startedAt = null;
-        this.completedAt = null;
-        this.expEarned = 0;
-        this.note = null;
-        this.imageUrl = null;
-        // isSharedToFeed는 유지 (마지막 완료의 피드 연동 정보)
+    @Override
+    public void onAutoComplete() {
+        this.completionCount = (this.completionCount == null ? 0 : this.completionCount) + 1;
+        this.totalExpEarned = (this.totalExpEarned == null ? 0 : this.totalExpEarned) + this.expEarned;
     }
 
     /**
-     * 시작~종료 시간을 분으로 계산하여 경험치 반환
+     * 자동 완료 가능 여부: 목표시간 설정 미션은 스케줄러가 Saga를 통해 별도 처리
+     */
+    @Override
+    public boolean shouldAutoComplete() {
+        return this.targetDurationMinutes == null || this.targetDurationMinutes <= 0;
+    }
+
+    /**
+     * 경험치 계산: 목표시간 기반 보너스 포함
      *
      * 목표시간(targetDurationMinutes) 설정 시:
      * - 목표시간 달성: targetDurationMinutes + expPerCompletion (보너스)
      * - 목표시간 미달: 실제 수행 분 (1분=1XP)
      *
-     * 목표시간 미설정 시: 기존 로직 (분당 1 EXP, 최대 480)
+     * 목표시간 미설정 시: 분당 1 EXP, 최대 480
      */
+    @Override
     public int calculateExpByDuration() {
         if (this.startedAt == null || this.completedAt == null) {
             return 0;
@@ -263,42 +220,29 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
         return (int) Math.max(1, Math.min(elapsed, 480));
     }
 
-    /**
-     * 미실행 처리 (마감 시간 경과)
-     */
-    public void markAsMissed() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 인스턴스는 미실행 처리할 수 없습니다.");
-        }
-        this.status = ExecutionStatus.MISSED;
-    }
+    // start(), complete(), skip(), markAsMissed(), shareToFeed(), unshareFromFeed(),
+    // isExpired(), autoCompleteIfExpired(), autoCompleteForDateChange()
+    // → MissionExecutionLifecycle 인터페이스의 default 메서드 사용
+
+    // === 고정 미션 전용 메서드 ===
 
     /**
-     * 진행 취소 (PENDING 상태로 되돌림)
+     * 완료된 인스턴스를 PENDING 상태로 리셋 (고정 미션의 재시작용)
+     * completionCount, totalExpEarned는 유지하여 오늘 수행 내역 기록
+     *
+     * NOTE: 이 메서드는 Saga Step에서만 호출되며,
+     * MissionExecutionLifecycle의 상태 전이 규칙을 우회합니다.
      */
-    public void skip() {
-        if (this.status == ExecutionStatus.COMPLETED) {
-            throw new IllegalStateException("완료된 인스턴스는 취소할 수 없습니다.");
-        }
-        if (this.status == ExecutionStatus.MISSED) {
-            throw new IllegalStateException("미실행 처리된 인스턴스는 취소할 수 없습니다.");
+    public void resetToPending() {
+        if (this.status != ExecutionStatus.COMPLETED) {
+            throw new IllegalStateException("완료 상태의 인스턴스만 리셋할 수 있습니다.");
         }
         this.status = ExecutionStatus.PENDING;
         this.startedAt = null;
-    }
-
-    /**
-     * 피드 공유 처리
-     */
-    public void shareToFeed() {
-        this.isSharedToFeed = true;
-    }
-
-    /**
-     * 피드 공유 취소
-     */
-    public void unshareFromFeed() {
-        this.isSharedToFeed = false;
+        this.completedAt = null;
+        this.expEarned = 0;
+        this.note = null;
+        this.imageUrl = null;
     }
 
     /**
@@ -311,95 +255,12 @@ public class DailyMissionInstance extends LocalDateTimeBaseEntity {
         return (int) Duration.between(this.startedAt, this.completedAt).toMinutes();
     }
 
-    /**
-     * 2시간 초과 미션 자동 완료 (어뷰징 방지)
-     * 스케줄러에서 호출하여 시작 후 2시간이 경과한 미션을 자동 종료
-     *
-     * 목표시간 설정 미션은 스케줄러가 Saga를 통해 별도 처리하므로 여기서는 스킵
-     *
-     * @param baseExp 기본 경험치 (2시간 초과 시 부여, 설정 파일에서 주입)
-     * @return 자동 완료 처리 여부
-     */
-    public boolean autoCompleteIfExpired(int baseExp) {
-        if (this.status != ExecutionStatus.IN_PROGRESS || this.startedAt == null) {
-            return false;
-        }
-
-        // 목표시간 설정 미션은 스케줄러가 Saga를 통해 처리 (XP 정상 지급)
-        if (this.targetDurationMinutes != null && this.targetDurationMinutes > 0) {
-            return false;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        long elapsedMinutes = Duration.between(this.startedAt, now).toMinutes();
-
-        if (elapsedMinutes < MAXIMUM_EXECUTION_MINUTES) {
-            return false;
-        }
-
-        // 2시간(120분) 초과: 기본 경험치만 부여
-        this.status = ExecutionStatus.COMPLETED;
-        this.completedAt = this.startedAt.plusMinutes(MAXIMUM_EXECUTION_MINUTES);
-        this.expEarned = baseExp;
-        this.isAutoCompleted = true;
-
-        // 완료 횟수 및 총 경험치 누적
-        this.completionCount = (this.completionCount == null ? 0 : this.completionCount) + 1;
-        this.totalExpEarned = (this.totalExpEarned == null ? 0 : this.totalExpEarned) + this.expEarned;
-
-        return true;
-    }
-
-    /**
-     * 날짜 변경 시 자동 완료 (자정 스케줄러 safety net)
-     *
-     * 날짜가 바뀌었는데 완료되지 않은 IN_PROGRESS 미션을 자동 완료합니다.
-     * 2시간 초과 시 기본 경험치만 부여합니다.
-     *
-     * @param baseExp 기본 경험치 (2시간 초과 시 부여)
-     * @return 자동 완료 처리 여부
-     */
-    public boolean autoCompleteForDateChange(int baseExp) {
-        if (this.status != ExecutionStatus.IN_PROGRESS || this.startedAt == null) {
-            return false;
-        }
-
-        this.status = ExecutionStatus.COMPLETED;
-        this.completedAt = LocalDateTime.now();
-        long elapsedMinutes = Duration.between(this.startedAt, this.completedAt).toMinutes();
-        this.expEarned = elapsedMinutes > MAXIMUM_EXECUTION_MINUTES ? baseExp : calculateExpByDuration();
-        this.isAutoCompleted = true;
-
-        // 완료 횟수 및 총 경험치 누적
-        this.completionCount = (this.completionCount == null ? 0 : this.completionCount) + 1;
-        this.totalExpEarned = (this.totalExpEarned == null ? 0 : this.totalExpEarned) + this.expEarned;
-
-        return true;
-    }
-
-    /**
-     * 수행 시작 후 경과 시간이 최대 수행 시간을 초과했는지 확인
-     */
-    public boolean isExpired() {
-        if (this.status != ExecutionStatus.IN_PROGRESS || this.startedAt == null) {
-            return false;
-        }
-        long elapsedMinutes = Duration.between(this.startedAt, LocalDateTime.now()).toMinutes();
-        return elapsedMinutes >= MAXIMUM_EXECUTION_MINUTES;
-    }
-
     // ============ 팩토리 메서드 ============
 
-    /**
-     * 미션 참여자와 미션 정보로부터 일일 인스턴스 생성
-     */
     public static DailyMissionInstance createFrom(MissionParticipant participant, LocalDate date) {
         return createFrom(participant, date, 1);
     }
 
-    /**
-     * 미션 참여자와 미션 정보로부터 일일 인스턴스 생성 (순번 지정)
-     */
     public static DailyMissionInstance createFrom(MissionParticipant participant, LocalDate date, int sequenceNumber) {
         Mission mission = participant.getMission();
         String categoryName = mission.getCategoryName();

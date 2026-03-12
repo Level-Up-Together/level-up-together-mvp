@@ -66,6 +66,9 @@ class RegularMissionExecutionStrategyTest {
     @Mock
     private UserQueryFacade userQueryFacadeService;
 
+    @Mock
+    private io.pinkspider.leveluptogethermvp.missionservice.config.MissionExecutionProperties missionExecutionProperties;
+
     @InjectMocks
     private RegularMissionExecutionStrategy strategy;
 

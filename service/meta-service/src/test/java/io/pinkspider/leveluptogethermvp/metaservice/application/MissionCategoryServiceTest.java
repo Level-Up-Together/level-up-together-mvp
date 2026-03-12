@@ -22,6 +22,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class MissionCategoryServiceTest {
@@ -392,6 +396,198 @@ class MissionCategoryServiceTest {
 
             // then
             assertThat(result).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("toggleActive 테스트")
+    class ToggleActiveTest {
+
+        @Test
+        @DisplayName("활성화된 카테고리를 비활성화로 토글한다")
+        void toggleActive_activeToInactive() {
+            // given
+            Long categoryId = 1L;
+            MissionCategory category = createTestCategory(categoryId, "운동", true);
+
+            when(missionCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+            when(missionCategoryRepository.save(any(MissionCategory.class))).thenReturn(category);
+
+            // when
+            MissionCategoryResponse result = missionCategoryService.toggleActive(categoryId);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(category.getIsActive()).isFalse();
+            verify(missionCategoryRepository).save(category);
+        }
+
+        @Test
+        @DisplayName("비활성화된 카테고리를 활성화로 토글한다")
+        void toggleActive_inactiveToActive() {
+            // given
+            Long categoryId = 2L;
+            MissionCategory category = createTestCategory(categoryId, "독서", false);
+
+            when(missionCategoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+            when(missionCategoryRepository.save(any(MissionCategory.class))).thenReturn(category);
+
+            // when
+            MissionCategoryResponse result = missionCategoryService.toggleActive(categoryId);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(category.getIsActive()).isTrue();
+            verify(missionCategoryRepository).save(category);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 카테고리 토글 시 예외 발생")
+        void toggleActive_notFound_throwsException() {
+            // given
+            when(missionCategoryRepository.findById(999L)).thenReturn(Optional.empty());
+
+            // when & then
+            assertThatThrownBy(() -> missionCategoryService.toggleActive(999L))
+                .isInstanceOf(CustomException.class)
+                .hasMessageContaining("카테고리를 찾을 수 없습니다");
+        }
+    }
+
+    @Nested
+    @DisplayName("searchCategories 테스트")
+    class SearchCategoriesTest {
+
+        @Test
+        @DisplayName("키워드로 카테고리를 검색한다")
+        void searchCategories_withKeyword() {
+            // given
+            String keyword = "운동";
+            Pageable pageable = PageRequest.of(0, 20);
+            MissionCategory category = createTestCategory(1L, "운동", true);
+            Page<MissionCategory> page = new PageImpl<>(List.of(category), pageable, 1);
+
+            when(missionCategoryRepository.searchByKeyword(keyword, pageable)).thenReturn(page);
+
+            // when
+            Page<MissionCategoryResponse> result = missionCategoryService.searchCategories(keyword, pageable);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalElements()).isEqualTo(1);
+            assertThat(result.getContent().get(0).getName()).isEqualTo("운동");
+            verify(missionCategoryRepository).searchByKeyword(keyword, pageable);
+        }
+
+        @Test
+        @DisplayName("키워드 없이 전체 카테고리를 검색한다")
+        void searchCategories_withoutKeyword() {
+            // given
+            Pageable pageable = PageRequest.of(0, 20);
+            MissionCategory category1 = createTestCategory(1L, "운동", true);
+            MissionCategory category2 = createTestCategory(2L, "독서", false);
+            Page<MissionCategory> page = new PageImpl<>(List.of(category1, category2), pageable, 2);
+
+            when(missionCategoryRepository.searchByKeyword(null, pageable)).thenReturn(page);
+
+            // when
+            Page<MissionCategoryResponse> result = missionCategoryService.searchCategories(null, pageable);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalElements()).isEqualTo(2);
+            verify(missionCategoryRepository).searchByKeyword(null, pageable);
+        }
+
+        @Test
+        @DisplayName("검색 결과가 없는 경우 빈 페이지를 반환한다")
+        void searchCategories_noResults() {
+            // given
+            String keyword = "없는카테고리";
+            Pageable pageable = PageRequest.of(0, 20);
+            Page<MissionCategory> emptyPage = new PageImpl<>(List.of(), pageable, 0);
+
+            when(missionCategoryRepository.searchByKeyword(keyword, pageable)).thenReturn(emptyPage);
+
+            // when
+            Page<MissionCategoryResponse> result = missionCategoryService.searchCategories(keyword, pageable);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalElements()).isEqualTo(0);
+            assertThat(result.getContent()).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("getCategoriesByIds 테스트")
+    class GetCategoriesByIdsTest {
+
+        @Test
+        @DisplayName("ID 목록으로 카테고리 배치 조회한다")
+        void getCategoriesByIds_success() {
+            // given
+            List<Long> ids = List.of(1L, 2L);
+            MissionCategory category1 = createTestCategory(1L, "운동", true);
+            MissionCategory category2 = createTestCategory(2L, "독서", true);
+
+            when(missionCategoryRepository.findAllByIdIn(ids)).thenReturn(List.of(category1, category2));
+
+            // when
+            List<MissionCategoryResponse> result = missionCategoryService.getCategoriesByIds(ids);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).getName()).isEqualTo("운동");
+            assertThat(result.get(1).getName()).isEqualTo("독서");
+            verify(missionCategoryRepository).findAllByIdIn(ids);
+        }
+
+        @Test
+        @DisplayName("일부 ID가 존재하지 않으면 존재하는 카테고리만 반환한다")
+        void getCategoriesByIds_partialMatch() {
+            // given
+            List<Long> ids = List.of(1L, 999L);
+            MissionCategory category = createTestCategory(1L, "운동", true);
+
+            when(missionCategoryRepository.findAllByIdIn(ids)).thenReturn(List.of(category));
+
+            // when
+            List<MissionCategoryResponse> result = missionCategoryService.getCategoriesByIds(ids);
+
+            // then
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getName()).isEqualTo("운동");
+        }
+
+        @Test
+        @DisplayName("빈 ID 목록으로 조회하면 빈 목록을 반환한다")
+        void getCategoriesByIds_emptyIds() {
+            // given
+            List<Long> ids = List.of();
+
+            when(missionCategoryRepository.findAllByIdIn(ids)).thenReturn(List.of());
+
+            // when
+            List<MissionCategoryResponse> result = missionCategoryService.getCategoriesByIds(ids);
+
+            // then
+            assertThat(result).isEmpty();
+            verify(missionCategoryRepository).findAllByIdIn(ids);
+        }
+    }
+
+    @Nested
+    @DisplayName("evictAllCaches 테스트")
+    class EvictAllCachesTest {
+
+        @Test
+        @DisplayName("캐시 무효화를 수행한다")
+        void evictAllCaches_success() {
+            // given / when
+            missionCategoryService.evictAllCaches();
+
+            // then — 예외 없이 정상 완료
         }
     }
 }

@@ -147,7 +147,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::start)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 완료된 인스턴스입니다");
+                .hasMessageContaining("이미 완료된 수행 기록입니다");
         }
 
         @Test
@@ -160,7 +160,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::start)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("미실행 처리된 인스턴스는 시작할 수 없습니다");
+                .hasMessageContaining("미실행 처리된 수행 기록은 시작할 수 없습니다");
         }
 
         @Test
@@ -173,7 +173,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::start)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 시작된 인스턴스입니다");
+                .hasMessageContaining("이미 시작된 수행 기록입니다");
         }
     }
 
@@ -211,7 +211,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::complete)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 완료된 인스턴스입니다");
+                .hasMessageContaining("이미 완료된 수행 기록입니다");
         }
 
         @Test
@@ -224,7 +224,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::complete)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("미실행 처리된 인스턴스는 완료할 수 없습니다");
+                .hasMessageContaining("미실행 처리된 수행 기록은 완료할 수 없습니다");
         }
 
         @Test
@@ -348,7 +348,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::markAsMissed)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("완료된 인스턴스는 미실행 처리할 수 없습니다");
+                .hasMessageContaining("완료된 수행 기록은 미실행 처리할 수 없습니다");
         }
     }
 
@@ -383,7 +383,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::skip)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("완료된 인스턴스는 취소할 수 없습니다");
+                .hasMessageContaining("완료된 수행 기록은 취소할 수 없습니다");
         }
 
         @Test
@@ -396,7 +396,7 @@ class DailyMissionInstanceTest {
             // when & then
             assertThatThrownBy(instance::skip)
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("미실행 처리된 인스턴스는 취소할 수 없습니다");
+                .hasMessageContaining("미실행 처리된 수행 기록은 취소할 수 없습니다");
         }
     }
 

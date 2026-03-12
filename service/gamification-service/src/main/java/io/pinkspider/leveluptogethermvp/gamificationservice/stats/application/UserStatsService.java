@@ -89,6 +89,12 @@ public class UserStatsService {
     }
 
     @Transactional(transactionManager = "gamificationTransactionManager")
+    public void incrementGuildJoinCount(String userId) {
+        UserStats stats = getOrCreateUserStats(userId);
+        stats.incrementGuildJoinCount();
+    }
+
+    @Transactional(transactionManager = "gamificationTransactionManager")
     public void incrementFriendCount(String userId) {
         UserStats stats = getOrCreateUserStats(userId);
         stats.incrementFriendCount();

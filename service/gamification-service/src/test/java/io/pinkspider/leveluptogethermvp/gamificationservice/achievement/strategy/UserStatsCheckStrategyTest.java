@@ -185,6 +185,23 @@ class UserStatsCheckStrategyTest {
         }
 
         @Test
+        @DisplayName("guildJoinCount 필드 값을 반환한다")
+        void fetchCurrentValue_guildJoinCount() {
+            // given
+            UserStats stats = UserStats.builder()
+                .userId(TEST_USER_ID)
+                .guildJoinCount(3)
+                .build();
+            when(userStatsRepository.findByUserId(TEST_USER_ID)).thenReturn(Optional.of(stats));
+
+            // when
+            Object result = strategy.fetchCurrentValue(TEST_USER_ID, "guildJoinCount");
+
+            // then
+            assertThat(result).isEqualTo(3);
+        }
+
+        @Test
         @DisplayName("알 수 없는 필드면 0을 반환한다")
         void fetchCurrentValue_unknownField_returnsZero() {
             // given

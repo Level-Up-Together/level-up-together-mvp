@@ -110,6 +110,11 @@ public class UserStats extends LocalDateTimeBaseEntity {
     @Builder.Default
     private Integer friendCount = 0;
 
+    @Column(name = "guild_join_count", nullable = false)
+    @Comment("길드 가입 횟수")
+    @Builder.Default
+    private Integer guildJoinCount = 0;
+
     public void incrementMissionCompletion() {
         this.totalMissionCompletions++;
         updateRankingPoints();
@@ -176,6 +181,10 @@ public class UserStats extends LocalDateTimeBaseEntity {
         if (this.friendCount > 0) {
             this.friendCount--;
         }
+    }
+
+    public void incrementGuildJoinCount() {
+        this.guildJoinCount++;
     }
 
     private void updateRankingPoints() {

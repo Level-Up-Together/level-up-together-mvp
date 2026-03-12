@@ -137,11 +137,13 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
         }
     }
 
+    // === 후처리 메서드 (instanceId는 일반 미션에서 무시됨 — 날짜별 1:1) ===
+
     @Override
     @ModerateImage
     @Transactional(transactionManager = "missionTransactionManager")
     public MissionExecutionResponse uploadExecutionImage(Long missionId, String userId, LocalDate executionDate,
-                                                          MultipartFile image) {
+                                                          MultipartFile image, Long instanceId) {
         MissionParticipant participant = findParticipant(missionId, userId);
 
         MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
@@ -172,7 +174,8 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate) {
+    public MissionExecutionResponse deleteExecutionImage(Long missionId, String userId, LocalDate executionDate,
+                                                          Long instanceId) {
         MissionParticipant participant = findParticipant(missionId, userId);
 
         MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
@@ -182,13 +185,11 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
             throw new IllegalStateException("완료된 미션만 이미지를 삭제할 수 있습니다.");
         }
 
-        // 이미지가 있으면 삭제
         if (execution.getImageUrl() != null) {
             missionImageStorageService.delete(execution.getImageUrl());
             execution.setImageUrl(null);
             executionRepository.save(execution);
 
-            // 이미 공유된 피드가 있으면 피드의 이미지 URL도 삭제 (이벤트 기반)
             if (Boolean.TRUE.equals(execution.getIsSharedToFeed())) {
                 eventPublisher.publishEvent(new MissionFeedImageChangedEvent(userId, execution.getId(), null));
             }
@@ -201,7 +202,8 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate) {
+    public MissionExecutionResponse shareExecutionToFeed(Long missionId, String userId, LocalDate executionDate,
+                                                          Long instanceId) {
         MissionParticipant participant = findParticipant(missionId, userId);
 
         MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
@@ -211,7 +213,6 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
             throw new IllegalStateException("완료된 미션만 피드에 공유할 수 있습니다.");
         }
 
-        // 이미 공유된 경우 확인
         if (Boolean.TRUE.equals(execution.getIsSharedToFeed())) {
             throw new IllegalStateException("이미 피드에 공유된 미션입니다.");
         }
@@ -258,7 +259,8 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse unshareExecutionFromFeed(Long missionId, String userId, LocalDate executionDate) {
+    public MissionExecutionResponse unshareExecutionFromFeed(Long missionId, String userId, LocalDate executionDate,
+                                                              Long instanceId) {
         MissionParticipant participant = findParticipant(missionId, userId);
 
         MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
@@ -281,7 +283,8 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager")
-    public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate, String note) {
+    public MissionExecutionResponse updateExecutionNote(Long missionId, String userId, LocalDate executionDate,
+                                                          String note, Long instanceId) {
         MissionParticipant participant = findParticipant(missionId, userId);
 
         MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), executionDate)
@@ -300,7 +303,8 @@ public class RegularMissionExecutionStrategy implements MissionExecutionStrategy
 
     @Override
     @Transactional(transactionManager = "missionTransactionManager", readOnly = true)
-    public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date) {
+    public MissionExecutionResponse getExecutionByDate(Long missionId, String userId, LocalDate date,
+                                                        Long instanceId) {
         MissionParticipant participant = findParticipant(missionId, userId);
 
         MissionExecution execution = executionRepository.findByParticipantIdAndExecutionDate(participant.getId(), date)
