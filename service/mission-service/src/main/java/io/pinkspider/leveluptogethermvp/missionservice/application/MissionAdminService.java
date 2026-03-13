@@ -48,7 +48,7 @@ public class MissionAdminService {
                 pageable
             ).map(MissionAdminResponse::from);
         } else {
-            page = missionRepository.findAllByOrderByCreatedAtDesc(pageable)
+            page = missionRepository.findAllByIsDeletedFalseOrderByCreatedAtDesc(pageable)
                 .map(MissionAdminResponse::from);
         }
         return MissionAdminPageResponse.from(page);

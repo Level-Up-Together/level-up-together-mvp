@@ -101,12 +101,13 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
 
     // ========== Admin Internal API용 쿼리 ==========
 
-    Page<Mission> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    Page<Mission> findAllByIsDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
 
     List<Mission> findBySource(MissionSource source);
 
     @Query(value = "SELECT * FROM mission m WHERE " +
-        "(:keyword IS NULL OR LOWER(CAST(m.title AS TEXT)) LIKE LOWER('%' || CAST(:keyword AS TEXT) || '%') " +
+        "m.is_deleted = false " +
+        "AND (:keyword IS NULL OR LOWER(CAST(m.title AS TEXT)) LIKE LOWER('%' || CAST(:keyword AS TEXT) || '%') " +
         "OR LOWER(CAST(m.description AS TEXT)) LIKE LOWER('%' || CAST(:keyword AS TEXT) || '%')) " +
         "AND (:source IS NULL OR m.source = CAST(:source AS TEXT)) " +
         "AND (:status IS NULL OR m.status = CAST(:status AS TEXT)) " +
@@ -116,7 +117,8 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
         "AND (:categoryId IS NULL OR m.category_id = :categoryId) " +
         "ORDER BY m.created_at DESC",
         countQuery = "SELECT COUNT(*) FROM mission m WHERE " +
-        "(:keyword IS NULL OR LOWER(CAST(m.title AS TEXT)) LIKE LOWER('%' || CAST(:keyword AS TEXT) || '%') " +
+        "m.is_deleted = false " +
+        "AND (:keyword IS NULL OR LOWER(CAST(m.title AS TEXT)) LIKE LOWER('%' || CAST(:keyword AS TEXT) || '%') " +
         "OR LOWER(CAST(m.description AS TEXT)) LIKE LOWER('%' || CAST(:keyword AS TEXT) || '%')) " +
         "AND (:source IS NULL OR m.source = CAST(:source AS TEXT)) " +
         "AND (:status IS NULL OR m.status = CAST(:status AS TEXT)) " +

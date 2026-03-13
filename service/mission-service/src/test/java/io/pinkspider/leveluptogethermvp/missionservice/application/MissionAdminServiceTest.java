@@ -102,7 +102,7 @@ class MissionAdminServiceTest {
             // given
             Mission mission = createTestMission(1L);
             Pageable pageable = PageRequest.of(0, 10);
-            when(missionRepository.findAllByOrderByCreatedAtDesc(pageable))
+            when(missionRepository.findAllByIsDeletedFalseOrderByCreatedAtDesc(pageable))
                 .thenReturn(new PageImpl<>(List.of(mission)));
 
             // when
